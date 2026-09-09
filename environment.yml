@@ -1,0 +1,17 @@
+name: eco-marl
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12
+  - pip
+
+  - pip:
+      - numpy
+      - mesa[viz]
+      - pettingzoo
+      - gymnasium
+      - matplotlib
+      - pytest
+      - networkx
