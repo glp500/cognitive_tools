@@ -3,8 +3,6 @@ from __future__ import annotations
 import mesa
 import numpy as np
 
-
-# Actions
 STAY = 0
 UP = 1
 DOWN = 2
@@ -14,7 +12,7 @@ HARVEST = 5
 
 
 class EcoAgent(mesa.Agent):
-    """Agent with position, cumulative wealth, and energy."""
+    """Agent with position, cumulative wealth, and current energy."""
 
     def __init__(
         self,
@@ -24,18 +22,20 @@ class EcoAgent(mesa.Agent):
         initial_energy: float,
     ):
         super().__init__(model)
-
         self.name = name
         self.position = np.array(position, dtype=int)
-
-        # Cumulative amount ever harvested.
         self.wealth = 0.0
+        self.energy = float(initial_energy)
 
-        # Current material reserve.
-        self.energy = initial_energy
 
 class EcoModel(mesa.Model):
-    """Minimal renewable common-pool resource model."""
+    """
+    Renewable common-pool resource model.
+
+    Defaults reproduce the earlier model. Supplying a capacity map,
+    equilibrium fraction, and coupling rate places the same random-action
+    agents into heterogeneous reaction-diffusion environments.
+    """
 
     def __init__(
         self,
@@ -46,64 +46,84 @@ class EcoModel(mesa.Model):
         harvest_amount: float = 0.25,
         metabolism_rate: float = 0.05,
         initial_energy: float = 1.0,
+        equilibrium_fraction: float = 1.0,
+        coupling_rate: float = 0.0,
+        initial_resource_fraction: float = 0.5,
+        capacity: np.ndarray | None = None,
         seed: int | None = None,
     ):
         super().__init__(rng=seed)
 
+        if width <= 0 or height <= 0:
+            raise ValueError("width and height must be positive.")
+        if n_agents <= 0:
+            raise ValueError("n_agents must be positive.")
+        if regeneration_rate < 0:
+            raise ValueError("regeneration_rate must be non-negative.")
+        if harvest_amount < 0:
+            raise ValueError("harvest_amount must be non-negative.")
+        if metabolism_rate < 0:
+            raise ValueError("metabolism_rate must be non-negative.")
+        if initial_energy < 0:
+            raise ValueError("initial_energy must be non-negative.")
+        if not 0 <= equilibrium_fraction <= 1:
+            raise ValueError("equilibrium_fraction must be between 0 and 1.")
+        if not 0 <= coupling_rate <= 1:
+            raise ValueError("coupling_rate must be between 0 and 1.")
+        if not 0 <= initial_resource_fraction <= 1:
+            raise ValueError("initial_resource_fraction must be between 0 and 1.")
+
         self.width = width
         self.height = height
-        self.regeneration_rate = regeneration_rate
-        self.harvest_amount = harvest_amount
-        self.metabolism_rate = metabolism_rate
-        self.initial_energy = initial_energy
+        self.regeneration_rate = float(regeneration_rate)
+        self.harvest_amount = float(harvest_amount)
+        self.metabolism_rate = float(metabolism_rate)
+        self.initial_energy = float(initial_energy)
+        self.equilibrium_fraction = float(equilibrium_fraction)
+        self.coupling_rate = float(coupling_rate)
+        self.initial_resource_fraction = float(initial_resource_fraction)
 
-        # Joint actions supplied by the PettingZoo wrapper before each Mesa step.
+        # Gives an isolated tile the positive equilibrium R* = qK.
+        self.depletion_rate = self.regeneration_rate * (1 - self.equilibrium_fraction)
+
         self.actions: dict[str, int] = {}
 
-        # Ecological state.
-        self.capacity = np.ones((height, width), dtype=float)
-        self.resource = 0.5 * self.capacity
+        if capacity is None:
+            self.capacity = np.ones((height, width), dtype=float)
+        else:
+            capacity = np.asarray(capacity, dtype=float)
+            if capacity.shape != (height, width):
+                raise ValueError(
+                    f"capacity must have shape ({height}, {width}), got {capacity.shape}."
+                )
+            if np.any(capacity <= 0) or np.any(capacity > 1):
+                raise ValueError("capacity values must be in the interval (0, 1].")
+            self.capacity = capacity.copy()
 
-        # Agents.
+        self.resource = self.initial_resource_fraction * self.capacity
+
         self.by_name: dict[str, EcoAgent] = {}
-
         for i in range(n_agents):
             name = f"agent_{i}"
-
             x = int(self.rng.integers(width))
             y = int(self.rng.integers(height))
-
-            agent = EcoAgent(
+            self.by_name[name] = EcoAgent(
                 model=self,
                 name=name,
                 position=(x, y),
                 initial_energy=self.initial_energy,
             )
 
-            self.by_name[name] = agent
-
     def step(self) -> dict[str, float]:
-        """
-        Advance the ecological model one timestep using the current joint actions.
+        """movement -> harvest -> metabolism -> ecology"""
 
-        Returns the amount harvested by each agent.
-        """
-
-        actions = self.actions
-
-        self._move_agents(actions)
-
-        harvest = self._harvest(actions)
-
+        self._move_agents(self.actions)
+        harvested = self._harvest(self.actions)
         self._metabolize()
-
-        self._regenerate()
-
-        return harvest
+        self._update_ecology()
+        return harvested
 
     def _move_agents(self, actions: dict[str, int]) -> None:
-        """Resolve all movement actions."""
-
         moves = {
             UP: (0, -1),
             DOWN: (0, 1),
@@ -116,60 +136,29 @@ class EcoModel(mesa.Model):
                 continue
 
             agent = self.by_name[name]
-
             dx, dy = moves[action]
 
-            x = np.clip(
-                agent.position[0] + dx,
-                0,
-                self.width - 1,
-            )
-            y = np.clip(
-                agent.position[1] + dy,
-                0,
-                self.height - 1,
-            )
-
+            x = np.clip(agent.position[0] + dx, 0, self.width - 1)
+            y = np.clip(agent.position[1] + dy, 0, self.height - 1)
             agent.position[:] = (x, y)
 
-    def _harvest(
-        self,
-        actions: dict[str, int],
-    ) -> dict[str, float]:
-        """
-        Resolve harvesting simultaneously.
+    def _harvest(self, actions: dict[str, int]) -> dict[str, float]:
+        """Resolve harvest requests simultaneously within each occupied cell."""
 
-        Agents sharing a cell divide the available resource equally.
-        """
-
-        harvested = {
-            name: 0.0
-            for name in self.by_name
-        }
-
+        harvested = {name: 0.0 for name in self.by_name}
         harvesters: dict[tuple[int, int], list[str]] = {}
 
         for name, action in actions.items():
             if action != HARVEST:
                 continue
 
-            agent = self.by_name[name]
-
-            x, y = agent.position
-
-            harvesters.setdefault((x, y), []).append(name)
+            x, y = self.by_name[name].position
+            harvesters.setdefault((int(x), int(y)), []).append(name)
 
         for (x, y), names in harvesters.items():
-
-            available = self.resource[y, x]
-
+            available = float(self.resource[y, x])
             requested = self.harvest_amount * len(names)
-
-            total_harvest = min(
-                available,
-                requested,
-            )
-
+            total_harvest = min(available, requested)
             share = total_harvest / len(names)
 
             self.resource[y, x] -= total_harvest
@@ -182,31 +171,40 @@ class EcoModel(mesa.Model):
 
         return harvested
 
-    def _regenerate(self) -> None:
-        """Logistic resource regeneration."""
+    def _metabolize(self) -> None:
+        for agent in self.by_name.values():
+            agent.energy = max(0.0, agent.energy - self.metabolism_rate)
+
+    def _update_ecology(self) -> None:
+        """
+        Spatial logistic reaction-diffusion update.
+
+        Local reaction:
+            rR(1 - R/K) - dR
+
+        Spatial exchange:
+            c(mean_neighbor_resource - R)
+        """
 
         growth = (
             self.regeneration_rate
             * self.resource
-            * (1.0 - self.resource / self.capacity)
+            * (1 - self.resource / self.capacity)
         )
+        depletion = self.depletion_rate * self.resource
+        neighbor_mean = self._neighbor_mean(self.resource)
+        diffusion = self.coupling_rate * (neighbor_mean - self.resource)
 
-        self.resource += growth
+        self.resource += growth - depletion + diffusion
+        self.resource = np.clip(self.resource, 0.0, self.capacity)
 
-        self.resource = np.clip(
-            self.resource,
-            0.0,
-            self.capacity,
-        )
+    @staticmethod
+    def _neighbor_mean(field: np.ndarray) -> np.ndarray:
+        """Mean of the four adjacent cells, with no wraparound."""
 
-    def _metabolize(self) -> None:
-        """Consume each agent's metabolic requirement."""
-
-        for agent in self.by_name.values():
-
-            agent.energy -= self.metabolism_rate
-
-            agent.energy = max(
-                0.0,
-                agent.energy,
-            )
+        padded = np.pad(field, 1, mode="edge")
+        up = padded[:-2, 1:-1]
+        down = padded[2:, 1:-1]
+        left = padded[1:-1, :-2]
+        right = padded[1:-1, 2:]
+        return (up + down + left + right) / 4.0
