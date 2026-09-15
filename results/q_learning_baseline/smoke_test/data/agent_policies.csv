@@ -1,0 +1,17 @@
+scenario,population,replicate,agent,x,y,region,policy_scarce,policy_moderate,policy_abundant,cooperation_preference,wealth,energy
+uniform_high,8,0,agent_0,9,3,uniform_high,D,D,C,0.3333333333333333,4.98793179536987,5.187931795369945
+uniform_high,8,0,agent_1,8,3,uniform_high,D,D,D,0.0,7.657999999999923,7.857999999999983
+uniform_high,8,0,agent_2,1,9,uniform_high,C,D,C,0.6666666666666666,5.803999999999949,6.004000000000004
+uniform_high,8,0,agent_3,4,3,uniform_high,C,D,D,0.3333333333333333,7.477999999999926,7.677999999999985
+uniform_high,8,0,agent_4,2,1,uniform_high,D,D,C,0.3333333333333333,7.112825284137784,7.312825284137846
+uniform_high,8,0,agent_5,0,9,uniform_high,C,D,D,0.3333333333333333,3.643999999999979,3.844000000000025
+uniform_high,8,0,agent_6,9,4,uniform_high,D,D,C,0.3333333333333333,6.525495537048672,6.7254955370487375
+uniform_high,8,0,agent_7,2,1,uniform_high,D,D,D,0.0,7.130825284137786,7.330825284137846
+patchy_high_central_low,8,0,agent_0,9,3,patchy_high,C,D,C,0.6666666666666666,6.523999999999937,6.723999999999996
+patchy_high_central_low,8,0,agent_1,8,3,patchy_high,D,D,D,0.0,7.657999999999923,7.857999999999983
+patchy_high_central_low,8,0,agent_2,1,9,patchy_high,C,D,C,0.6666666666666666,5.731999999999947,5.932000000000005
+patchy_high_central_low,8,0,agent_3,4,3,central_low,C,D,D,0.3333333333333333,4.705999999999968,4.906000000000017
+patchy_high_central_low,8,0,agent_4,2,1,patchy_high,D,D,C,0.3333333333333333,7.297999999999929,7.497999999999987
+patchy_high_central_low,8,0,agent_5,0,9,patchy_high,D,D,D,0.0,5.804078276100269,6.004078276100335
+patchy_high_central_low,8,0,agent_6,9,4,patchy_high,D,D,C,0.3333333333333333,7.423999999999927,7.6239999999999855
+patchy_high_central_low,8,0,agent_7,2,1,patchy_high,C,D,D,0.3333333333333333,4.417999999999969,4.61800000000002
