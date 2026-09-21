@@ -11,12 +11,15 @@ class EcoEnv(ParallelEnv):
     """
     PettingZoo wrapper for the stationary common-pool resource model.
 
-    Action 0: cooperate -> low extraction
-    Action 1: defect    -> high extraction
+    Action 0: low extraction / cooperation proxy
+    Action 1: high extraction / defection proxy
+
+    The environment exposes a richer observation for compatibility and
+    diagnostics, but the current tabular Q-learner uses only local R/K.
     """
 
     metadata = {
-        "name": "eco_commons_qlearning_v0",
+        "name": "eco_commons_qlearning_v1",
     }
 
     def __init__(
@@ -33,6 +36,7 @@ class EcoEnv(ParallelEnv):
         harvest_amount: float | None = None,
         metabolism_rate: float = 0.002,
         initial_energy: float = 1.0,
+        energy_capacity: float = 1.0,
         initial_resource_fraction: float = 0.50,
         capacity_map: np.ndarray | None = None,
     ):
@@ -47,9 +51,7 @@ class EcoEnv(ParallelEnv):
 
         self.cooperative_harvest_amount = cooperative_harvest_amount
 
-        # Backward-compatible alias for the earlier random-agent script.
-        # In the new two-action model, the old harvest_amount is interpreted
-        # as the high-extraction (defective) request.
+        # Backward-compatible alias for older experiment scripts.
         self.defective_harvest_amount = (
             defective_harvest_amount
             if harvest_amount is None
@@ -58,6 +60,7 @@ class EcoEnv(ParallelEnv):
 
         self.metabolism_rate = metabolism_rate
         self.initial_energy = initial_energy
+        self.energy_capacity = energy_capacity
         self.initial_resource_fraction = initial_resource_fraction
 
         self.capacity_map = (
@@ -82,7 +85,6 @@ class EcoEnv(ParallelEnv):
         self.observation_spaces = {
             agent: spaces.Dict(
                 {
-                    # Retained for compatibility with the earlier UI.
                     "resources": spaces.Box(
                         low=0.0,
                         high=1.0,
@@ -114,10 +116,7 @@ class EcoEnv(ParallelEnv):
             for agent in self.possible_agents
         }
 
-        self.model: (
-            model.EcoModel
-            | None
-        ) = None
+        self.model: model.EcoModel | None = None
 
     def reset(
         self,
@@ -135,22 +134,19 @@ class EcoEnv(ParallelEnv):
             defective_harvest_amount=self.defective_harvest_amount,
             metabolism_rate=self.metabolism_rate,
             initial_energy=self.initial_energy,
+            energy_capacity=self.energy_capacity,
             initial_resource_fraction=self.initial_resource_fraction,
             capacity=self.capacity_map,
             seed=seed,
         )
 
-        self.agents = (
-            self.possible_agents.copy()
-        )
+        self.agents = self.possible_agents.copy()
 
         if seed is not None:
             for i, agent in enumerate(
                 self.possible_agents
             ):
-                self.action_spaces[
-                    agent
-                ].seed(
+                self.action_spaces[agent].seed(
                     seed + i
                 )
 
@@ -164,20 +160,12 @@ class EcoEnv(ParallelEnv):
             for agent in self.agents
         }
 
-        return (
-            observations,
-            infos,
-        )
+        return observations, infos
 
-    def step(
-        self,
-        actions,
-    ):
+    def step(self, actions):
         assert self.model is not None
 
-        current_agents = (
-            self.agents.copy()
-        )
+        current_agents = self.agents.copy()
 
         pre_state = {}
 
@@ -195,32 +183,20 @@ class EcoEnv(ParallelEnv):
             }
 
         wealth_before = {
-            name: self.model.by_name[
-                name
-            ].wealth
+            name: self.model.by_name[name].wealth
             for name in current_agents
         }
 
         self.model.actions = actions
-
-        # Mesa wraps Model.step() internally and does not preserve a custom
-        # return value. Therefore we call step() only for its state changes
-        # and calculate realized harvest from the change in agent wealth.
         self.model.step()
 
         rewards = {
             name: (
-                self.model.by_name[
-                    name
-                ].wealth
+                self.model.by_name[name].wealth
                 - wealth_before[name]
             )
             for name in current_agents
         }
-
-        # Wealth changes only through harvesting in this model, so the
-        # realized harvest is exactly the same quantity as the reward.
-        harvested = rewards.copy()
 
         terminations = {
             name: False
@@ -240,45 +216,48 @@ class EcoEnv(ParallelEnv):
         infos = {}
 
         for name in current_agents:
-            resource_before = (
-                pre_state[name][
-                    "resource_before"
-                ]
-            )
-
-            capacity = (
-                pre_state[name][
-                    "capacity"
-                ]
-            )
+            resource_before = pre_state[name][
+                "resource_before"
+            ]
+            capacity = pre_state[name][
+                "capacity"
+            ]
+            agent = self.model.by_name[name]
 
             infos[name] = {
                 "action_name": (
-                    "cooperate"
+                    "low"
                     if actions[name]
-                    == model.COOPERATE
-                    else "defect"
+                    == model.LOW_EXTRACT
+                    else "high"
                 ),
                 "harvested": float(
-                    harvested[name]
+                    rewards[name]
                 ),
-                "resource_before": (
-                    resource_before
-                ),
+                "resource_before": resource_before,
                 "capacity": capacity,
                 "resource_fraction_before": (
                     resource_before
-                    / max(
-                        capacity,
-                        1e-12,
-                    )
+                    / max(capacity, 1e-12)
+                ),
+                "energy": float(agent.energy),
+                "reserve_welfare": float(
+                    agent.reserve_welfare
+                ),
+                "need_satisfaction": float(
+                    agent.need_satisfaction
+                ),
+                "metabolic_shortfall": float(
+                    agent.metabolic_shortfall
+                ),
+                "cumulative_shortfall": float(
+                    agent.cumulative_shortfall
                 ),
             }
 
         if finished:
             self.agents = []
             observations = {}
-
         else:
             observations = {
                 name: self.observe(name)
@@ -293,16 +272,10 @@ class EcoEnv(ParallelEnv):
             infos,
         )
 
-    def observe(
-        self,
-        name: str,
-    ):
+    def observe(self, name: str):
         assert self.model is not None
 
-        agent = (
-            self.model.by_name[name]
-        )
-
+        agent = self.model.by_name[name]
         x, y = agent.position
 
         resources = np.zeros(
@@ -315,12 +288,8 @@ class EcoEnv(ParallelEnv):
             dtype=np.float32,
         )
 
-        for row, dy in enumerate(
-            (-1, 0, 1)
-        ):
-            for col, dx in enumerate(
-                (-1, 0, 1)
-            ):
+        for row, dy in enumerate((-1, 0, 1)):
+            for col, dx in enumerate((-1, 0, 1)):
                 xx = int(x + dx)
                 yy = int(y + dy)
 
@@ -328,48 +297,29 @@ class EcoEnv(ParallelEnv):
                     0 <= xx < self.width
                     and 0 <= yy < self.height
                 ):
-                    resources[
-                        row,
-                        col,
-                    ] = self.model.resource[
-                        yy,
-                        xx,
-                    ]
-
-                    capacities[
-                        row,
-                        col,
-                    ] = self.model.capacity[
-                        yy,
-                        xx,
-                    ]
+                    resources[row, col] = (
+                        self.model.resource[yy, xx]
+                    )
+                    capacities[row, col] = (
+                        self.model.capacity[yy, xx]
+                    )
 
         local_resource = float(
             self.model.resource[y, x]
         )
-
         local_capacity = float(
             self.model.capacity[y, x]
         )
 
         resource_fraction = (
             local_resource
-            / max(
-                local_capacity,
-                1e-12,
-            )
+            / max(local_capacity, 1e-12)
         )
 
         own_state = np.array(
             [
-                x / max(
-                    self.width - 1,
-                    1,
-                ),
-                y / max(
-                    self.height - 1,
-                    1,
-                ),
+                x / max(self.width - 1, 1),
+                y / max(self.height - 1, 1),
                 agent.wealth,
                 agent.energy,
             ],
@@ -392,25 +342,11 @@ class EcoEnv(ParallelEnv):
             "local": local_state,
         }
 
-    def observation_space(
-        self,
-        agent,
-    ):
-        return (
-            self.observation_spaces[
-                agent
-            ]
-        )
+    def observation_space(self, agent):
+        return self.observation_spaces[agent]
 
-    def action_space(
-        self,
-        agent,
-    ):
-        return (
-            self.action_spaces[
-                agent
-            ]
-        )
+    def action_space(self, agent):
+        return self.action_spaces[agent]
 
     def render(self):
         pass

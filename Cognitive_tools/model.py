@@ -4,12 +4,16 @@ import mesa
 import numpy as np
 
 
-COOPERATE = 0
-DEFECT = 1
+LOW_EXTRACT = 0
+HIGH_EXTRACT = 1
+
+# Backward-compatible names used elsewhere in the project.
+COOPERATE = LOW_EXTRACT
+DEFECT = HIGH_EXTRACT
 
 
 class EcoAgent(mesa.Agent):
-    """Stationary agent with cumulative wealth and current energy."""
+    """Stationary agent with wealth, an energy reserve, and welfare records."""
 
     def __init__(
         self,
@@ -17,6 +21,7 @@ class EcoAgent(mesa.Agent):
         name: str,
         position: tuple[int, int],
         initial_energy: float,
+        energy_capacity: float,
     ):
         super().__init__(model)
 
@@ -24,22 +29,52 @@ class EcoAgent(mesa.Agent):
         self.position = np.array(position, dtype=int)
 
         self.wealth = 0.0
-        self.energy = float(initial_energy)
+
+        self.energy_capacity = float(energy_capacity)
+        self.energy = min(float(initial_energy), self.energy_capacity)
+
+        # Welfare accounting. These do not enter the Q-learning reward.
+        self.metabolic_consumption = 0.0
+        self.metabolic_shortfall = 0.0
+        self.need_satisfaction = 1.0
+        self.cumulative_shortfall = 0.0
+        self.deprivation_steps = 0
+
+    @property
+    def reserve_welfare(self) -> float:
+        """Bounded energy-reserve adequacy in [0, 1]."""
+
+        if self.energy_capacity <= 0.0:
+            return 0.0
+
+        return float(
+            np.clip(
+                self.energy / self.energy_capacity,
+                0.0,
+                1.0,
+            )
+        )
 
 
 class EcoModel(mesa.Model):
     """
     Stationary-agent common-pool resource model.
 
-    Agents do not move. At each timestep they choose one of two harvest
+    Agents do not move. At each timestep they choose one of two extraction
     intensities:
 
-        COOPERATE = low extraction
-        DEFECT    = high extraction
+        LOW_EXTRACT  = low extraction / cooperation proxy
+        HIGH_EXTRACT = high extraction / defection proxy
 
-    The ecological field follows a spatial logistic reaction-diffusion
-    process. Capacity, regeneration rate, and equilibrium fraction may be
-    scalars or spatial maps.
+    Welfare and wealth are intentionally separate:
+
+    - wealth = cumulative resource appropriated;
+    - energy = bounded reserve used to satisfy metabolism;
+    - need_satisfaction = fraction of current metabolic need met;
+    - cumulative_shortfall = cumulative unmet metabolic need.
+
+    The Q-learning reward remains realized harvest, so welfare is an outcome,
+    not an objective supplied to the learner.
     """
 
     def __init__(
@@ -54,6 +89,7 @@ class EcoModel(mesa.Model):
         defective_harvest_amount: float = 0.020,
         metabolism_rate: float = 0.002,
         initial_energy: float = 1.0,
+        energy_capacity: float = 1.0,
         initial_resource_fraction: float = 0.50,
         capacity: np.ndarray | None = None,
         seed: int | None = None,
@@ -74,8 +110,12 @@ class EcoModel(mesa.Model):
             )
         if metabolism_rate < 0.0:
             raise ValueError("metabolism_rate must be non-negative.")
-        if initial_energy < 0.0:
-            raise ValueError("initial_energy must be non-negative.")
+        if energy_capacity <= 0.0:
+            raise ValueError("energy_capacity must be positive.")
+        if initial_energy < 0.0 or initial_energy > energy_capacity:
+            raise ValueError(
+                "initial_energy must be between 0 and energy_capacity."
+            )
         if not 0.0 <= initial_resource_fraction <= 1.0:
             raise ValueError("initial_resource_fraction must be between 0 and 1.")
 
@@ -88,6 +128,7 @@ class EcoModel(mesa.Model):
         self.defective_harvest_amount = float(defective_harvest_amount)
         self.metabolism_rate = float(metabolism_rate)
         self.initial_energy = float(initial_energy)
+        self.energy_capacity = float(energy_capacity)
         self.initial_resource_fraction = float(initial_resource_fraction)
 
         self.capacity = self._capacity_field(capacity)
@@ -122,7 +163,7 @@ class EcoModel(mesa.Model):
 
         self.actions: dict[str, int] = {}
 
-        # Agent positions are sampled once and then remain fixed.
+        # Positions are random at initialization and fixed thereafter.
         self.by_name: dict[str, EcoAgent] = {}
 
         for i in range(n_agents):
@@ -136,6 +177,7 @@ class EcoModel(mesa.Model):
                 name=name,
                 position=(x, y),
                 initial_energy=self.initial_energy,
+                energy_capacity=self.energy_capacity,
             )
 
     def _capacity_field(
@@ -207,21 +249,9 @@ class EcoModel(mesa.Model):
         return field
 
     def step(self) -> None:
-        """
-        One timestep:
+        """Harvest, satisfy metabolism, then update the ecology."""
 
-            1. agents choose low or high extraction,
-            2. metabolism occurs,
-            3. ecology regenerates and diffuses.
-
-        Mesa wraps Model.step() internally to maintain model.steps, so callers
-        should not rely on a return value from step().
-        """
-
-        self._harvest(
-            self.actions
-        )
-
+        self._harvest(self.actions)
         self._metabolize()
         self._update_ecology()
 
@@ -233,8 +263,8 @@ class EcoModel(mesa.Model):
         Resolve simultaneous extraction.
 
         If a tile cannot satisfy all requests, every request on that tile is
-        reduced by the same proportional factor. This preserves the
-        difference between cooperative and defective harvest requests.
+        reduced proportionally. Wealth receives the full realized harvest;
+        energy is a bounded reserve and cannot exceed energy_capacity.
         """
 
         harvested = {
@@ -250,23 +280,16 @@ class EcoModel(mesa.Model):
         for name, agent in self.by_name.items():
             action = actions.get(
                 name,
-                COOPERATE,
+                LOW_EXTRACT,
             )
 
-            if action == COOPERATE:
-                requested = (
-                    self.cooperative_harvest_amount
-                )
-
-            elif action == DEFECT:
-                requested = (
-                    self.defective_harvest_amount
-                )
-
+            if action == LOW_EXTRACT:
+                requested = self.cooperative_harvest_amount
+            elif action == HIGH_EXTRACT:
+                requested = self.defective_harvest_amount
             else:
                 raise ValueError(
-                    f"Unknown action {action}. "
-                    f"Use COOPERATE={COOPERATE} or DEFECT={DEFECT}."
+                    f"Unknown action {action}. Use 0=low or 1=high extraction."
                 )
 
             x, y = agent.position
@@ -274,14 +297,10 @@ class EcoModel(mesa.Model):
             requests_by_tile.setdefault(
                 (int(x), int(y)),
                 [],
-            ).append(
-                (name, requested)
-            )
+            ).append((name, requested))
 
         for (x, y), requests in requests_by_tile.items():
-            available = float(
-                self.resource[y, x]
-            )
+            available = float(self.resource[y, x])
 
             total_requested = sum(
                 amount
@@ -299,15 +318,14 @@ class EcoModel(mesa.Model):
             total_harvest = 0.0
 
             for name, requested in requests:
-                realized = (
-                    requested
-                    * scale
-                )
-
+                realized = requested * scale
                 agent = self.by_name[name]
 
                 agent.wealth += realized
-                agent.energy += realized
+                agent.energy = min(
+                    agent.energy_capacity,
+                    agent.energy + realized,
+                )
 
                 harvested[name] = realized
                 total_harvest += realized
@@ -317,25 +335,35 @@ class EcoModel(mesa.Model):
         return harvested
 
     def _metabolize(self) -> None:
+        """Consume energy and record unmet metabolic need."""
+
         for agent in self.by_name.values():
-            agent.energy = max(
-                0.0,
-                agent.energy - self.metabolism_rate,
+            need = self.metabolism_rate
+
+            if need <= 0.0:
+                agent.metabolic_consumption = 0.0
+                agent.metabolic_shortfall = 0.0
+                agent.need_satisfaction = 1.0
+                continue
+
+            consumed = min(
+                agent.energy,
+                need,
             )
 
+            shortfall = need - consumed
+
+            agent.energy -= consumed
+            agent.metabolic_consumption = consumed
+            agent.metabolic_shortfall = shortfall
+            agent.need_satisfaction = consumed / need
+            agent.cumulative_shortfall += shortfall
+
+            if shortfall > 1e-12:
+                agent.deprivation_steps += 1
+
     def _update_ecology(self) -> None:
-        """
-        Spatial logistic reaction-diffusion update.
-
-        Local reaction:
-            r(x) R (1 - R/K) - d(x) R
-
-        with:
-            d(x) = r(x) [1 - q(x)]
-
-        Spatial exchange:
-            c [mean_neighbor_resource - R]
-        """
+        """Spatial logistic reaction-diffusion update."""
 
         growth = (
             self.regeneration_map
