@@ -14,14 +14,14 @@ import networkx as nx
 import numpy as np
 
 from Cognitive_tools import EcoEnv
+from Cognitive_tools.ecology import make_capacity_map
+from Cognitive_tools.model import COOPERATE
 from Cognitive_tools.qlearning import (
-    COOPERATE,
-    DEFECT,
     QLearningPolicy,
     STATE_NAMES,
     resource_state,
 )
-from Cognitive_tools.ecology import make_capacity_map
+
 
 RESULTS_ROOT = (
     Path("results")
@@ -214,23 +214,45 @@ def gaussian_mask(
     width: int,
     height: int,
     *,
-    centres: list[tuple[float, float]],
+    centres: list[
+        tuple[
+            float,
+            float,
+        ]
+    ],
     sigma: float,
     threshold: float,
 ) -> np.ndarray:
     y, x = np.indices(
-        (height, width)
+        (
+            height,
+            width,
+        )
     )
 
     field = np.zeros(
-        (height, width),
+        (
+            height,
+            width,
+        ),
         dtype=float,
     )
 
-    for centre_x, centre_y in centres:
+    for (
+        centre_x,
+        centre_y,
+    ) in centres:
         distance_squared = (
-            (x - centre_x) ** 2
-            + (y - centre_y) ** 2
+            (
+                x
+                - centre_x
+            )
+            ** 2
+            + (
+                y
+                - centre_y
+            )
+            ** 2
         )
 
         field += np.exp(
@@ -241,14 +263,18 @@ def gaussian_mask(
             )
         )
 
-    if field.max() > 0:
+    if (
+        field.max()
+        > 0
+    ):
         field = (
             field
             / field.max()
         )
 
     return (
-        field >= threshold
+        field
+        >= threshold
     )
 
 
@@ -277,31 +303,55 @@ def build_environment_maps(
         scenario_name
     ]
 
-    if spec["group"] == "single":
-        capacity = make_capacity_map(
-            family=spec["family"],
-            mean_capacity=spec[
-                "mean_capacity"
-            ],
-            width=width,
-            height=height,
-            seed=seed,
+    if (
+        spec[
+            "group"
+        ]
+        == "single"
+    ):
+        capacity = (
+            make_capacity_map(
+                family=spec[
+                    "family"
+                ],
+                mean_capacity=spec[
+                    "mean_capacity"
+                ],
+                width=width,
+                height=height,
+                seed=seed,
+            )
         )
 
         recovery = np.full(
-            (height, width),
-            spec["recovery"],
+            (
+                height,
+                width,
+            ),
+            spec[
+                "recovery"
+            ],
             dtype=float,
         )
 
-        equilibrium = np.full(
-            (height, width),
-            spec["equilibrium"],
-            dtype=float,
+        equilibrium = (
+            np.full(
+                (
+                    height,
+                    width,
+                ),
+                spec[
+                    "equilibrium"
+                ],
+                dtype=float,
+            )
         )
 
         regions = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             scenario_name,
             dtype=object,
         )
@@ -313,140 +363,232 @@ def build_environment_maps(
             regions,
         )
 
-    kind = spec["kind"]
+    kind = spec[
+        "kind"
+    ]
 
-    high_patchy = make_capacity_map(
-        family="patchy",
-        mean_capacity=0.75,
-        width=width,
-        height=height,
-        seed=seed,
+    high_patchy = (
+        make_capacity_map(
+            family="patchy",
+            mean_capacity=0.75,
+            width=width,
+            height=height,
+            seed=seed,
+        )
     )
 
-    low_patchy = make_capacity_map(
-        family="patchy",
-        mean_capacity=0.30,
-        width=width,
-        height=height,
-        seed=seed + 17,
+    low_patchy = (
+        make_capacity_map(
+            family="patchy",
+            mean_capacity=0.30,
+            width=width,
+            height=height,
+            seed=(
+                seed
+                + 17
+            ),
+        )
     )
 
-    if kind == "central_low":
+    if (
+        kind
+        == "central_low"
+    ):
         mask = gaussian_mask(
             width,
             height,
             centres=[
                 (
-                    (width - 1) / 2.0,
-                    (height - 1) / 2.0,
+                    (
+                        width
+                        - 1
+                    )
+                    / 2.0,
+                    (
+                        height
+                        - 1
+                    )
+                    / 2.0,
                 )
             ],
-            sigma=min(
-                width,
-                height,
-            ) / 4.0,
+            sigma=(
+                min(
+                    width,
+                    height,
+                )
+                / 4.0
+            ),
             threshold=0.52,
         )
 
-        capacity = high_patchy.copy()
-        capacity[mask] = (
-            low_patchy[mask]
+        capacity = (
+            high_patchy.copy()
         )
 
+        capacity[
+            mask
+        ] = low_patchy[
+            mask
+        ]
+
         recovery = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.07,
         )
 
-        recovery[mask] = 0.02
+        recovery[
+            mask
+        ] = 0.02
 
         equilibrium = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.78,
         )
 
-        equilibrium[mask] = 0.48
+        equilibrium[
+            mask
+        ] = 0.48
 
         regions = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             "patchy_high",
             dtype=object,
         )
 
-        regions[mask] = (
-            "central_low"
-        )
+        regions[
+            mask
+        ] = "central_low"
 
-    elif kind == "central_high":
+    elif (
+        kind
+        == "central_high"
+    ):
         mask = gaussian_mask(
             width,
             height,
             centres=[
                 (
-                    (width - 1) / 2.0,
-                    (height - 1) / 2.0,
+                    (
+                        width
+                        - 1
+                    )
+                    / 2.0,
+                    (
+                        height
+                        - 1
+                    )
+                    / 2.0,
                 )
             ],
-            sigma=min(
-                width,
-                height,
-            ) / 4.0,
+            sigma=(
+                min(
+                    width,
+                    height,
+                )
+                / 4.0
+            ),
             threshold=0.52,
         )
 
-        capacity = low_patchy.copy()
+        capacity = (
+            low_patchy.copy()
+        )
 
         high_central = (
             make_capacity_map(
-                family="centralized",
-                mean_capacity=0.78,
+                family=(
+                    "centralized"
+                ),
+                mean_capacity=(
+                    0.78
+                ),
                 width=width,
                 height=height,
-                seed=seed + 31,
+                seed=(
+                    seed
+                    + 31
+                ),
             )
         )
 
-        capacity[mask] = (
-            high_central[mask]
-        )
+        capacity[
+            mask
+        ] = high_central[
+            mask
+        ]
 
         recovery = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.025,
         )
 
-        recovery[mask] = 0.08
+        recovery[
+            mask
+        ] = 0.08
 
         equilibrium = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.52,
         )
 
-        equilibrium[mask] = 0.82
+        equilibrium[
+            mask
+        ] = 0.82
 
         regions = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             "patchy_low",
             dtype=object,
         )
 
-        regions[mask] = (
-            "central_high"
-        )
+        regions[
+            mask
+        ] = "central_high"
 
-    elif kind == "split":
+    elif (
+        kind
+        == "split"
+    ):
         fragmented_low = (
             make_capacity_map(
-                family="fragmented",
-                mean_capacity=0.30,
+                family=(
+                    "fragmented"
+                ),
+                mean_capacity=(
+                    0.30
+                ),
                 width=width,
                 height=height,
-                seed=seed + 47,
+                seed=(
+                    seed
+                    + 47
+                ),
             )
         )
 
         mask = np.zeros(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             dtype=bool,
         )
 
@@ -455,52 +597,83 @@ def build_environment_maps(
             width // 2:
         ] = True
 
-        capacity = high_patchy.copy()
-        capacity[mask] = (
-            fragmented_low[mask]
+        capacity = (
+            high_patchy.copy()
         )
 
+        capacity[
+            mask
+        ] = fragmented_low[
+            mask
+        ]
+
         recovery = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.07,
         )
 
-        recovery[mask] = 0.02
+        recovery[
+            mask
+        ] = 0.02
 
         equilibrium = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.78,
         )
 
-        equilibrium[mask] = 0.48
+        equilibrium[
+            mask
+        ] = 0.48
 
         regions = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             "left_high_patchy",
             dtype=object,
         )
 
-        regions[mask] = (
+        regions[
+            mask
+        ] = (
             "right_low_fragmented"
         )
 
-    elif kind == "high_islands":
+    elif (
+        kind
+        == "high_islands"
+    ):
         centres = [
             (
-                width * 0.25,
-                height * 0.25,
+                width
+                * 0.25,
+                height
+                * 0.25,
             ),
             (
-                width * 0.75,
-                height * 0.25,
+                width
+                * 0.75,
+                height
+                * 0.25,
             ),
             (
-                width * 0.25,
-                height * 0.75,
+                width
+                * 0.25,
+                height
+                * 0.75,
             ),
             (
-                width * 0.75,
-                height * 0.75,
+                width
+                * 0.75,
+                height
+                * 0.75,
             ),
         ]
 
@@ -512,49 +685,75 @@ def build_environment_maps(
             threshold=0.48,
         )
 
-        capacity = low_patchy.copy()
+        capacity = (
+            low_patchy.copy()
+        )
 
         high_islands = (
             make_capacity_map(
-                family="decentralized",
-                mean_capacity=0.78,
+                family=(
+                    "decentralized"
+                ),
+                mean_capacity=(
+                    0.78
+                ),
                 width=width,
                 height=height,
-                seed=seed + 73,
+                seed=(
+                    seed
+                    + 73
+                ),
             )
         )
 
-        capacity[mask] = (
-            high_islands[mask]
-        )
+        capacity[
+            mask
+        ] = high_islands[
+            mask
+        ]
 
         recovery = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.025,
         )
 
-        recovery[mask] = 0.075
+        recovery[
+            mask
+        ] = 0.075
 
         equilibrium = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             0.52,
         )
 
-        equilibrium[mask] = 0.80
+        equilibrium[
+            mask
+        ] = 0.80
 
         regions = np.full(
-            (height, width),
+            (
+                height,
+                width,
+            ),
             "low_background",
             dtype=object,
         )
 
-        regions[mask] = (
-            "high_island"
-        )
+        regions[
+            mask
+        ] = "high_island"
 
     else:
         raise ValueError(
-            f"Unknown mixed scenario kind: {kind}"
+            "Unknown mixed "
+            "scenario kind: "
+            f"{kind}"
         )
 
     return (
@@ -607,21 +806,37 @@ def make_env(
         n_agents=population,
         max_steps=total_steps,
         regeneration_rate=recovery,
-        equilibrium_fraction=equilibrium,
-        coupling_rate=args.coupling,
-        cooperative_harvest_amount=args.cooperative_harvest,
-        defective_harvest_amount=args.defective_harvest,
-        metabolism_rate=args.metabolism,
-        initial_energy=args.initial_energy,
-        initial_resource_fraction=args.initial_resource_fraction,
+        equilibrium_fraction=(
+            equilibrium
+        ),
+        coupling_rate=(
+            args.coupling
+        ),
+        cooperative_harvest_amount=(
+            args.cooperative_harvest
+        ),
+        defective_harvest_amount=(
+            args.defective_harvest
+        ),
+        metabolism_rate=(
+            args.metabolism
+        ),
+        initial_energy=(
+            args.initial_energy
+        ),
+        initial_resource_fraction=(
+            args.initial_resource_fraction
+        ),
         capacity_map=capacity,
     )
 
-    observations, _ = env.reset(
-        seed=(
-            args.seed
-            + 100_000
-            + replicate
+    observations, _ = (
+        env.reset(
+            seed=(
+                args.seed
+                + 100_000
+                + replicate
+            )
         )
     )
 
@@ -636,27 +851,34 @@ def make_learners(
     env: EcoEnv,
     replicate: int,
     args,
-) -> dict[str, QLearningPolicy]:
+) -> dict[
+    str,
+    QLearningPolicy,
+]:
     learners = {}
 
     for index, name in enumerate(
         env.possible_agents
     ):
-        learners[name] = (
-            QLearningPolicy(
-                alpha=args.alpha,
-                gamma=args.gamma,
-                epsilon=args.epsilon,
-                epsilon_min=args.epsilon_min,
-                epsilon_decay=args.epsilon_decay,
-                seed=(
-                    args.seed
-                    + 200_000
-                    + 10_000
-                    * replicate
-                    + index
-                ),
-            )
+        learners[
+            name
+        ] = QLearningPolicy(
+            alpha=args.alpha,
+            gamma=args.gamma,
+            epsilon=args.epsilon,
+            epsilon_min=(
+                args.epsilon_min
+            ),
+            epsilon_decay=(
+                args.epsilon_decay
+            ),
+            seed=(
+                args.seed
+                + 200_000
+                + 10_000
+                * replicate
+                + index
+            ),
         )
 
     return learners
@@ -664,8 +886,17 @@ def make_learners(
 
 def system_metrics(
     env: EcoEnv,
-    actions: dict[str, int],
-    previous_actions: dict[str, int] | None,
+    actions: dict[
+        str,
+        int,
+    ],
+    previous_actions: (
+        dict[
+            str,
+            int,
+        ]
+        | None
+    ),
 ) -> dict:
     agents = list(
         env.model.by_name.values()
@@ -673,12 +904,14 @@ def system_metrics(
 
     wealth = [
         agent.wealth
-        for agent in agents
+        for agent
+        in agents
     ]
 
     energy = [
         agent.energy
-        for agent in agents
+        for agent
+        in agents
     ]
 
     cooperation_rate = float(
@@ -692,14 +925,22 @@ def system_metrics(
         )
     )
 
-    if previous_actions is None:
+    if (
+        previous_actions
+        is None
+    ):
         switch_rate = 0.0
+
     else:
         switch_rate = float(
             np.mean(
                 [
-                    actions[name]
-                    != previous_actions[name]
+                    actions[
+                        name
+                    ]
+                    != previous_actions[
+                        name
+                    ]
                     for name
                     in actions
                 ]
@@ -720,7 +961,9 @@ def system_metrics(
             * cooperation_rate
             - 1.0
         ),
-        "switch_rate": switch_rate,
+        "switch_rate": (
+            switch_rate
+        ),
         "wealth_gini": gini(
             wealth
         ),
@@ -753,8 +996,13 @@ def policy_metrics(
     ],
 ) -> dict:
     policies = {
-        name: learner.greedy_policy()
-        for name, learner
+        name: (
+            learner.greedy_policy()
+        )
+        for (
+            name,
+            learner,
+        )
         in learners.items()
     }
 
@@ -764,17 +1012,26 @@ def policy_metrics(
 
     pairwise = []
 
-    for first, second in combinations(
+    for (
+        first,
+        second,
+    ) in combinations(
         policy_list,
         2,
     ):
         distance = np.mean(
-            np.asarray(first)
-            != np.asarray(second)
+            np.asarray(
+                first
+            )
+            != np.asarray(
+                second
+            )
         )
 
         pairwise.append(
-            float(distance)
+            float(
+                distance
+            )
         )
 
     mean_hamming = (
@@ -804,7 +1061,9 @@ def policy_metrics(
 
     entropy = 0.0
 
-    for p in probabilities:
+    for p in (
+        probabilities
+    ):
         if p > 0:
             entropy -= (
                 p
@@ -814,22 +1073,31 @@ def policy_metrics(
             )
 
     max_types = min(
-        len(policy_list),
-        2 ** len(
+        len(
+            policy_list
+        ),
+        2
+        ** len(
             STATE_NAMES
         ),
     )
 
     if max_types > 1:
-        entropy /= math.log2(
-            max_types
+        entropy /= (
+            math.log2(
+                max_types
+            )
         )
+
     else:
         entropy = 0.0
 
     state_cooperation = {}
 
-    for state_index, state_name in enumerate(
+    for (
+        state_index,
+        state_name,
+    ) in enumerate(
         STATE_NAMES
     ):
         state_cooperation[
@@ -848,7 +1116,9 @@ def policy_metrics(
         )
 
     return {
-        "policies": policies,
+        "policies": (
+            policies
+        ),
         "unique_policy_count": len(
             counts
         ),
@@ -866,7 +1136,11 @@ def build_interaction_network(
     env: EcoEnv,
     policies: dict[
         str,
-        tuple[int, int, int],
+        tuple[
+            int,
+            int,
+            int,
+        ],
     ],
     *,
     radius: int,
@@ -874,9 +1148,10 @@ def build_interaction_network(
     """
     Ecological interaction network.
 
-    Two stationary agents are linked when they occupy the same tile or
-    tiles within the chosen Manhattan radius. This is not a communication
-    network. It represents potential coupling through a shared/local commons.
+    Two stationary agents are linked when they occupy the same tile
+    or tiles within the chosen Manhattan radius. This is not a
+    communication network. It represents potential coupling through
+    a shared/local commons.
     """
 
     graph = nx.Graph()
@@ -886,70 +1161,104 @@ def build_interaction_network(
     )
 
     for name in names:
-        agent = env.model.by_name[
-            name
-        ]
+        agent = (
+            env.model.by_name[
+                name
+            ]
+        )
 
-        policy = policies[name]
+        policy = (
+            policies[
+                name
+            ]
+        )
 
-        cooperation_preference = float(
-            np.mean(
-                np.asarray(
-                    policy
+        cooperation_preference = (
+            float(
+                np.mean(
+                    np.asarray(
+                        policy
+                    )
+                    == COOPERATE
                 )
-                == COOPERATE
             )
         )
 
         graph.add_node(
             name,
             x=int(
-                agent.position[0]
+                agent.position[
+                    0
+                ]
             ),
             y=int(
-                agent.position[1]
+                agent.position[
+                    1
+                ]
             ),
             cooperation_preference=(
                 cooperation_preference
             ),
         )
 
-    for first, second in combinations(
+    for (
+        first,
+        second,
+    ) in combinations(
         names,
         2,
     ):
-        a = env.model.by_name[
-            first
-        ]
+        a = (
+            env.model.by_name[
+                first
+            ]
+        )
 
-        b = env.model.by_name[
-            second
-        ]
+        b = (
+            env.model.by_name[
+                second
+            ]
+        )
 
         distance = (
             abs(
                 int(
-                    a.position[0]
-                    - b.position[0]
+                    a.position[
+                        0
+                    ]
+                    - b.position[
+                        0
+                    ]
                 )
             )
             + abs(
                 int(
-                    a.position[1]
-                    - b.position[1]
+                    a.position[
+                        1
+                    ]
+                    - b.position[
+                        1
+                    ]
                 )
             )
         )
 
-        if distance <= radius:
+        if (
+            distance
+            <= radius
+        ):
             graph.add_edge(
                 first,
                 second,
-                distance=distance,
-                weight=1.0
-                / (
+                distance=(
+                    distance
+                ),
+                weight=(
                     1.0
-                    + distance
+                    / (
+                        1.0
+                        + distance
+                    )
                 ),
             )
 
@@ -960,10 +1269,16 @@ def network_metrics(
     graph: nx.Graph,
     policies: dict[
         str,
-        tuple[int, int, int],
+        tuple[
+            int,
+            int,
+            int,
+        ],
     ],
 ) -> dict:
-    n = graph.number_of_nodes()
+    n = (
+        graph.number_of_nodes()
+    )
 
     if n == 0:
         return {
@@ -971,8 +1286,12 @@ def network_metrics(
             "network_components": 0,
             "largest_component_fraction": 0.0,
             "network_clustering": 0.0,
-            "network_policy_similarity": float("nan"),
-            "policy_assortativity": float("nan"),
+            "network_policy_similarity": float(
+                "nan"
+            ),
+            "policy_assortativity": float(
+                "nan"
+            ),
         }
 
     components = list(
@@ -983,7 +1302,9 @@ def network_metrics(
 
     largest = max(
         (
-            len(component)
+            len(
+                component
+            )
             for component
             in components
         ),
@@ -992,20 +1313,28 @@ def network_metrics(
 
     similarities = []
 
-    for first, second in graph.edges():
+    for (
+        first,
+        second,
+    ) in graph.edges():
         distance = float(
             np.mean(
                 np.asarray(
-                    policies[first]
+                    policies[
+                        first
+                    ]
                 )
                 != np.asarray(
-                    policies[second]
+                    policies[
+                        second
+                    ]
                 )
             )
         )
 
         similarities.append(
-            1.0 - distance
+            1.0
+            - distance
         )
 
     if similarities:
@@ -1014,23 +1343,29 @@ def network_metrics(
                 similarities
             )
         )
+
     else:
         policy_similarity = float(
             "nan"
         )
 
     preferences = [
-        graph.nodes[name][
+        graph.nodes[
+            name
+        ][
             "cooperation_preference"
         ]
-        for name in graph.nodes
+        for name
+        in graph.nodes
     ]
 
     if (
-        graph.number_of_edges() > 0
+        graph.number_of_edges()
+        > 0
         and np.std(
             preferences
-        ) > 1e-12
+        )
+        > 1e-12
     ):
         try:
             assortativity = float(
@@ -1039,10 +1374,12 @@ def network_metrics(
                     "cooperation_preference",
                 )
             )
+
         except Exception:
             assortativity = float(
                 "nan"
             )
+
     else:
         assortativity = float(
             "nan"
@@ -1080,16 +1417,24 @@ def region_for_agent(
     regions: np.ndarray,
     name: str,
 ) -> str:
-    agent = env.model.by_name[
-        name
-    ]
+    agent = (
+        env.model.by_name[
+            name
+        ]
+    )
 
-    x, y = agent.position
+    x, y = (
+        agent.position
+    )
 
     return str(
         regions[
-            int(y),
-            int(x),
+            int(
+                y
+            ),
+            int(
+                x
+            ),
         ]
     )
 
@@ -1127,23 +1472,30 @@ def run_condition(
 
     for time in range(
         1,
-        args.training_steps + 1,
+        args.training_steps
+        + 1,
     ):
         states = {
             name: resource_state(
-                observations[name]
+                observations[
+                    name
+                ]
             )
-            for name in env.agents
+            for name
+            in env.agents
         }
 
         actions = {
             name: learners[
                 name
             ].choose_action(
-                states[name],
+                states[
+                    name
+                ],
                 explore=True,
             )
-            for name in env.agents
+            for name
+            in env.agents
         }
 
         (
@@ -1158,14 +1510,21 @@ def run_condition(
 
         for name in states:
             done = (
-                terminations[name]
-                or truncations[name]
+                terminations[
+                    name
+                ]
+                or truncations[
+                    name
+                ]
             )
 
             if done:
                 next_state = (
-                    states[name]
+                    states[
+                        name
+                    ]
                 )
+
             else:
                 next_state = (
                     resource_state(
@@ -1178,9 +1537,15 @@ def run_condition(
             learners[
                 name
             ].update(
-                states[name],
-                actions[name],
-                rewards[name],
+                states[
+                    name
+                ],
+                actions[
+                    name
+                ],
+                rewards[
+                    name
+                ],
                 next_state,
                 done=done,
             )
@@ -1190,7 +1555,9 @@ def run_condition(
             ].decay_exploration()
 
         if (
-            time % args.record_every == 0
+            time
+            % args.record_every
+            == 0
             or time == 1
             or time
             == args.training_steps
@@ -1203,10 +1570,18 @@ def run_condition(
 
             timeseries.append(
                 {
-                    "scenario": scenario_name,
-                    "population": population,
-                    "replicate": replicate,
-                    "phase": "training",
+                    "scenario": (
+                        scenario_name
+                    ),
+                    "population": (
+                        population
+                    ),
+                    "replicate": (
+                        replicate
+                    ),
+                    "phase": (
+                        "training"
+                    ),
                     "time": time,
                     **metrics,
                 }
@@ -1228,23 +1603,30 @@ def run_condition(
 
     for evaluation_step in range(
         1,
-        args.evaluation_steps + 1,
+        args.evaluation_steps
+        + 1,
     ):
         states = {
             name: resource_state(
-                observations[name]
+                observations[
+                    name
+                ]
             )
-            for name in env.agents
+            for name
+            in env.agents
         }
 
         actions = {
             name: learners[
                 name
             ].choose_action(
-                states[name],
+                states[
+                    name
+                ],
                 explore=False,
             )
-            for name in env.agents
+            for name
+            in env.agents
         }
 
         (
@@ -1274,18 +1656,30 @@ def run_condition(
 
         if (
             evaluation_step
-            % args.record_every == 0
-            or evaluation_step == 1
+            % args.record_every
+            == 0
+            or evaluation_step
+            == 1
             or evaluation_step
             == args.evaluation_steps
         ):
             timeseries.append(
                 {
-                    "scenario": scenario_name,
-                    "population": population,
-                    "replicate": replicate,
-                    "phase": "evaluation",
-                    "time": absolute_time,
+                    "scenario": (
+                        scenario_name
+                    ),
+                    "population": (
+                        population
+                    ),
+                    "replicate": (
+                        replicate
+                    ),
+                    "phase": (
+                        "evaluation"
+                    ),
+                    "time": (
+                        absolute_time
+                    ),
                     **metrics,
                 }
             )
@@ -1298,31 +1692,57 @@ def run_condition(
             next_observations
         )
 
-    policy_info = policy_metrics(
-        learners
+    policy_info = (
+        policy_metrics(
+            learners
+        )
     )
 
-    graph = build_interaction_network(
-        env,
-        policy_info["policies"],
-        radius=args.network_radius,
+    graph = (
+        build_interaction_network(
+            env,
+            policy_info[
+                "policies"
+            ],
+            radius=(
+                args.network_radius
+            ),
+        )
     )
 
-    net_info = network_metrics(
-        graph,
-        policy_info["policies"],
+    net_info = (
+        network_metrics(
+            graph,
+            policy_info[
+                "policies"
+            ],
+        )
     )
 
     summary = {
-        "scenario": scenario_name,
-        "scenario_label": SCENARIOS[
+        "scenario": (
             scenario_name
-        ]["label"],
-        "scenario_group": SCENARIOS[
-            scenario_name
-        ]["group"],
-        "population": population,
-        "replicate": replicate,
+        ),
+        "scenario_label": (
+            SCENARIOS[
+                scenario_name
+            ][
+                "label"
+            ]
+        ),
+        "scenario_group": (
+            SCENARIOS[
+                scenario_name
+            ][
+                "group"
+            ]
+        ),
+        "population": (
+            population
+        ),
+        "replicate": (
+            replicate
+        ),
         "cooperation_rate": float(
             np.mean(
                 [
@@ -1457,45 +1877,70 @@ def run_condition(
 
     agent_rows = []
 
-    for name, learner in learners.items():
-        agent = env.model.by_name[
-            name
-        ]
+    for (
+        name,
+        learner,
+    ) in learners.items():
+        agent = (
+            env.model.by_name[
+                name
+            ]
+        )
 
-        policy = learner.greedy_policy()
+        policy = (
+            learner.greedy_policy()
+        )
 
         agent_rows.append(
             {
-                "scenario": scenario_name,
-                "population": population,
-                "replicate": replicate,
+                "scenario": (
+                    scenario_name
+                ),
+                "population": (
+                    population
+                ),
+                "replicate": (
+                    replicate
+                ),
                 "agent": name,
                 "x": int(
-                    agent.position[0]
+                    agent.position[
+                        0
+                    ]
                 ),
                 "y": int(
-                    agent.position[1]
+                    agent.position[
+                        1
+                    ]
                 ),
-                "region": region_for_agent(
-                    env,
-                    regions,
-                    name,
+                "region": (
+                    region_for_agent(
+                        env,
+                        regions,
+                        name,
+                    )
                 ),
                 "policy_scarce": (
                     "C"
-                    if policy[0]
+                    if policy[
+                        0
+                    ]
                     == COOPERATE
                     else "D"
                 ),
                 "policy_moderate": (
                     "C"
-                    if policy[1]
+                    if policy[
+                        1
+                    ]
                     == COOPERATE
                     else "D"
                 ),
                 "policy_abundant": (
                     "C"
-                    if policy[2]
+                    if policy[
+                        2
+                    ]
                     == COOPERATE
                     else "D"
                 ),
@@ -1524,8 +1969,12 @@ def run_condition(
 
 
 def aggregate_runs(
-    rows: list[dict],
-) -> list[dict]:
+    rows: list[
+        dict
+    ],
+) -> list[
+    dict
+]:
     metrics = [
         "cooperation_rate",
         "collective_action_entropy",
@@ -1554,10 +2003,18 @@ def aggregate_runs(
 
     for row in rows:
         key = (
-            row["scenario"],
-            row["scenario_label"],
-            row["scenario_group"],
-            row["population"],
+            row[
+                "scenario"
+            ],
+            row[
+                "scenario_label"
+            ],
+            row[
+                "scenario_group"
+            ],
+            row[
+                "population"
+            ],
         )
 
         groups.setdefault(
@@ -1569,7 +2026,10 @@ def aggregate_runs(
 
     output = []
 
-    for key, group in groups.items():
+    for (
+        key,
+        group,
+    ) in groups.items():
         (
             scenario,
             label,
@@ -1578,20 +2038,33 @@ def aggregate_runs(
         ) = key
 
         result = {
-            "scenario": scenario,
-            "scenario_label": label,
-            "scenario_group": scenario_group,
-            "population": population,
+            "scenario": (
+                scenario
+            ),
+            "scenario_label": (
+                label
+            ),
+            "scenario_group": (
+                scenario_group
+            ),
+            "population": (
+                population
+            ),
             "replicates": len(
                 group
             ),
         }
 
-        for metric in metrics:
+        for metric in (
+            metrics
+        ):
             values = np.array(
                 [
-                    row[metric]
-                    for row in group
+                    row[
+                        metric
+                    ]
+                    for row
+                    in group
                 ],
                 dtype=float,
             )
@@ -1602,10 +2075,16 @@ def aggregate_runs(
                 )
             ]
 
-            if len(finite) == 0:
+            if (
+                len(
+                    finite
+                )
+                == 0
+            ):
                 mean = float(
                     "nan"
                 )
+
                 sd = float(
                     "nan"
                 )
@@ -1621,7 +2100,10 @@ def aggregate_runs(
                             ddof=1
                         )
                     )
-                    if len(finite) > 1
+                    if len(
+                        finite
+                    )
+                    > 1
                     else 0.0
                 )
 
@@ -1643,52 +2125,84 @@ def aggregate_runs(
             row[
                 "scenario_group"
             ],
-            row["scenario"],
-            row["population"],
+            row[
+                "scenario"
+            ],
+            row[
+                "population"
+            ],
         ),
     )
 
 
 def plot_metric(
-    rows: list[dict],
+    rows: list[
+        dict
+    ],
     *,
     metric: str,
     ylabel: str,
     filename: str,
-    paths: dict[str, Path],
+    paths: dict[
+        str,
+        Path,
+    ],
 ) -> None:
     fig, axes = plt.subplots(
         1,
         2,
-        figsize=(13, 5.5),
+        figsize=(
+            13,
+            5.5,
+        ),
         sharey=True,
         layout="constrained",
     )
 
-    for ax, group_name in zip(
+    for (
+        ax,
+        group_name,
+    ) in zip(
         axes,
-        ["single", "mixed"],
+        [
+            "single",
+            "mixed",
+        ],
     ):
         scenarios = [
             name
-            for name, spec
+            for (
+                name,
+                spec,
+            )
             in SCENARIOS.items()
-            if spec["group"]
-            == group_name
+            if (
+                spec[
+                    "group"
+                ]
+                == group_name
+            )
         ]
 
-        for scenario in scenarios:
+        for scenario in (
+            scenarios
+        ):
             subset = sorted(
                 [
                     row
-                    for row in rows
+                    for row
+                    in rows
                     if (
-                        row["scenario"]
+                        row[
+                            "scenario"
+                        ]
                         == scenario
                     )
                 ],
                 key=lambda row: (
-                    row["population"]
+                    row[
+                        "population"
+                    ]
                 ),
             )
 
@@ -1697,33 +2211,47 @@ def plot_metric(
 
             ax.errorbar(
                 [
-                    row["population"]
-                    for row in subset
+                    row[
+                        "population"
+                    ]
+                    for row
+                    in subset
                 ],
                 [
                     row[
                         f"{metric}_mean"
                     ]
-                    for row in subset
+                    for row
+                    in subset
                 ],
                 yerr=[
                     row[
                         f"{metric}_sd"
                     ]
-                    for row in subset
+                    for row
+                    in subset
                 ],
                 marker="o",
                 capsize=3,
-                label=SCENARIOS[
-                    scenario
-                ]["label"],
+                label=(
+                    SCENARIOS[
+                        scenario
+                    ][
+                        "label"
+                    ]
+                ),
             )
 
         ax.set_title(
             (
                 "Single-regime environments"
-                if group_name == "single"
-                else "Mixed-regime environments"
+                if (
+                    group_name
+                    == "single"
+                )
+                else (
+                    "Mixed-regime environments"
+                )
             )
         )
 
@@ -1735,11 +2263,15 @@ def plot_metric(
             alpha=0.25
         )
 
-    axes[0].set_ylabel(
+    axes[
+        0
+    ].set_ylabel(
         ylabel
     )
 
-    axes[1].legend(
+    axes[
+        1
+    ].legend(
         loc="center left",
         bbox_to_anchor=(
             1.02,
@@ -1749,7 +2281,9 @@ def plot_metric(
     )
 
     path = (
-        paths["figures"]
+        paths[
+            "figures"
+        ]
         / filename
     )
 
@@ -1769,15 +2303,26 @@ def plot_metric(
 
 
 def plot_state_conditioned_policy(
-    rows: list[dict],
-    paths: dict[str, Path],
+    rows: list[
+        dict
+    ],
+    paths: dict[
+        str,
+        Path,
+    ],
 ) -> None:
     ordered = sorted(
         rows,
         key=lambda row: (
-            row["scenario_group"],
-            row["scenario"],
-            row["population"],
+            row[
+                "scenario_group"
+            ],
+            row[
+                "scenario"
+            ],
+            row[
+                "population"
+            ],
         ),
     )
 
@@ -1794,7 +2339,8 @@ def plot_state_conditioned_policy(
                     "policy_cooperate_abundant_mean"
                 ],
             ]
-            for row in ordered
+            for row
+            in ordered
         ],
         dtype=float,
     )
@@ -1804,7 +2350,8 @@ def plot_state_conditioned_policy(
             f"{row['scenario']} "
             f"N={row['population']}"
         )
-        for row in ordered
+        for row
+        in ordered
     ]
 
     fig, ax = plt.subplots(
@@ -1829,7 +2376,9 @@ def plot_state_conditioned_policy(
     )
 
     ax.set_xticks(
-        range(3)
+        range(
+            3
+        )
     )
 
     ax.set_xticklabels(
@@ -1861,20 +2410,27 @@ def plot_state_conditioned_policy(
     )
 
     ax.set_title(
-        "Fraction of learned greedy policies choosing cooperation"
+        "Fraction of learned greedy policies "
+        "choosing cooperation"
     )
 
     fig.colorbar(
         image,
         ax=ax,
         label=(
-            "Fraction choosing cooperative extraction"
+            "Fraction choosing "
+            "cooperative extraction"
         ),
     )
 
     path = (
-        paths["figures"]
-        / "07_state_conditioned_cooperation.png"
+        paths[
+            "figures"
+        ]
+        / (
+            "07_state_conditioned_"
+            "cooperation.png"
+        )
     )
 
     fig.savefig(
@@ -1894,7 +2450,10 @@ def plot_state_conditioned_policy(
 
 def save_environment_catalog(
     args,
-    paths: dict[str, Path],
+    paths: dict[
+        str,
+        Path,
+    ],
 ) -> None:
     names = list(
         SCENARIOS
@@ -1903,23 +2462,32 @@ def save_environment_catalog(
     fig, axes = plt.subplots(
         2,
         4,
-        figsize=(14, 7),
+        figsize=(
+            14,
+            7,
+        ),
         layout="constrained",
     )
 
     image = None
 
-    for ax, name in zip(
+    for (
+        ax,
+        name,
+    ) in zip(
         axes.ravel(),
         names,
     ):
-        capacity, _, _, _ = (
-            build_environment_maps(
-                name,
-                width=args.width,
-                height=args.height,
-                seed=args.seed,
-            )
+        (
+            capacity,
+            _,
+            _,
+            _,
+        ) = build_environment_maps(
+            name,
+            width=args.width,
+            height=args.height,
+            seed=args.seed,
         )
 
         image = ax.imshow(
@@ -1931,11 +2499,18 @@ def save_environment_catalog(
         ax.set_title(
             SCENARIOS[
                 name
-            ]["label"]
+            ][
+                "label"
+            ]
         )
 
-        ax.set_xticks([])
-        ax.set_yticks([])
+        ax.set_xticks(
+            []
+        )
+
+        ax.set_yticks(
+            []
+        )
 
     fig.suptitle(
         "Q-learning baseline environments"
@@ -1944,13 +2519,20 @@ def save_environment_catalog(
     fig.colorbar(
         image,
         ax=axes,
-        label="Carrying capacity",
+        label=(
+            "Carrying capacity"
+        ),
         shrink=0.82,
     )
 
     path = (
-        paths["figures"]
-        / "00_environment_catalog.png"
+        paths[
+            "figures"
+        ]
+        / (
+            "00_environment_"
+            "catalog.png"
+        )
     )
 
     fig.savefig(
@@ -1970,24 +2552,36 @@ def save_environment_catalog(
 
 def snapshot(
     env: EcoEnv,
-    actions: dict[str, int],
+    actions: dict[
+        str,
+        int,
+    ],
 ) -> dict:
     return {
         "resource": (
             env.model.resource.copy()
         ),
         "positions": {
-            name: agent.position.copy()
-            for name, agent
+            name: (
+                agent.position.copy()
+            )
+            for (
+                name,
+                agent,
+            )
             in env.model.by_name.items()
         },
-        "actions": actions.copy(),
+        "actions": (
+            actions.copy()
+        ),
     }
 
 
 def render_gif_frame(
     state: dict,
-    history: list[dict],
+    history: list[
+        dict
+    ],
     frame_index: int,
     scenario: str,
     population: int,
@@ -1995,57 +2589,86 @@ def render_gif_frame(
     fig, axes = plt.subplots(
         1,
         2,
-        figsize=(10, 4.8),
+        figsize=(
+            10,
+            4.8,
+        ),
         layout="constrained",
     )
 
-    image = axes[0].imshow(
-        state["resource"],
+    image = axes[
+        0
+    ].imshow(
+        state[
+            "resource"
+        ],
         vmin=0.0,
         vmax=1.0,
     )
 
-    for name, position in (
-        state["positions"].items()
-    ):
+    for (
+        name,
+        position,
+    ) in state[
+        "positions"
+    ].items():
         action = state[
             "actions"
-        ][name]
+        ][
+            name
+        ]
 
         marker = (
             "o"
-            if action
-            == COOPERATE
+            if (
+                action
+                == COOPERATE
+            )
             else "x"
         )
 
-        # Small deterministic display offset helps reveal co-located agents.
+        # Small deterministic display offset helps reveal
+        # co-located agents.
         agent_index = int(
-            name.split("_")[-1]
+            name.split(
+                "_"
+            )[
+                -1
+            ]
         )
 
         dx = (
             (
-                agent_index % 3
+                agent_index
+                % 3
             )
             - 1
         ) * 0.08
 
         dy = (
             (
-                agent_index // 3
+                (
+                    agent_index
+                    // 3
+                )
+                % 3
             )
-            % 3
             - 1
         ) * 0.08
 
-        axes[0].scatter(
+        axes[
+            0
+        ].scatter(
             float(
-                position[0]
+                position[
+                    0
+                ]
             )
             + dx,
             float(
-                position[1]
+                position[
+                    1
+                ]
             )
             + dy,
             marker=marker,
@@ -2053,25 +2676,44 @@ def render_gif_frame(
             linewidths=1.0,
         )
 
-    axes[0].set_title(
+    axes[
+        0
+    ].set_title(
         "Resource field and actions\n"
         "circle = cooperate, x = defect"
     )
 
-    axes[0].set_xticks([])
-    axes[0].set_yticks([])
+    axes[
+        0
+    ].set_xticks(
+        []
+    )
+
+    axes[
+        0
+    ].set_yticks(
+        []
+    )
 
     fig.colorbar(
         image,
-        ax=axes[0],
-        label="Resource stock",
+        ax=axes[
+            0
+        ],
+        label=(
+            "Resource stock"
+        ),
         fraction=0.046,
     )
 
     times = [
-        row["time"]
-        for row in history[
-            : frame_index + 1
+        row[
+            "time"
+        ]
+        for row
+        in history[
+            : frame_index
+            + 1
         ]
     ]
 
@@ -2079,8 +2721,10 @@ def render_gif_frame(
         row[
             "cooperation_rate"
         ]
-        for row in history[
-            : frame_index + 1
+        for row
+        in history[
+            : frame_index
+            + 1
         ]
     ]
 
@@ -2088,56 +2732,84 @@ def render_gif_frame(
         row[
             "collective_order"
         ]
-        for row in history[
-            : frame_index + 1
+        for row
+        in history[
+            : frame_index
+            + 1
         ]
     ]
 
-    axes[1].plot(
+    axes[
+        1
+    ].plot(
         times,
         cooperation,
-        label="Cooperation rate",
+        label=(
+            "Cooperation rate"
+        ),
     )
 
-    axes[1].plot(
+    axes[
+        1
+    ].plot(
         times,
         order,
-        label="Collective order",
+        label=(
+            "Collective order"
+        ),
     )
 
-    axes[1].set_xlim(
+    axes[
+        1
+    ].set_xlim(
         0,
-        history[-1][
+        history[
+            -1
+        ][
             "time"
         ],
     )
 
-    axes[1].set_ylim(
+    axes[
+        1
+    ].set_ylim(
         0,
         1,
     )
 
-    axes[1].set_xlabel(
+    axes[
+        1
+    ].set_xlabel(
         "Training step"
     )
 
-    axes[1].set_ylabel(
+    axes[
+        1
+    ].set_ylabel(
         "Rate"
     )
 
-    axes[1].set_title(
+    axes[
+        1
+    ].set_title(
         "Collective learning dynamics"
     )
 
-    axes[1].grid(
+    axes[
+        1
+    ].grid(
         alpha=0.25
     )
 
-    axes[1].legend()
+    axes[
+        1
+    ].legend()
 
     fig.suptitle(
-        f"{scenario} | N={population} | "
-        f"step={history[frame_index]['time']}"
+        f"{scenario} | "
+        f"N={population} | "
+        f"step="
+        f"{history[frame_index]['time']}"
     )
 
     fig.canvas.draw()
@@ -2155,7 +2827,10 @@ def render_gif_frame(
         height,
         width,
         4,
-    )[..., :3].copy()
+    )[
+        ...,
+        :3,
+    ].copy()
 
     plt.close(
         fig
@@ -2169,10 +2844,14 @@ def make_learning_gif(
     population: int,
     replicate: int,
     args,
-    paths: dict[str, Path],
+    paths: dict[
+        str,
+        Path,
+    ],
 ) -> None:
     try:
         import imageio.v2 as imageio
+
     except ImportError as exc:
         raise RuntimeError(
             "GIF export requires imageio and pillow. "
@@ -2212,27 +2891,35 @@ def make_learning_gif(
 
     histories = []
     states = []
+
     previous_actions = None
 
     for time in range(
         1,
-        args.gif_steps + 1,
+        args.gif_steps
+        + 1,
     ):
         current_states = {
             name: resource_state(
-                observations[name]
+                observations[
+                    name
+                ]
             )
-            for name in env.agents
+            for name
+            in env.agents
         }
 
         actions = {
             name: learners[
                 name
             ].choose_action(
-                current_states[name],
+                current_states[
+                    name
+                ],
                 explore=True,
             )
-            for name in env.agents
+            for name
+            in env.agents
         }
 
         (
@@ -2245,16 +2932,25 @@ def make_learning_gif(
             actions
         )
 
-        for name in current_states:
+        for name in (
+            current_states
+        ):
             done = (
-                terminations[name]
-                or truncations[name]
+                terminations[
+                    name
+                ]
+                or truncations[
+                    name
+                ]
             )
 
             if done:
                 next_state = (
-                    current_states[name]
+                    current_states[
+                        name
+                    ]
                 )
+
             else:
                 next_state = (
                     resource_state(
@@ -2267,9 +2963,15 @@ def make_learning_gif(
             learners[
                 name
             ].update(
-                current_states[name],
-                actions[name],
-                rewards[name],
+                current_states[
+                    name
+                ],
+                actions[
+                    name
+                ],
+                rewards[
+                    name
+                ],
                 next_state,
                 done=done,
             )
@@ -2280,9 +2982,11 @@ def make_learning_gif(
 
         if (
             time == 1
-            or time
-            % args.frame_every
-            == 0
+            or (
+                time
+                % args.frame_every
+                == 0
+            )
             or time
             == args.gif_steps
         ):
@@ -2294,7 +2998,9 @@ def make_learning_gif(
 
             histories.append(
                 {
-                    "time": time,
+                    "time": (
+                        time
+                    ),
                     **metrics,
                 }
             )
@@ -2317,7 +3023,9 @@ def make_learning_gif(
     frames = []
 
     frame_dir = (
-        paths["frames"]
+        paths[
+            "frames"
+        ]
         / (
             f"{scenario_name}"
             f"_N{population}"
@@ -2325,36 +3033,50 @@ def make_learning_gif(
         )
     )
 
-    if args.save_frames:
+    if (
+        args.save_frames
+    ):
         frame_dir.mkdir(
             parents=True,
             exist_ok=True,
         )
 
-    for index, state in enumerate(
+    for (
+        index,
+        state,
+    ) in enumerate(
         states
     ):
-        frame = render_gif_frame(
-            state,
-            histories,
-            index,
-            scenario_name,
-            population,
+        frame = (
+            render_gif_frame(
+                state,
+                histories,
+                index,
+                scenario_name,
+                population,
+            )
         )
 
         frames.append(
             frame
         )
 
-        if args.save_frames:
+        if (
+            args.save_frames
+        ):
             imageio.imwrite(
                 frame_dir
-                / f"frame_{index:04d}.png",
+                / (
+                    f"frame_"
+                    f"{index:04d}.png"
+                ),
                 frame,
             )
 
     path = (
-        paths["gifs"]
+        paths[
+            "gifs"
+        ]
         / (
             f"{scenario_name}"
             f"_N{population}"
@@ -2381,7 +3103,8 @@ def make_learning_gif(
     )
 
 
-def main() -> None:
+def main(
+) -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Independent Q-learning baseline "
@@ -2567,20 +3290,32 @@ def main() -> None:
 
     parser.add_argument(
         "--save-frames",
-        action="store_true",
+        action=(
+            "store_true"
+        ),
     )
 
     parser.add_argument(
         "--gif-only",
-        action="store_true",
+        action=(
+            "store_true"
+        ),
     )
 
-    args = parser.parse_args()
+    args = (
+        parser.parse_args()
+    )
 
-    for scenario in args.scenarios:
-        if scenario not in SCENARIOS:
+    for scenario in (
+        args.scenarios
+    ):
+        if (
+            scenario
+            not in SCENARIOS
+        ):
             raise ValueError(
-                f"Unknown scenario: {scenario}"
+                f"Unknown scenario: "
+                f"{scenario}"
             )
 
     if (
@@ -2589,12 +3324,15 @@ def main() -> None:
         not in SCENARIOS
     ):
         raise ValueError(
-            f"Unknown GIF scenario: "
+            "Unknown GIF scenario: "
             f"{args.make_gif}"
         )
 
-    paths = make_run_directories(
-        args.run_name or None
+    paths = (
+        make_run_directories(
+            args.run_name
+            or None
+        )
     )
 
     config = vars(
@@ -2606,7 +3344,9 @@ def main() -> None:
     ] = SCENARIOS
 
     with (
-        paths["root"]
+        paths[
+            "root"
+        ]
         / "config.json"
     ).open(
         "w"
@@ -2622,8 +3362,12 @@ def main() -> None:
         paths,
     )
 
-    if args.gif_only:
-        if not args.make_gif:
+    if (
+        args.gif_only
+    ):
+        if not (
+            args.make_gif
+        ):
             raise ValueError(
                 "--gif-only requires "
                 "--make-gif SCENARIO."
@@ -2708,89 +3452,126 @@ def main() -> None:
     )
 
     write_csv(
-        paths["data"]
+        paths[
+            "data"
+        ]
         / "run_summary.csv",
         run_rows,
     )
 
     write_csv(
-        paths["data"]
+        paths[
+            "data"
+        ]
         / "aggregate_summary.csv",
         aggregate_rows,
     )
 
     write_csv(
-        paths["data"]
+        paths[
+            "data"
+        ]
         / "timeseries.csv",
         timeseries_rows,
     )
 
     write_csv(
-        paths["data"]
+        paths[
+            "data"
+        ]
         / "agent_policies.csv",
         agent_rows,
     )
 
     plot_metric(
         aggregate_rows,
-        metric="cooperation_rate",
-        ylabel="Cooperation rate",
-        filename=(
-            "01_cooperation_vs_population.png"
+        metric=(
+            "cooperation_rate"
         ),
-        paths=paths,
-    )
-
-    plot_metric(
-        aggregate_rows,
-        metric="mean_welfare",
-        ylabel="Mean energy (welfare proxy)",
-        filename=(
-            "02_welfare_vs_population.png"
-        ),
-        paths=paths,
-    )
-
-    plot_metric(
-        aggregate_rows,
-        metric="wealth_gini",
-        ylabel="Wealth Gini",
-        filename=(
-            "03_wealth_gini_vs_population.png"
-        ),
-        paths=paths,
-    )
-
-    plot_metric(
-        aggregate_rows,
-        metric="policy_hamming_mean",
         ylabel=(
-            "Mean pairwise policy Hamming distance"
+            "Cooperation rate"
         ),
         filename=(
-            "04_policy_heterogeneity_vs_population.png"
+            "01_cooperation_"
+            "vs_population.png"
         ),
         paths=paths,
     )
 
     plot_metric(
         aggregate_rows,
-        metric="collective_order",
-        ylabel="Collective order parameter",
-        filename=(
-            "05_collective_order_vs_population.png"
+        metric=(
+            "mean_welfare"
         ),
-        paths=paths,
-    )
-
-    plot_metric(
-        aggregate_rows,
-        metric="network_policy_similarity",
         ylabel=(
-            "Interaction-network policy similarity"
+            "Mean energy "
+            "(welfare proxy)"
         ),
         filename=(
-            "06_network_policy_similarity_vs_population.png"
+            "02_welfare_"
+            "vs_population.png"
+        ),
+        paths=paths,
+    )
+
+    plot_metric(
+        aggregate_rows,
+        metric=(
+            "wealth_gini"
+        ),
+        ylabel=(
+            "Wealth Gini"
+        ),
+        filename=(
+            "03_wealth_gini_"
+            "vs_population.png"
+        ),
+        paths=paths,
+    )
+
+    plot_metric(
+        aggregate_rows,
+        metric=(
+            "policy_hamming_mean"
+        ),
+        ylabel=(
+            "Mean pairwise policy "
+            "Hamming distance"
+        ),
+        filename=(
+            "04_policy_heterogeneity_"
+            "vs_population.png"
+        ),
+        paths=paths,
+    )
+
+    plot_metric(
+        aggregate_rows,
+        metric=(
+            "collective_order"
+        ),
+        ylabel=(
+            "Collective order parameter"
+        ),
+        filename=(
+            "05_collective_order_"
+            "vs_population.png"
+        ),
+        paths=paths,
+    )
+
+    plot_metric(
+        aggregate_rows,
+        metric=(
+            "network_policy_similarity"
+        ),
+        ylabel=(
+            "Interaction-network "
+            "policy similarity"
+        ),
+        filename=(
+            "06_network_policy_similarity_"
+            "vs_population.png"
         ),
         paths=paths,
     )
@@ -2800,7 +3581,9 @@ def main() -> None:
         paths,
     )
 
-    if args.make_gif:
+    if (
+        args.make_gif
+    ):
         make_learning_gif(
             args.make_gif,
             args.gif_population,
