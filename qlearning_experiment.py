@@ -21,8 +21,7 @@ from Cognitive_tools.qlearning import (
     STATE_NAMES,
     resource_state,
 )
-from ecology_patch_scan import make_capacity_map
-
+from Cognitive_tools.ecology import make_capacity_map
 
 RESULTS_ROOT = (
     Path("results")

@@ -8,12 +8,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from Cognitive_tools import EcoEnv
-from ecology_patch_scan import (
+from Cognitive_tools.ecology import (
     ABUNDANCE_LEVELS,
     PATTERN_FAMILIES,
     make_capacity_map,
 )
-
 
 RESULTS_DIR = Path("results")
 ANIMATIONS_DIR = RESULTS_DIR / "agent_animations"

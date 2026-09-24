@@ -1,19 +1,71 @@
+"""
+Stationary-agent common-pool-resource model.
+
+`EcoModel` owns simulation state:
+
+- resource stock;
+- stationary agents;
+- extraction;
+- wealth;
+- energy/welfare bookkeeping.
+
+The actual renewable-resource equation is implemented once, in
+`Cognitive_tools.ecology.resource_step`.
+
+Scientific provenance
+---------------------
+The renewable-resource feedback is conceptually related to:
+
+    Tilman, A. R., Plotkin, J. B., & Akcay, E. (2020).
+    "Evolutionary games with environmental feedbacks."
+    Nature Communications, 11, 915.
+    https://doi.org/10.1038/s41467-020-14531-6
+
+and:
+
+    Tu, C., Wu, Y., Chen, R., Fan, Y., & Yang, Y. (2025).
+    "Balancing Resource and Strategy: Coevolution for Sustainable
+    Common-Pool Resource Management."
+    Earth Systems and Environment, 9, 1529-1542.
+    https://doi.org/10.1007/s41748-024-00489-8
+
+This source file is not copied from either work. See PROVENANCE.md.
+"""
+
 from __future__ import annotations
 
 import mesa
 import numpy as np
 
+from .ecology import (
+    coerce_capacity_map,
+    coerce_parameter_map,
+    depletion_from_equilibrium,
+    resource_step,
+)
+
 
 LOW_EXTRACT = 0
 HIGH_EXTRACT = 1
 
-# Backward-compatible names used elsewhere in the project.
+# Temporary backward-compatible aliases.
+#
+# These remain during the ecological refactor so that this commit changes
+# no behavioral semantics. A later terminology-cleanup commit should remove
+# them from the mechanical model and use LOW_EXTRACT/HIGH_EXTRACT directly.
 COOPERATE = LOW_EXTRACT
 DEFECT = HIGH_EXTRACT
 
 
 class EcoAgent(mesa.Agent):
-    """Stationary agent with wealth, an energy reserve, and welfare records."""
+    """
+    Stationary resource user.
+
+    Wealth is cumulative realized extraction.
+
+    Energy and metabolic variables are diagnostic welfare quantities and
+    do not enter the current Q-learning reward.
+    """
 
     def __init__(
         self,
@@ -23,17 +75,29 @@ class EcoAgent(mesa.Agent):
         initial_energy: float,
         energy_capacity: float,
     ):
-        super().__init__(model)
+        super().__init__(
+            model
+        )
 
         self.name = name
-        self.position = np.array(position, dtype=int)
+
+        self.position = np.array(
+            position,
+            dtype=int,
+        )
 
         self.wealth = 0.0
 
-        self.energy_capacity = float(energy_capacity)
-        self.energy = min(float(initial_energy), self.energy_capacity)
+        self.energy_capacity = float(
+            energy_capacity
+        )
 
-        # Welfare accounting. These do not enter the Q-learning reward.
+        self.energy = min(
+            float(initial_energy),
+            self.energy_capacity,
+        )
+
+        # Welfare accounting.
         self.metabolic_consumption = 0.0
         self.metabolic_shortfall = 0.0
         self.need_satisfaction = 1.0
@@ -41,15 +105,22 @@ class EcoAgent(mesa.Agent):
         self.deprivation_steps = 0
 
     @property
-    def reserve_welfare(self) -> float:
-        """Bounded energy-reserve adequacy in [0, 1]."""
+    def reserve_welfare(
+        self,
+    ) -> float:
+        """
+        Energy reserve as a fraction of maximum reserve capacity.
+        """
 
         if self.energy_capacity <= 0.0:
             return 0.0
 
         return float(
             np.clip(
-                self.energy / self.energy_capacity,
+                (
+                    self.energy
+                    / self.energy_capacity
+                ),
                 0.0,
                 1.0,
             )
@@ -58,23 +129,33 @@ class EcoAgent(mesa.Agent):
 
 class EcoModel(mesa.Model):
     """
-    Stationary-agent common-pool resource model.
+    Spatial common-pool-resource model with stationary users.
 
-    Agents do not move. At each timestep they choose one of two extraction
-    intensities:
+    Timestep ordering
+    -----------------
+    Each timestep preserves the current baseline ordering:
 
-        LOW_EXTRACT  = low extraction / cooperation proxy
-        HIGH_EXTRACT = high extraction / defection proxy
+        1. requested extraction is resolved;
+        2. realized harvest is removed from the resource;
+        3. realized harvest enters wealth and energy;
+        4. metabolism is applied;
+        5. the remaining resource undergoes ecological dynamics.
 
-    Welfare and wealth are intentionally separate:
+    Agents do not move.
 
-    - wealth = cumulative resource appropriated;
-    - energy = bounded reserve used to satisfy metabolism;
-    - need_satisfaction = fraction of current metabolic need met;
-    - cumulative_shortfall = cumulative unmet metabolic need.
+    Actions
+    -------
+    LOW_EXTRACT
+        Small requested harvest.
 
-    The Q-learning reward remains realized harvest, so welfare is an outcome,
-    not an objective supplied to the learner.
+    HIGH_EXTRACT
+        Larger requested harvest.
+
+    Reward
+    ------
+    The PettingZoo wrapper uses realized harvest as the Q-learning reward.
+
+    Welfare and ecological sustainability are outcomes, not reward terms.
     """
 
     def __init__(
@@ -94,66 +175,161 @@ class EcoModel(mesa.Model):
         capacity: np.ndarray | None = None,
         seed: int | None = None,
     ):
-        super().__init__(rng=seed)
+        super().__init__(
+            rng=seed
+        )
+
+        # -------------------------------------------------------------
+        # Validate scalar model settings
+        # -------------------------------------------------------------
 
         if width <= 0 or height <= 0:
-            raise ValueError("width and height must be positive.")
+            raise ValueError(
+                "width and height must be positive."
+            )
+
         if n_agents <= 0:
-            raise ValueError("n_agents must be positive.")
+            raise ValueError(
+                "n_agents must be positive."
+            )
+
         if not 0.0 <= coupling_rate <= 1.0:
-            raise ValueError("coupling_rate must be between 0 and 1.")
+            raise ValueError(
+                "coupling_rate must be between 0 and 1."
+            )
+
         if cooperative_harvest_amount < 0.0:
-            raise ValueError("cooperative_harvest_amount must be non-negative.")
-        if defective_harvest_amount < cooperative_harvest_amount:
             raise ValueError(
-                "defective_harvest_amount must be >= cooperative_harvest_amount."
+                "cooperative_harvest_amount "
+                "must be non-negative."
             )
+
+        if (
+            defective_harvest_amount
+            < cooperative_harvest_amount
+        ):
+            raise ValueError(
+                "defective_harvest_amount must be "
+                ">= cooperative_harvest_amount."
+            )
+
         if metabolism_rate < 0.0:
-            raise ValueError("metabolism_rate must be non-negative.")
-        if energy_capacity <= 0.0:
-            raise ValueError("energy_capacity must be positive.")
-        if initial_energy < 0.0 or initial_energy > energy_capacity:
             raise ValueError(
-                "initial_energy must be between 0 and energy_capacity."
+                "metabolism_rate must be non-negative."
             )
-        if not 0.0 <= initial_resource_fraction <= 1.0:
-            raise ValueError("initial_resource_fraction must be between 0 and 1.")
 
-        self.width = width
-        self.height = height
-        self.n_agents = n_agents
+        if energy_capacity <= 0.0:
+            raise ValueError(
+                "energy_capacity must be positive."
+            )
 
-        self.coupling_rate = float(coupling_rate)
-        self.cooperative_harvest_amount = float(cooperative_harvest_amount)
-        self.defective_harvest_amount = float(defective_harvest_amount)
-        self.metabolism_rate = float(metabolism_rate)
-        self.initial_energy = float(initial_energy)
-        self.energy_capacity = float(energy_capacity)
-        self.initial_resource_fraction = float(initial_resource_fraction)
+        if (
+            initial_energy < 0.0
+            or initial_energy > energy_capacity
+        ):
+            raise ValueError(
+                "initial_energy must be between "
+                "0 and energy_capacity."
+            )
 
-        self.capacity = self._capacity_field(capacity)
+        if not (
+            0.0
+            <= initial_resource_fraction
+            <= 1.0
+        ):
+            raise ValueError(
+                "initial_resource_fraction "
+                "must be between 0 and 1."
+            )
 
-        self.regeneration_rate = regeneration_rate
-        self.equilibrium_fraction = equilibrium_fraction
+        # -------------------------------------------------------------
+        # Model settings
+        # -------------------------------------------------------------
 
-        self.regeneration_map = self._parameter_field(
-            regeneration_rate,
-            name="regeneration_rate",
-            minimum=0.0,
-            maximum=None,
+        self.width = int(
+            width
         )
 
-        self.equilibrium_map = self._parameter_field(
-            equilibrium_fraction,
-            name="equilibrium_fraction",
-            minimum=0.0,
-            maximum=1.0,
+        self.height = int(
+            height
         )
 
-        # Gives an isolated tile the positive equilibrium R* = qK.
+        self.n_agents = int(
+            n_agents
+        )
+
+        self.coupling_rate = float(
+            coupling_rate
+        )
+
+        self.cooperative_harvest_amount = float(
+            cooperative_harvest_amount
+        )
+
+        self.defective_harvest_amount = float(
+            defective_harvest_amount
+        )
+
+        self.metabolism_rate = float(
+            metabolism_rate
+        )
+
+        self.initial_energy = float(
+            initial_energy
+        )
+
+        self.energy_capacity = float(
+            energy_capacity
+        )
+
+        self.initial_resource_fraction = float(
+            initial_resource_fraction
+        )
+
+        # -------------------------------------------------------------
+        # Ecological fields
+        # -------------------------------------------------------------
+
+        self.capacity = coerce_capacity_map(
+            capacity,
+            width=self.width,
+            height=self.height,
+        )
+
+        self.regeneration_rate = (
+            regeneration_rate
+        )
+
+        self.equilibrium_fraction = (
+            equilibrium_fraction
+        )
+
+        self.regeneration_map = (
+            coerce_parameter_map(
+                regeneration_rate,
+                width=self.width,
+                height=self.height,
+                name="regeneration_rate",
+                minimum=0.0,
+            )
+        )
+
+        self.equilibrium_map = (
+            coerce_parameter_map(
+                equilibrium_fraction,
+                width=self.width,
+                height=self.height,
+                name="equilibrium_fraction",
+                minimum=0.0,
+                maximum=1.0,
+            )
+        )
+
         self.depletion_map = (
-            self.regeneration_map
-            * (1.0 - self.equilibrium_map)
+            depletion_from_equilibrium(
+                self.regeneration_map,
+                self.equilibrium_map,
+            )
         )
 
         self.resource = (
@@ -161,110 +337,100 @@ class EcoModel(mesa.Model):
             * self.capacity
         )
 
-        self.actions: dict[str, int] = {}
+        # -------------------------------------------------------------
+        # Agent state
+        # -------------------------------------------------------------
 
-        # Positions are random at initialization and fixed thereafter.
-        self.by_name: dict[str, EcoAgent] = {}
+        self.actions: dict[
+            str,
+            int,
+        ] = {}
 
-        for i in range(n_agents):
-            name = f"agent_{i}"
+        self.by_name: dict[
+            str,
+            EcoAgent,
+        ] = {}
 
-            x = int(self.rng.integers(width))
-            y = int(self.rng.integers(height))
+        # Agent positions are sampled once and then remain fixed.
+        for index in range(
+            self.n_agents
+        ):
+            name = (
+                f"agent_{index}"
+            )
 
-            self.by_name[name] = EcoAgent(
+            x = int(
+                self.rng.integers(
+                    self.width
+                )
+            )
+
+            y = int(
+                self.rng.integers(
+                    self.height
+                )
+            )
+
+            self.by_name[
+                name
+            ] = EcoAgent(
                 model=self,
                 name=name,
-                position=(x, y),
-                initial_energy=self.initial_energy,
-                energy_capacity=self.energy_capacity,
+                position=(
+                    x,
+                    y,
+                ),
+                initial_energy=(
+                    self.initial_energy
+                ),
+                energy_capacity=(
+                    self.energy_capacity
+                ),
             )
 
-    def _capacity_field(
+    # -----------------------------------------------------------------
+    # Main timestep
+    # -----------------------------------------------------------------
+
+    def step(
         self,
-        capacity: np.ndarray | None,
-    ) -> np.ndarray:
-        if capacity is None:
-            return np.ones(
-                (self.height, self.width),
-                dtype=float,
-            )
+    ) -> None:
+        """
+        Advance the coupled agent-resource system by one timestep.
+        """
 
-        field = np.asarray(
-            capacity,
-            dtype=float,
+        self._harvest(
+            self.actions
         )
 
-        if field.shape != (self.height, self.width):
-            raise ValueError(
-                "capacity must have shape "
-                f"({self.height}, {self.width}), got {field.shape}."
-            )
-
-        if np.any(field <= 0.0) or np.any(field > 1.0):
-            raise ValueError(
-                "capacity values must be in the interval (0, 1]."
-            )
-
-        return field.copy()
-
-    def _parameter_field(
-        self,
-        value: float | np.ndarray,
-        *,
-        name: str,
-        minimum: float,
-        maximum: float | None,
-    ) -> np.ndarray:
-        if np.isscalar(value):
-            field = np.full(
-                (self.height, self.width),
-                float(value),
-                dtype=float,
-            )
-        else:
-            field = np.asarray(
-                value,
-                dtype=float,
-            )
-
-            if field.shape != (self.height, self.width):
-                raise ValueError(
-                    f"{name} must have shape "
-                    f"({self.height}, {self.width}), got {field.shape}."
-                )
-
-            field = field.copy()
-
-        if np.any(field < minimum):
-            raise ValueError(
-                f"{name} must be >= {minimum}."
-            )
-
-        if maximum is not None and np.any(field > maximum):
-            raise ValueError(
-                f"{name} must be <= {maximum}."
-            )
-
-        return field
-
-    def step(self) -> None:
-        """Harvest, satisfy metabolism, then update the ecology."""
-
-        self._harvest(self.actions)
         self._metabolize()
+
         self._update_ecology()
+
+    # -----------------------------------------------------------------
+    # Extraction
+    # -----------------------------------------------------------------
 
     def _harvest(
         self,
-        actions: dict[str, int],
-    ) -> dict[str, float]:
+        actions: dict[
+            str,
+            int,
+        ],
+    ) -> dict[
+        str,
+        float,
+    ]:
         """
         Resolve simultaneous extraction.
 
-        If a tile cannot satisfy all requests, every request on that tile is
-        reduced proportionally. Wealth receives the full realized harvest;
-        energy is a bounded reserve and cannot exceed energy_capacity.
+        If agents on the same tile collectively request more resource than
+        the tile contains, every request on that tile is scaled by the same
+        factor.
+
+        Wealth receives the full realized harvest.
+
+        Energy is a bounded reserve and cannot exceed energy_capacity.
         """
 
         harvested = {
@@ -273,72 +439,162 @@ class EcoModel(mesa.Model):
         }
 
         requests_by_tile: dict[
-            tuple[int, int],
-            list[tuple[str, float]],
+            tuple[
+                int,
+                int,
+            ],
+            list[
+                tuple[
+                    str,
+                    float,
+                ]
+            ],
         ] = {}
 
-        for name, agent in self.by_name.items():
+        for (
+            name,
+            agent,
+        ) in self.by_name.items():
             action = actions.get(
                 name,
                 LOW_EXTRACT,
             )
 
-            if action == LOW_EXTRACT:
-                requested = self.cooperative_harvest_amount
-            elif action == HIGH_EXTRACT:
-                requested = self.defective_harvest_amount
-            else:
-                raise ValueError(
-                    f"Unknown action {action}. Use 0=low or 1=high extraction."
+            if (
+                action
+                == LOW_EXTRACT
+            ):
+                requested = (
+                    self.cooperative_harvest_amount
                 )
 
-            x, y = agent.position
+            elif (
+                action
+                == HIGH_EXTRACT
+            ):
+                requested = (
+                    self.defective_harvest_amount
+                )
+
+            else:
+                raise ValueError(
+                    f"Unknown action {action}. "
+                    "Use 0=low or 1=high extraction."
+                )
+
+            x, y = (
+                agent.position
+            )
+
+            tile = (
+                int(x),
+                int(y),
+            )
 
             requests_by_tile.setdefault(
-                (int(x), int(y)),
+                tile,
                 [],
-            ).append((name, requested))
+            ).append(
+                (
+                    name,
+                    requested,
+                )
+            )
 
-        for (x, y), requests in requests_by_tile.items():
-            available = float(self.resource[y, x])
+        for (
+            x,
+            y,
+        ), requests in (
+            requests_by_tile.items()
+        ):
+            available = float(
+                self.resource[
+                    y,
+                    x,
+                ]
+            )
 
             total_requested = sum(
                 amount
-                for _, amount in requests
+                for _, amount
+                in requests
             )
 
-            if total_requested <= 0.0:
+            if (
+                total_requested
+                <= 0.0
+            ):
                 continue
 
             scale = min(
                 1.0,
-                available / total_requested,
+                (
+                    available
+                    / total_requested
+                ),
             )
 
             total_harvest = 0.0
 
-            for name, requested in requests:
-                realized = requested * scale
-                agent = self.by_name[name]
-
-                agent.wealth += realized
-                agent.energy = min(
-                    agent.energy_capacity,
-                    agent.energy + realized,
+            for (
+                name,
+                requested,
+            ) in requests:
+                realized = (
+                    requested
+                    * scale
                 )
 
-                harvested[name] = realized
-                total_harvest += realized
+                agent = (
+                    self.by_name[
+                        name
+                    ]
+                )
 
-            self.resource[y, x] -= total_harvest
+                agent.wealth += (
+                    realized
+                )
+
+                agent.energy = min(
+                    agent.energy_capacity,
+                    (
+                        agent.energy
+                        + realized
+                    ),
+                )
+
+                harvested[
+                    name
+                ] = realized
+
+                total_harvest += (
+                    realized
+                )
+
+            self.resource[
+                y,
+                x,
+            ] -= total_harvest
 
         return harvested
 
-    def _metabolize(self) -> None:
-        """Consume energy and record unmet metabolic need."""
+    # -----------------------------------------------------------------
+    # Welfare accounting
+    # -----------------------------------------------------------------
 
-        for agent in self.by_name.values():
-            need = self.metabolism_rate
+    def _metabolize(
+        self,
+    ) -> None:
+        """
+        Consume stored energy and record unmet metabolic need.
+        """
+
+        for agent in (
+            self.by_name.values()
+        ):
+            need = (
+                self.metabolism_rate
+            )
 
             if need <= 0.0:
                 agent.metabolic_consumption = 0.0
@@ -351,76 +607,58 @@ class EcoModel(mesa.Model):
                 need,
             )
 
-            shortfall = need - consumed
+            shortfall = (
+                need
+                - consumed
+            )
 
-            agent.energy -= consumed
-            agent.metabolic_consumption = consumed
-            agent.metabolic_shortfall = shortfall
-            agent.need_satisfaction = consumed / need
-            agent.cumulative_shortfall += shortfall
+            agent.energy -= (
+                consumed
+            )
+
+            agent.metabolic_consumption = (
+                consumed
+            )
+
+            agent.metabolic_shortfall = (
+                shortfall
+            )
+
+            agent.need_satisfaction = (
+                consumed
+                / need
+            )
+
+            agent.cumulative_shortfall += (
+                shortfall
+            )
 
             if shortfall > 1e-12:
                 agent.deprivation_steps += 1
 
-    def _update_ecology(self) -> None:
-        """Spatial logistic reaction-diffusion update."""
+    # -----------------------------------------------------------------
+    # Ecology
+    # -----------------------------------------------------------------
 
-        growth = (
-            self.regeneration_map
-            * self.resource
-            * (
-                1.0
-                - self.resource / self.capacity
-            )
+    def _update_ecology(
+        self,
+    ) -> None:
+        """
+        Advance the post-harvest resource state.
+
+        All ecological mathematics lives in `ecology.resource_step`.
+        """
+
+        self.resource = resource_step(
+            resource=self.resource,
+            capacity=self.capacity,
+            regeneration_rate=(
+                self.regeneration_map
+            ),
+            depletion_rate=(
+                self.depletion_map
+            ),
+            coupling_rate=(
+                self.coupling_rate
+            ),
         )
-
-        depletion = (
-            self.depletion_map
-            * self.resource
-        )
-
-        neighbour_mean = self._neighbor_mean(
-            self.resource
-        )
-
-        diffusion = (
-            self.coupling_rate
-            * (
-                neighbour_mean
-                - self.resource
-            )
-        )
-
-        self.resource += (
-            growth
-            - depletion
-            + diffusion
-        )
-
-        self.resource = np.clip(
-            self.resource,
-            0.0,
-            self.capacity,
-        )
-
-    @staticmethod
-    def _neighbor_mean(
-        field: np.ndarray,
-    ) -> np.ndarray:
-        padded = np.pad(
-            field,
-            1,
-            mode="edge",
-        )
-
-        up = padded[:-2, 1:-1]
-        down = padded[2:, 1:-1]
-        left = padded[1:-1, :-2]
-        right = padded[1:-1, 2:]
-
-        return (
-            up
-            + down
-            + left
-            + right
-        ) / 4.0
