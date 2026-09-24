@@ -11,13 +11,17 @@ from pathlib import Path
 import numpy as np
 
 from Cognitive_tools import EcoEnv
+
+from Cognitive_tools.model import (
+    HIGH_EXTRACT,
+    LOW_EXTRACT,
+)
 from Cognitive_tools.qlearning import (
-    COOPERATE,
-    DEFECT,
     QLearningPolicy,
     STATE_NAMES,
     resource_state,
 )
+
 from qlearning_experiment import SCENARIOS, build_environment_maps
 
 
