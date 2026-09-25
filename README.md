@@ -1,65 +1,37 @@
 # cognitive_tools
 
-`cognitive_tools` is a research codebase for studying how local learning,
-social information, and decentralized adaptation interact with renewable
-common-pool-resource dynamics.
+`cognitive_tools` is a research codebase for studying how ecological
+feedback, local learning, social information, and decentralized
+adaptation interact in renewable common-pool-resource systems.
 
-The current baseline asks:
-
-> Can resource users learn extraction behavior from local ecological
-> feedback alone?
-
-The next model extension asks:
+The central social-network question is:
 
 > Can agents that locally predict the behavior of their information
-> sources use prediction error to adapt whom they observe, and how does
-> that decentralized rewiring interact with ecological conditions?
-
----
+> sources use prediction error to adapt whom they observe, and can that
+> decentralized rewiring improve or destabilize common-pool-resource
+> sustainability?
 
 ## Current model
 
-The current implemented model contains:
+The implemented model now contains:
 
 1. a spatial renewable resource;
 2. stationary resource users;
 3. low- and high-extraction actions;
 4. independent tabular Q-learning;
-5. ecological state information based on local `R/K`;
-6. no social-information network yet.
+5. a three-state ecological representation based on local `R/K`;
+6. an optional directed fixed-k social-information network;
+7. previous-action social observation;
+8. a nine-state ecology x social learner;
+9. optional decentralized network rewiring.
 
-The social layer is intentionally being added only after the ecological
-and learning baselines are mechanically stable.
+Ecological dynamics and social information remain separate.
 
----
-
-## Architecture
+The physical environment owns:
 
 ```text
-cognitive_tools/
-│
-├── README.md
-├── PROVENANCE.md
-├── REFERENCES.bib
-├── BASELINE_EXPERIMENT.md
-├── environment.yml
-│
-├── Cognitive_tools/
-│   ├── __init__.py
-│   ├── ecology.py
-│   ├── model.py
-│   ├── env.py
-│   ├── qlearning.py
-│   └── visualization.py
-│
-├── baseline_validation_experiment.py
-├── baseline_validation_figures.py
-│
-├── qlearning_experiment.py
-├── agent_environment_experiment.py
-├── run.py
-│
-└── tests/
-    ├── test_ecology.py
-    ├── test_qlearning.py
-    └── test_imports.py
+resource dynamics
+extraction
+reward
+wealth
+welfare

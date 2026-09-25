@@ -1,0 +1,3 @@
+scenario,population,replicate,social_mode,rewiring,unique_policy_count,policy_entropy,policy_hamming_mean,total_rewires,mean_rewires_per_agent,mean_prediction_error,visibility_gini,max_visibility_degree,max_visibility_share,policy_low_scarce,policy_low_moderate,policy_low_abundant
+uniform_high,8,0,none,none,4,0.6352130207431889,0.36904761904761907,0,0.0,nan,nan,nan,nan,0.375,0.0,0.5
+patchy_high,8,0,none,none,4,0.603759374819711,0.3809523809523809,0,0.0,nan,nan,nan,nan,0.5,0.0,0.5

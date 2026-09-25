@@ -1,0 +1,59 @@
+{
+  "run_name": "r2_prediction_smoke",
+  "scenarios": [
+    "uniform_high",
+    "patchy_high"
+  ],
+  "populations": [
+    8
+  ],
+  "replicates": 1,
+  "training_steps": 500,
+  "evaluation_steps": 100,
+  "record_every": 20,
+  "width": 10,
+  "height": 10,
+  "seed": 42,
+  "coupling": 0.1,
+  "low_harvest": 0.002,
+  "high_harvest": 0.02,
+  "metabolism": 0.002,
+  "initial_energy": 1.0,
+  "energy_capacity": 1.0,
+  "initial_resource_fraction": 0.5,
+  "alpha": 0.1,
+  "gamma": 0.95,
+  "epsilon": 0.2,
+  "epsilon_min": 0.02,
+  "epsilon_decay": 0.9995,
+  "social_mode": "fixed",
+  "social_k": 4,
+  "rewiring": "prediction_error",
+  "rewire_theta": 0.25,
+  "rewire_mu": 0.1,
+  "rewire_every": 50,
+  "rewire_threshold": 0.25,
+  "forecast_alpha": 0.5,
+  "record_network_every": 50,
+  "scenario_definitions": {
+    "uniform_high": {
+      "label": "Uniform high",
+      "group": "single",
+      "family": "uniform",
+      "mean_capacity": 0.75,
+      "recovery": 0.05,
+      "equilibrium": 0.7
+    },
+    "patchy_high": {
+      "label": "Patchy high",
+      "group": "single",
+      "family": "patchy",
+      "mean_capacity": 0.75,
+      "recovery": 0.05,
+      "equilibrium": 0.7
+    }
+  },
+  "learner_n_states": 9,
+  "network_evaluation": "frozen",
+  "fresh_network": "carried_terminal_network"
+}
