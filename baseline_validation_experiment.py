@@ -20,6 +20,14 @@ from Cognitive_tools.qlearning import (
     STATE_NAMES,
     resource_state,
 )
+from Cognitive_tools.social import (
+    SOCIAL_STATE_NAMES,
+    init_random_attention,
+    joint_state,
+    observed_low_fraction,
+    social_bin,
+    visibility_counts,
+)
 from qlearning_experiment import (
     SCENARIOS,
     build_environment_maps,
@@ -31,6 +39,16 @@ RESULTS_ROOT = (
     / "q_learning_baseline"
     / "experiments"
 )
+
+SOCIAL_MODES = (
+    "none",
+    "fixed",
+)
+
+
+# ---------------------------------------------------------------------
+# General utilities
+# ---------------------------------------------------------------------
 
 
 def write_csv(
@@ -94,10 +112,12 @@ def gini(
     value = (
         2.0
         * np.sum(
-            index * values
+            index
+            * values
         )
         / (
-            n * total
+            n
+            * total
         )
         - (
             n + 1.0
@@ -141,21 +161,20 @@ def binary_entropy(
 def mean_or_nan(
     values,
 ) -> float:
-    return (
-        float(
-            np.mean(
-                values
-            )
-        )
-        if values
-        else float(
+    if not values:
+        return float(
             "nan"
+        )
+
+    return float(
+        np.mean(
+            values
         )
     )
 
 
 # ---------------------------------------------------------------------
-# Environment creation
+# Seeds
 # ---------------------------------------------------------------------
 
 
@@ -164,7 +183,8 @@ def landscape_seed(
     base_seed: int,
 ) -> int:
     """
-    Use the same landscape seed across scenarios within a replicate.
+    Use the same landscape seed across ecological scenarios within a
+    replicate.
     """
 
     return (
@@ -178,7 +198,8 @@ def agent_seed(
     base_seed: int,
 ) -> int:
     """
-    Use the same agent-position seed across scenarios within a replicate.
+    Use the same agent-position seed across ecological scenarios within a
+    replicate.
     """
 
     return (
@@ -186,6 +207,33 @@ def agent_seed(
         + 100_000
         + replicate
     )
+
+
+def social_seed(
+    replicate: int,
+    population: int,
+    base_seed: int,
+) -> int:
+    """
+    Dedicated initial social-network seed.
+
+    It does not depend on ecological scenario, so matched ecological
+    treatments receive the same social graph for a given population and
+    replicate.
+    """
+
+    return (
+        base_seed
+        + 300_000
+        + 10_000
+        * replicate
+        + population
+    )
+
+
+# ---------------------------------------------------------------------
+# Environment creation
+# ---------------------------------------------------------------------
 
 
 def make_environment(
@@ -248,6 +296,186 @@ def make_environment(
 
 
 # ---------------------------------------------------------------------
+# Social observation
+# ---------------------------------------------------------------------
+
+
+def make_social_sources(
+    env: EcoEnv,
+    replicate: int,
+    args,
+) -> dict[str, list[str]] | None:
+    """
+    Create the fixed social-information network when social observation
+    is enabled.
+
+    The ecological baseline returns None and therefore remains unchanged.
+    """
+
+    if (
+        args.social_mode
+        == "none"
+    ):
+        return None
+
+    if (
+        args.social_mode
+        != "fixed"
+    ):
+        raise ValueError(
+            f"Unknown social mode: "
+            f"{args.social_mode}"
+        )
+
+    rng = np.random.default_rng(
+        social_seed(
+            replicate,
+            len(
+                env.possible_agents
+            ),
+            args.seed,
+        )
+    )
+
+    return init_random_attention(
+        list(
+            env.possible_agents
+        ),
+        args.social_k,
+        rng,
+    )
+
+
+def learner_state_count(
+    social_mode: str,
+) -> int:
+    if (
+        social_mode
+        == "none"
+    ):
+        return 3
+
+    if (
+        social_mode
+        == "fixed"
+    ):
+        return 9
+
+    raise ValueError(
+        f"Unknown social mode: "
+        f"{social_mode}"
+    )
+
+
+def encode_states(
+    observations: dict,
+    *,
+    social_mode: str,
+    sources: (
+        dict[
+            str,
+            list[str],
+        ]
+        | None
+    ),
+    previous_actions: (
+        dict[
+            str,
+            int,
+        ]
+        | None
+    ),
+) -> dict[
+    str,
+    int,
+]:
+    """
+    Encode learner states.
+
+    Ecological baseline:
+
+        state = ecological state
+        -> 3 states
+
+    Fixed social observation:
+
+        state
+        =
+        3 * ecological_state
+        + social_state
+
+        -> 9 states
+
+    The social signal for action a_t is based on observed actions from
+    t-1.
+    """
+
+    ecological_states = {
+        name: resource_state(
+            observation
+        )
+        for (
+            name,
+            observation,
+        )
+        in observations.items()
+    }
+
+    if (
+        social_mode
+        == "none"
+    ):
+        return ecological_states
+
+    if (
+        social_mode
+        != "fixed"
+    ):
+        raise ValueError(
+            f"Unknown social mode: "
+            f"{social_mode}"
+        )
+
+    if (
+        sources
+        is None
+    ):
+        raise ValueError(
+            "Fixed social observation "
+            "requires sources."
+        )
+
+    states = {}
+
+    for (
+        name,
+        ecological_state,
+    ) in ecological_states.items():
+        low_fraction = (
+            observed_low_fraction(
+                name,
+                sources,
+                previous_actions,
+            )
+        )
+
+        social_state = (
+            social_bin(
+                low_fraction
+            )
+        )
+
+        states[
+            name
+        ] = joint_state(
+            ecological_state,
+            social_state,
+        )
+
+    return states
+
+
+# ---------------------------------------------------------------------
 # Q-learning
 # ---------------------------------------------------------------------
 
@@ -262,16 +490,26 @@ def make_learners(
 ]:
     learners = {}
 
+    n_states = (
+        learner_state_count(
+            args.social_mode
+        )
+    )
+
     for index, name in enumerate(
         env.possible_agents
     ):
         learners[
             name
         ] = QLearningPolicy(
+            n_states=n_states,
+            n_actions=2,
             alpha=args.alpha,
             gamma=args.gamma,
             epsilon=args.epsilon,
-            epsilon_min=args.epsilon_min,
+            epsilon_min=(
+                args.epsilon_min
+            ),
             epsilon_decay=(
                 args.epsilon_decay
             ),
@@ -293,6 +531,14 @@ def system_metrics(
         str,
         int,
     ],
+    *,
+    sources: (
+        dict[
+            str,
+            list[str],
+        ]
+        | None
+    ) = None,
 ) -> dict:
     agents = list(
         env.model.by_name.values()
@@ -308,6 +554,31 @@ def system_metrics(
             ]
         )
     )
+
+    if (
+        sources
+        is None
+    ):
+        mean_social_low_fraction = (
+            float(
+                "nan"
+            )
+        )
+
+    else:
+        mean_social_low_fraction = float(
+            np.mean(
+                [
+                    observed_low_fraction(
+                        name,
+                        sources,
+                        actions,
+                    )
+                    for name
+                    in actions
+                ]
+            )
+        )
 
     return {
         "low_extraction_rate": (
@@ -332,8 +603,6 @@ def system_metrics(
         "total_resource": float(
             env.model.resource.sum()
         ),
-
-        # Primary welfare measures.
         "mean_reserve_welfare": float(
             np.mean(
                 [
@@ -371,8 +640,6 @@ def system_metrics(
                 ]
             )
         ),
-
-        # Secondary welfare/resilience state.
         "mean_energy": float(
             np.mean(
                 [
@@ -382,8 +649,6 @@ def system_metrics(
                 ]
             )
         ),
-
-        # Primary distributional outcome.
         "wealth_gini": gini(
             [
                 agent.wealth
@@ -399,6 +664,9 @@ def system_metrics(
                     in agents
                 ]
             )
+        ),
+        "mean_social_low_fraction": (
+            mean_social_low_fraction
         ),
     }
 
@@ -426,6 +694,12 @@ def train_q_learning(
         args,
     )
 
+    sources = make_social_sources(
+        env,
+        replicate,
+        args,
+    )
+
     learners = make_learners(
         env,
         replicate,
@@ -434,20 +708,23 @@ def train_q_learning(
 
     timeseries = []
 
+    previous_actions = None
+
     for time in range(
         1,
         args.training_steps
         + 1,
     ):
-        states = {
-            name: resource_state(
-                observations[
-                    name
-                ]
-            )
-            for name
-            in env.agents
-        }
+        states = encode_states(
+            observations,
+            social_mode=(
+                args.social_mode
+            ),
+            sources=sources,
+            previous_actions=(
+                previous_actions
+            ),
+        )
 
         actions = {
             name: learners[
@@ -472,6 +749,16 @@ def train_q_learning(
             actions
         )
 
+        # The next social state uses actions at time t.
+        next_states = encode_states(
+            next_observations,
+            social_mode=(
+                args.social_mode
+            ),
+            sources=sources,
+            previous_actions=actions,
+        )
+
         for name in states:
             done = (
                 terminations[
@@ -482,17 +769,19 @@ def train_q_learning(
                 ]
             )
 
-            next_state = (
-                states[
-                    name
-                ]
-                if done
-                else resource_state(
-                    next_observations[
+            if done:
+                learner_next_state = (
+                    states[
                         name
                     ]
                 )
-            )
+
+            else:
+                learner_next_state = (
+                    next_states[
+                        name
+                    ]
+                )
 
             learners[
                 name
@@ -506,7 +795,7 @@ def train_q_learning(
                 rewards[
                     name
                 ],
-                next_state,
+                learner_next_state,
                 done=done,
             )
 
@@ -533,10 +822,14 @@ def train_q_learning(
                     "replicate": (
                         replicate
                     ),
+                    "social_mode": (
+                        args.social_mode
+                    ),
                     "time": time,
                     **system_metrics(
                         env,
                         actions,
+                        sources=sources,
                     ),
                     "mean_epsilon": float(
                         np.mean(
@@ -550,6 +843,10 @@ def train_q_learning(
                 }
             )
 
+        previous_actions = (
+            actions.copy()
+        )
+
         observations = (
             next_observations
         )
@@ -560,29 +857,94 @@ def train_q_learning(
         regions,
         learners,
         timeseries,
+        sources,
+        previous_actions,
     )
 
 
 # ---------------------------------------------------------------------
-# Evaluation
+# State-count diagnostics
 # ---------------------------------------------------------------------
 
 
 def empty_state_counts(
+    social_mode: str,
 ) -> dict[
     str,
     np.ndarray,
 ]:
+    if (
+        social_mode
+        == "none"
+    ):
+        social_states = 1
+
+    elif (
+        social_mode
+        == "fixed"
+    ):
+        social_states = 3
+
+    else:
+        raise ValueError(
+            f"Unknown social mode: "
+            f"{social_mode}"
+        )
+
+    shape = (
+        3,
+        social_states,
+    )
+
     return {
         "visits": np.zeros(
-            3,
+            shape,
             dtype=int,
         ),
         "low_actions": np.zeros(
-            3,
+            shape,
             dtype=int,
         ),
     }
+
+
+def decode_state(
+    state: int,
+    social_mode: str,
+) -> tuple[
+    int,
+    int,
+]:
+    if (
+        social_mode
+        == "none"
+    ):
+        return (
+            int(
+                state
+            ),
+            0,
+        )
+
+    if (
+        social_mode
+        == "fixed"
+    ):
+        return (
+            int(
+                state
+            )
+            // 3,
+            int(
+                state
+            )
+            % 3,
+        )
+
+    raise ValueError(
+        f"Unknown social mode: "
+        f"{social_mode}"
+    )
 
 
 def update_state_counts(
@@ -598,14 +960,26 @@ def update_state_counts(
         str,
         int,
     ],
+    *,
+    social_mode: str,
 ) -> None:
-    for name, state in (
-        states.items()
-    ):
+    for (
+        name,
+        state,
+    ) in states.items():
+        (
+            ecological_state,
+            social_state,
+        ) = decode_state(
+            state,
+            social_mode,
+        )
+
         counts[
             "visits"
         ][
-            state
+            ecological_state,
+            social_state,
         ] += 1
 
         if (
@@ -617,7 +991,8 @@ def update_state_counts(
             counts[
                 "low_actions"
             ][
-                state
+                ecological_state,
+                social_state,
             ] += 1
 
 
@@ -626,6 +1001,8 @@ def summarize_state_counts(
         str,
         np.ndarray,
     ],
+    *,
+    social_mode: str,
 ) -> dict:
     visits = counts[
         "visits"
@@ -641,19 +1018,31 @@ def summarize_state_counts(
 
     result = {}
 
-    for index, state_name in enumerate(
+    # Preserve the existing ecological marginal diagnostics.
+    for (
+        ecological_index,
+        ecological_name,
+    ) in enumerate(
         STATE_NAMES
     ):
-        state_visits = int(
+        ecological_visits = int(
             visits[
-                index
-            ]
+                ecological_index,
+                :,
+            ].sum()
+        )
+
+        ecological_low = int(
+            low_actions[
+                ecological_index,
+                :,
+            ].sum()
         )
 
         result[
-            f"state_occupancy_{state_name}"
+            f"state_occupancy_{ecological_name}"
         ] = (
-            state_visits
+            ecological_visits
             / total
             if total > 0
             else float(
@@ -662,21 +1051,106 @@ def summarize_state_counts(
         )
 
         result[
-            f"low_given_{state_name}"
+            f"low_given_{ecological_name}"
         ] = (
-            int(
-                low_actions[
-                    index
-                ]
-            )
-            / state_visits
-            if state_visits > 0
+            ecological_low
+            / ecological_visits
+            if ecological_visits > 0
             else float(
                 "nan"
             )
         )
 
+    if (
+        social_mode
+        == "fixed"
+    ):
+        for (
+            social_index,
+            social_name,
+        ) in enumerate(
+            SOCIAL_STATE_NAMES
+        ):
+            social_visits = int(
+                visits[
+                    :,
+                    social_index,
+                ].sum()
+            )
+
+            result[
+                f"social_occupancy_{social_name}"
+            ] = (
+                social_visits
+                / total
+                if total > 0
+                else float(
+                    "nan"
+                )
+            )
+
+        for (
+            ecological_index,
+            ecological_name,
+        ) in enumerate(
+            STATE_NAMES
+        ):
+            for (
+                social_index,
+                social_name,
+            ) in enumerate(
+                SOCIAL_STATE_NAMES
+            ):
+                joint_visits = int(
+                    visits[
+                        ecological_index,
+                        social_index,
+                    ]
+                )
+
+                joint_low = int(
+                    low_actions[
+                        ecological_index,
+                        social_index,
+                    ]
+                )
+
+                result[
+                    (
+                        "joint_occupancy_"
+                        f"{ecological_name}_"
+                        f"{social_name}"
+                    )
+                ] = (
+                    joint_visits
+                    / total
+                    if total > 0
+                    else float(
+                        "nan"
+                    )
+                )
+
+                result[
+                    (
+                        "low_given_"
+                        f"{ecological_name}_"
+                        f"{social_name}"
+                    )
+                ] = (
+                    joint_low
+                    / joint_visits
+                    if joint_visits > 0
+                    else float(
+                        "nan"
+                    )
+                )
+
     return result
+
+
+# ---------------------------------------------------------------------
+# Evaluation
+# ---------------------------------------------------------------------
 
 
 def action_rule(
@@ -690,17 +1164,33 @@ def action_rule(
         | None
     ),
     rng: np.random.Generator,
+    *,
+    social_mode: str = "none",
+    sources: (
+        dict[
+            str,
+            list[str],
+        ]
+        | None
+    ) = None,
+    previous_actions: (
+        dict[
+            str,
+            int,
+        ]
+        | None
+    ) = None,
 ):
-    states = {
-        name: resource_state(
-            observation
-        )
-        for (
-            name,
-            observation,
-        )
-        in observations.items()
-    }
+    states = encode_states(
+        observations,
+        social_mode=(
+            social_mode
+        ),
+        sources=sources,
+        previous_actions=(
+            previous_actions
+        ),
+    )
 
     if (
         strategy
@@ -787,10 +1277,22 @@ def evaluate_policy(
         ]
         | None
     ),
+    sources: (
+        dict[
+            str,
+            list[str],
+        ]
+        | None
+    ),
+    previous_actions: (
+        dict[
+            str,
+            int,
+        ]
+        | None
+    ),
     args,
 ):
-    # Same random-policy stream across ecological scenarios
-    # for matched runs.
     rng = np.random.default_rng(
         args.seed
         + 400_000
@@ -800,7 +1302,9 @@ def evaluate_policy(
     )
 
     state_counts = (
-        empty_state_counts()
+        empty_state_counts(
+            args.social_mode
+        )
     )
 
     snapshots = []
@@ -819,12 +1323,22 @@ def evaluate_policy(
             observations,
             learners,
             rng,
+            social_mode=(
+                args.social_mode
+            ),
+            sources=sources,
+            previous_actions=(
+                previous_actions
+            ),
         )
 
         update_state_counts(
             state_counts,
             states,
             actions,
+            social_mode=(
+                args.social_mode
+            ),
         )
 
         (
@@ -840,6 +1354,7 @@ def evaluate_policy(
         metrics = system_metrics(
             env,
             actions,
+            sources=sources,
         )
 
         snapshots.append(
@@ -865,6 +1380,9 @@ def evaluate_policy(
                     "replicate": (
                         replicate
                     ),
+                    "social_mode": (
+                        args.social_mode
+                    ),
                     "strategy": (
                         strategy
                     ),
@@ -875,6 +1393,10 @@ def evaluate_policy(
                     **metrics,
                 }
             )
+
+        previous_actions = (
+            actions.copy()
+        )
 
         observations = (
             next_observations
@@ -909,6 +1431,9 @@ def evaluate_policy(
         "replicate": (
             replicate
         ),
+        "social_mode": (
+            args.social_mode
+        ),
         "strategy": (
             strategy
         ),
@@ -939,10 +1464,21 @@ def evaluate_policy(
             in snapshots
         ]
 
+        finite_values = [
+            value
+            for value
+            in values
+            if np.isfinite(
+                value
+            )
+        ]
+
         summary[
             f"eval_mean_{metric}"
-        ] = mean_or_nan(
-            values
+        ] = (
+            mean_or_nan(
+                finite_values
+            )
         )
 
         summary[
@@ -961,7 +1497,10 @@ def evaluate_policy(
 
     summary.update(
         summarize_state_counts(
-            state_counts
+            state_counts,
+            social_mode=(
+                args.social_mode
+            ),
         )
     )
 
@@ -972,7 +1511,7 @@ def evaluate_policy(
 
 
 # ---------------------------------------------------------------------
-# Learned-policy heterogeneity
+# Learned-policy diagnostics
 # ---------------------------------------------------------------------
 
 
@@ -986,9 +1525,45 @@ def policy_diagnostics(
     scenario_name: str,
     population: int,
     replicate: int,
+    *,
+    social_mode: str,
+    sources: (
+        dict[
+            str,
+            list[str],
+        ]
+        | None
+    ),
 ):
     agent_rows = []
-    policies = {}
+
+    policies = {
+        name: (
+            learner.greedy_policy()
+        )
+        for (
+            name,
+            learner,
+        )
+        in learners.items()
+    }
+
+    if (
+        sources
+        is None
+    ):
+        visibility = {
+            name: 0
+            for name
+            in learners
+        }
+
+    else:
+        visibility = (
+            visibility_counts(
+                sources
+            )
+        )
 
     for (
         name,
@@ -1013,94 +1588,142 @@ def policy_diagnostics(
         )
 
         policy = (
-            learner.greedy_policy()
+            policies[
+                name
+            ]
         )
 
-        policies[
-            name
-        ] = policy
+        row = {
+            "scenario": (
+                scenario_name
+            ),
+            "population": (
+                population
+            ),
+            "replicate": (
+                replicate
+            ),
+            "social_mode": (
+                social_mode
+            ),
+            "agent": name,
+            "x": x,
+            "y": y,
+            "region": str(
+                regions[
+                    y,
+                    x,
+                ]
+            ),
+            "visibility_degree": int(
+                visibility[
+                    name
+                ]
+            ),
+            "attention_sources": (
+                ""
+                if sources is None
+                else "|".join(
+                    sources[
+                        name
+                    ]
+                )
+            ),
+        }
+
+        if (
+            social_mode
+            == "none"
+        ):
+            for (
+                ecological_index,
+                ecological_name,
+            ) in enumerate(
+                STATE_NAMES
+            ):
+                row[
+                    f"policy_{ecological_name}"
+                ] = (
+                    "L"
+                    if policy[
+                        ecological_index
+                    ]
+                    == LOW_EXTRACT
+                    else "H"
+                )
+
+                row[
+                    f"q_{ecological_name}_low"
+                ] = float(
+                    learner.q[
+                        ecological_index,
+                        LOW_EXTRACT,
+                    ]
+                )
+
+                row[
+                    f"q_{ecological_name}_high"
+                ] = float(
+                    learner.q[
+                        ecological_index,
+                        HIGH_EXTRACT,
+                    ]
+                )
+
+        else:
+            for (
+                ecological_index,
+                ecological_name,
+            ) in enumerate(
+                STATE_NAMES
+            ):
+                for (
+                    social_index,
+                    social_name,
+                ) in enumerate(
+                    SOCIAL_STATE_NAMES
+                ):
+                    state = joint_state(
+                        ecological_index,
+                        social_index,
+                    )
+
+                    label = (
+                        f"{ecological_name}_"
+                        f"{social_name}"
+                    )
+
+                    row[
+                        f"policy_{label}"
+                    ] = (
+                        "L"
+                        if policy[
+                            state
+                        ]
+                        == LOW_EXTRACT
+                        else "H"
+                    )
+
+                    row[
+                        f"q_{label}_low"
+                    ] = float(
+                        learner.q[
+                            state,
+                            LOW_EXTRACT,
+                        ]
+                    )
+
+                    row[
+                        f"q_{label}_high"
+                    ] = float(
+                        learner.q[
+                            state,
+                            HIGH_EXTRACT,
+                        ]
+                    )
 
         agent_rows.append(
-            {
-                "scenario": (
-                    scenario_name
-                ),
-                "population": (
-                    population
-                ),
-                "replicate": (
-                    replicate
-                ),
-                "agent": name,
-                "x": x,
-                "y": y,
-                "region": str(
-                    regions[
-                        y,
-                        x,
-                    ]
-                ),
-                "policy_scarce": (
-                    "L"
-                    if policy[
-                        0
-                    ]
-                    == LOW_EXTRACT
-                    else "H"
-                ),
-                "policy_moderate": (
-                    "L"
-                    if policy[
-                        1
-                    ]
-                    == LOW_EXTRACT
-                    else "H"
-                ),
-                "policy_abundant": (
-                    "L"
-                    if policy[
-                        2
-                    ]
-                    == LOW_EXTRACT
-                    else "H"
-                ),
-                "q_scarce_low": float(
-                    learner.q[
-                        0,
-                        LOW_EXTRACT,
-                    ]
-                ),
-                "q_scarce_high": float(
-                    learner.q[
-                        0,
-                        HIGH_EXTRACT,
-                    ]
-                ),
-                "q_moderate_low": float(
-                    learner.q[
-                        1,
-                        LOW_EXTRACT,
-                    ]
-                ),
-                "q_moderate_high": float(
-                    learner.q[
-                        1,
-                        HIGH_EXTRACT,
-                    ]
-                ),
-                "q_abundant_low": float(
-                    learner.q[
-                        2,
-                        LOW_EXTRACT,
-                    ]
-                ),
-                "q_abundant_high": float(
-                    learner.q[
-                        2,
-                        HIGH_EXTRACT,
-                    ]
-                ),
-            }
+            row
         )
 
     policy_list = list(
@@ -1147,15 +1770,25 @@ def policy_diagnostics(
     entropy = float(
         -np.sum(
             [
-                p
+                probability
                 * math.log2(
-                    p
+                    probability
                 )
-                for p
+                for probability
                 in probabilities
-                if p > 0.0
+                if probability > 0.0
             ]
         )
+    )
+
+    policy_length = (
+        len(
+            policy_list[
+                0
+            ]
+        )
+        if policy_list
+        else 0
     )
 
     max_types = min(
@@ -1163,12 +1796,12 @@ def policy_diagnostics(
             policy_list
         ),
         2
-        ** len(
-            STATE_NAMES
-        ),
+        ** policy_length,
     )
 
-    if max_types > 1:
+    if (
+        max_types > 1
+    ):
         entropy /= math.log2(
             max_types
         )
@@ -1185,6 +1818,9 @@ def policy_diagnostics(
         ),
         "replicate": (
             replicate
+        ),
+        "social_mode": (
+            social_mode
         ),
         "unique_policy_count": len(
             counts
@@ -1203,23 +1839,134 @@ def policy_diagnostics(
         ),
     }
 
-    for index, state_name in enumerate(
-        STATE_NAMES
+    if (
+        sources
+        is None
     ):
         summary[
-            f"policy_low_{state_name}"
+            "visibility_gini"
         ] = float(
-            np.mean(
-                [
-                    policy[
-                        index
-                    ]
-                    == LOW_EXTRACT
-                    for policy
-                    in policy_list
-                ]
+            "nan"
+        )
+
+        summary[
+            "max_visibility_degree"
+        ] = float(
+            "nan"
+        )
+
+    else:
+        visibility_values = list(
+            visibility.values()
+        )
+
+        summary[
+            "visibility_gini"
+        ] = gini(
+            visibility_values
+        )
+
+        summary[
+            "max_visibility_degree"
+        ] = int(
+            max(
+                visibility_values
             )
         )
+
+    if (
+        social_mode
+        == "none"
+    ):
+        for (
+            ecological_index,
+            ecological_name,
+        ) in enumerate(
+            STATE_NAMES
+        ):
+            summary[
+                f"policy_low_{ecological_name}"
+            ] = float(
+                np.mean(
+                    [
+                        policy[
+                            ecological_index
+                        ]
+                        == LOW_EXTRACT
+                        for policy
+                        in policy_list
+                    ]
+                )
+            )
+
+    else:
+        # Ecological marginal across the three social states.
+        for (
+            ecological_index,
+            ecological_name,
+        ) in enumerate(
+            STATE_NAMES
+        ):
+            summary[
+                f"policy_low_{ecological_name}"
+            ] = float(
+                np.mean(
+                    [
+                        (
+                            policy[
+                                joint_state(
+                                    ecological_index,
+                                    social_index,
+                                )
+                            ]
+                            == LOW_EXTRACT
+                        )
+                        for policy
+                        in policy_list
+                        for social_index
+                        in range(
+                            3
+                        )
+                    ]
+                )
+            )
+
+        # Full ecological x social policy matrix.
+        for (
+            ecological_index,
+            ecological_name,
+        ) in enumerate(
+            STATE_NAMES
+        ):
+            for (
+                social_index,
+                social_name,
+            ) in enumerate(
+                SOCIAL_STATE_NAMES
+            ):
+                state = joint_state(
+                    ecological_index,
+                    social_index,
+                )
+
+                summary[
+                    (
+                        "policy_low_"
+                        f"{ecological_name}_"
+                        f"{social_name}"
+                    )
+                ] = float(
+                    np.mean(
+                        [
+                            policy[
+                                state
+                            ]
+                            == LOW_EXTRACT
+                            for policy
+                            in policy_list
+                        ]
+                    )
+                )
 
     return (
         summary,
@@ -1228,7 +1975,7 @@ def policy_diagnostics(
 
 
 # ---------------------------------------------------------------------
-# One condition
+# One experimental condition
 # ---------------------------------------------------------------------
 
 
@@ -1244,6 +1991,8 @@ def run_condition(
         regions,
         learners,
         training_timeseries,
+        sources,
+        final_training_actions,
     ) = train_q_learning(
         scenario_name,
         population,
@@ -1261,6 +2010,10 @@ def run_condition(
         scenario_name,
         population,
         replicate,
+        social_mode=(
+            args.social_mode
+        ),
+        sources=sources,
     )
 
     # A. Continue from the ecology produced during training.
@@ -1280,11 +2033,17 @@ def run_condition(
             "continuation"
         ),
         learners=learners,
+        sources=sources,
+        previous_actions=(
+            final_training_actions
+        ),
         args=args,
     )
 
-    # B. Evaluate the same learned policy from a fresh common
-    # initial state.
+    # B. Same learned Q-policy from fresh ecological conditions.
+    #
+    # The S1 social graph is fixed and therefore carried unchanged.
+    # Social action memory is reset to neutral at the first step.
     (
         fresh_env,
         fresh_obs,
@@ -1313,10 +2072,12 @@ def run_condition(
             "fresh_reset"
         ),
         learners=learners,
+        sources=sources,
+        previous_actions=None,
         args=args,
     )
 
-    # C. Fixed-policy controls from the same fresh initial state.
+    # C. Fixed-policy controls from the same fresh ecological state.
     control_summaries = []
     control_timeseries = []
 
@@ -1353,6 +2114,8 @@ def run_condition(
                 "fresh_reset"
             ),
             learners=None,
+            sources=sources,
+            previous_actions=None,
             args=args,
         )
 
@@ -1396,9 +2159,8 @@ def main(
 ) -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Baseline validation: independent ecological Q-learning "
-            "with welfare, inequality, state occupancy, fresh-reset "
-            "evaluation, and fixed-policy controls."
+            "Baseline validation for independent ecological Q-learning "
+            "with optional fixed social observation."
         )
     )
 
@@ -1542,6 +2304,27 @@ def main(
         default=0.9995,
     )
 
+    parser.add_argument(
+        "--social-mode",
+        choices=SOCIAL_MODES,
+        default="none",
+        help=(
+            "'none' reproduces the ecological baseline. "
+            "'fixed' adds a fixed directed attention network and "
+            "previous-action social observation."
+        ),
+    )
+
+    parser.add_argument(
+        "--social-k",
+        type=int,
+        default=4,
+        help=(
+            "Number of information sources observed by each agent "
+            "when --social-mode fixed."
+        ),
+    )
+
     args = (
         parser.parse_args()
     )
@@ -1557,6 +2340,32 @@ def main(
                 f"Unknown scenario: "
                 f"{scenario}"
             )
+
+    if (
+        args.social_mode
+        == "fixed"
+    ):
+        if (
+            args.social_k
+            < 1
+        ):
+            raise ValueError(
+                "--social-k must be at least 1."
+            )
+
+        for population in (
+            args.populations
+        ):
+            if (
+                args.social_k
+                >= population
+            ):
+                raise ValueError(
+                    "--social-k must be smaller "
+                    "than every population size. "
+                    f"Received k={args.social_k}, "
+                    f"population={population}."
+                )
 
     run_dir = (
         RESULTS_ROOT
@@ -1597,6 +2406,12 @@ def main(
         in args.scenarios
     }
 
+    config[
+        "learner_n_states"
+    ] = learner_state_count(
+        args.social_mode
+    )
+
     with (
         run_dir
         / "config.json"
@@ -1631,6 +2446,20 @@ def main(
         f"Running {total} "
         "Q-learning training conditions..."
     )
+
+    print(
+        f"Social mode: "
+        f"{args.social_mode}"
+    )
+
+    if (
+        args.social_mode
+        == "fixed"
+    ):
+        print(
+            f"Attention capacity k: "
+            f"{args.social_k}"
+        )
 
     print(
         "Each condition also receives continuation evaluation, "
@@ -1732,7 +2561,7 @@ def main(
     )
 
     print(
-        "Generate figures with:"
+        "Generate the existing baseline figures with:"
     )
 
     print(
