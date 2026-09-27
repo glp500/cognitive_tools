@@ -1,0 +1,256 @@
+diff --git a/.gitignore b/.gitignore
+index 143ad64..0000000 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -7,12 +7,14 @@ htmlcov/
+ # Generated experiment outputs.
+ #
+ # Existing result files that are already tracked by Git remain tracked
+-# until they are explicitly removed from the index. New experiment
+-# directories should remain local/release artifacts rather than normal
+-# source-code commits.
++# until they are explicitly removed from the index. New experiment and
++# cross-treatment analysis directories should remain local/release artifacts
++# rather than normal source-code commits.
+ results/q_learning_baseline/experiments/
++results/q_learning_baseline/social_analysis/
+ 
+ # Editor / OS noise
+ .DS_Store
+ .vscode/
+ .idea/
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -441,9 +441,52 @@ visibility degree and attention size. This is intended for structural checks
+ and network visualizations without writing every edge at every timestep.
+ 
+-New experiment directories are ignored by Git. Final datasets should be
+-frozen as deliberate research-release artifacts rather than accumulated
+-in ordinary source history.
++## Cross-treatment analysis
++
++Stage 5 adds:
++
++```text
++social_experiment_analysis.py
++SOCIAL_ANALYSIS.md
++```
++
++The analysis script reads multiple Stage-4-compatible experiment directories
++and produces run-level distribution tables, bootstrap summaries, paired
++adaptive-minus-matched-R0 effects, network-memory contrasts, theta x mu
++summaries, and the social figure suite.
++
++Example:
++
++```bash
++python social_experiment_analysis.py \
++    --analysis-name pilot_core_v1 \
++    --run results/q_learning_baseline/experiments/b0_pilot \
++    --run results/q_learning_baseline/experiments/s1_pilot \
++    --run results/q_learning_baseline/experiments/s2_pilot \
++    --run results/q_learning_baseline/experiments/r1_pilot \
++    --run results/q_learning_baseline/experiments/r0_matched_r1_pilot \
++    --run results/q_learning_baseline/experiments/r2_pilot \
++    --run results/q_learning_baseline/experiments/r0_matched_r2_pilot \
++    --run results/q_learning_baseline/experiments/r3_pilot \
++    --run results/q_learning_baseline/experiments/r0_matched_r3_pilot
++```
++
++The default analysis output is:
++
++```text
++results/q_learning_baseline/social_analysis/<analysis-name>/
++```
++
++Matched R0 effects are paired to the exact loaded adaptive source through the
++recorded rewiring-schedule SHA-256 when available. Run-level outcome
++distributions are retained, and aggregate confidence intervals use bootstrap
++resampling rather than mean +/- SEM.
++
++See `SOCIAL_ANALYSIS.md` for the complete input contract, output tables,
++figure definitions, regime thresholds, and pairing semantics.
++
++New experiment and analysis directories are ignored by Git. Final datasets
++and derived analysis products should be frozen as deliberate research-release
++artifacts rather than accumulated in ordinary source history.
+ 
+ ## Tests
+ 
+@@ -461,6 +504,7 @@ python -m py_compile \
+     Cognitive_tools/social.py \
+     qlearning_experiment.py \
+     baseline_validation_experiment.py \
++    social_experiment_analysis.py \
+     baseline_validation_figures.py
+ ```
+@@ -591,13 +635,14 @@ core social controls: S2 + matched R0
+ network evaluation decomposition
+ social measurements and normalized network/agent outputs
++cross-treatment analysis and figures
+ ```
+ 
+ Next:
+ 
+ ```text
+-Stage 5: cross-treatment analysis and figures
+ pilot experiments
+ confirmatory experiments
+ ```
+ 
+ See `SOCIAL_EXPERIMENT.md` for the experimental specification and
+-`PROVENANCE.md` for mechanism-level scientific and code provenance.
++`SOCIAL_ANALYSIS.md` for cross-treatment analysis semantics, and
++`PROVENANCE.md` for mechanism-level scientific and code provenance.
+diff --git a/PROVENANCE.md b/PROVENANCE.md
+--- a/PROVENANCE.md
++++ b/PROVENANCE.md
+@@ -545,6 +545,16 @@ data/network_edges_checkpoints.csv
+ The edge checkpoint file contains only exact initial and terminal training
+ graphs rather than every edge at every timestep.
+ 
++Stage 5 cross-treatment analysis additionally writes an
++`analysis_manifest.json` that records:
++
++```text
++input run paths and config SHA-256 hashes
++rewiring-schedule SHA-256 hashes
++resolved adaptive/R0 pair identities
++bootstrap settings
++resource-regime thresholds
++analysis warnings
++```
++
+ Generated experiment directories are ignored by Git for new runs and
+ should be frozen later as deliberate research-release artifacts.
+@@ -641,7 +651,12 @@ keep Q-tables frozen during evaluation
+ ```
+ 
+ ## Stage 4 social-measurement changeset
++
++Implementation state on `main` spans:
++
++```text
++af38b411073aa5564e18cf4dfe60a962ca7f2dfb
++1fb513f5f20b6feae7d60cf6c5f8f0799386519e
++```
+ 
+ Purpose:
+ 
+@@ -655,6 +670,25 @@ add visit-weighted policy heterogeneity
+ ```
+ 
++## Stage 5 cross-treatment analysis changeset
++
++Purpose:
++
++```text
++retain replicate-level outcome distributions
++report predefined final-resource regime probabilities
++use deterministic bootstrap confidence intervals
++pair matched R0 controls to adaptive source schedules by SHA-256
++report adaptive-minus-R0 paired effects
++report carried-terminal minus reset-initial network-memory effects
++aggregate theta x mu phase diagrams
++generate policy/occupancy heatmaps and network-mechanism trajectories
++generate inequality, turnover, and local-vs-population diagnostic figures
++write a reproducible analysis manifest
++```
++
++The Stage 5 analysis is repository-local code. No external scientific source
++code is copied into the analysis pipeline.
++
+ ---
+ 
+ # Current scientific boundary
+diff --git a/SOCIAL_EXPERIMENT.md b/SOCIAL_EXPERIMENT.md
+--- a/SOCIAL_EXPERIMENT.md
++++ b/SOCIAL_EXPERIMENT.md
+@@ -874,30 +874,81 @@ rewire interval:
+     50
+ ```
+ 
+-Do not move to the full 50-100 replicate confirmatory campaign until the
+-remaining Stage 5 social-figure pipeline has been validated on pilot outputs.
++Do not move to the full 50-100 replicate confirmatory campaign until the
++Stage 5 analysis pipeline has been run successfully on the scientific pilot
++outputs.
+ 
+ ---
+ 
+ # 22. Remaining stages
+ 
+ Completed:
+ 
+ ```text
+ Stage 3 — network evaluation decomposition
+ Stage 4 — complete social measurements
++Stage 5 — cross-treatment analysis and figures
+ ```
+ 
+-## Stage 5 — cross-treatment analysis and figures
++## Stage 5 analysis contract
+ 
+-At minimum:
++`social_experiment_analysis.py` consumes multiple Stage-4-compatible run
++directories. Primary cross-treatment outcome comparisons use:
++
++```text
++strategy        = q_learning
++evaluation_mode = fresh_reset
++network_start   = terminal
++```
++
++while the network-memory decomposition retains the within-run comparison:
++
++```text
++fresh_reset - fresh_reset_network
++```
++
++The analysis retains replicate-level distributions and writes deterministic
++bootstrap summaries. Final-resource regime probabilities default to:
++
++```text
++low:     final R/K < 1/3
++middle:  1/3 <= final R/K < 2/3
++high:    final R/K >= 2/3
++```
++
++Matched R0 comparisons are resolved against the exact loaded adaptive source
++using the recorded rewiring-schedule SHA-256 when available. Paired effects
++are defined as:
++
++```text
++adaptive - matched R0
++```
++
++The implemented figure suite includes:
+ 
+ ```text
+ resource outcome distributions
+ joint state behavior heatmap
+ joint state occupancy heatmap
+ visibility-Gini trajectories
+ perception-error trajectories
+ degree-action correlation trajectories
+ wealth Gini vs visibility Gini
+ turnover vs resource outcome
+ paired adaptive-minus-R0 effects
++carried-terminal minus reset-initial network-memory effects
+ theta x mu heatmaps
++local perceived behavior vs population behavior
+ ```
+ 
+-Run-level distributions and paired contrasts should be retained rather
+-than relying only on mean +/- SEM summaries.
++See `SOCIAL_ANALYSIS.md` for the exact tables, command line, bootstrap
++semantics, and figure filenames.
++
++## Next experimental stage
++
++Run the scientific pilot across the core treatment matrix, inspect the
++run-level distributions and mechanism diagnostics, then freeze the final
++confirmatory parameter grid before scaling to 50-100 replicates.
+ 
+ ---

@@ -1,0 +1,65 @@
+run_id,analysis_label,treatment,rewire_theta,rewire_mu,scenario,population,replicate,metric,carried_terminal_value,reset_initial_value,carried_minus_reset
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,0,perception_error,0.10285714285714284,0.10285714285714284,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_s1,S1,S1,0.25,0.1,uniform_high,8,1,perception_error,0.12660714285714286,0.12660714285714286,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,0,resource_fraction,0.5550097117702787,0.5550097117702787,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,0,wealth_gini,0.1053929767060664,0.1053929767060664,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,0,perception_error,0.10854166666666666,0.10854166666666666,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,1,resource_fraction,0.5611266737490538,0.5611266737490538,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,1,wealth_gini,0.13458268933539408,0.13458268933539408,0.0
+stage5_smoke_s2,S2,S2,0.25,0.1,uniform_high,8,1,perception_error,0.14364285714285713,0.14364285714285713,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,0,perception_error,0.10723214285714286,0.10285714285714284,0.004375000000000018
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_r1,R1,R1,0.0,0.1,uniform_high,8,1,perception_error,0.12660714285714286,0.12660714285714286,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,0,perception_error,0.10723214285714286,0.10285714285714284,0.004375000000000018
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_r0_r1,"R0 (theta=0, matched mu=0.1)",R0,0.0,0.1,uniform_high,8,1,perception_error,0.13142857142857142,0.12660714285714286,0.00482142857142856
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,0,perception_error,0.10723214285714286,0.10285714285714284,0.004375000000000018
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_r2,R2,R2,0.25,0.1,uniform_high,8,1,perception_error,0.12660714285714286,0.12660714285714286,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,0,perception_error,0.10723214285714286,0.10285714285714284,0.004375000000000018
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_r0_r2,"R0 (theta=0.25, matched mu=0.1)",R0,0.25,0.1,uniform_high,8,1,perception_error,0.13142857142857142,0.12660714285714286,0.00482142857142856
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,0,perception_error,0.10723214285714286,0.10285714285714284,0.004375000000000018
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_r3,R3,R3,1.0,0.1,uniform_high,8,1,perception_error,0.12660714285714286,0.12660714285714286,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,0,resource_fraction,0.554989104719364,0.554989104719364,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,0,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,0,wealth_gini,0.12876025647175826,0.12876025647175826,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,0,perception_error,0.10723214285714286,0.10285714285714284,0.004375000000000018
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,1,resource_fraction,0.5646075335072126,0.5646075335072126,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,1,reserve_welfare,0.998,0.998,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,1,wealth_gini,0.17217723247116412,0.17217723247116412,0.0
+stage5_smoke_r0_r3,"R0 (theta=1, matched mu=0.1)",R0,1.0,0.1,uniform_high,8,1,perception_error,0.13142857142857142,0.12660714285714286,0.00482142857142856
