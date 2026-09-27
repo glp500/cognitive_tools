@@ -343,6 +343,10 @@ def test_run_condition_decomposes_carried_and_reset_networks(
             [],
             initial_sources,
             final_forecasts,
+            {
+                "state_visit_counts": [0] * 9,
+                "agent_social_summary": [],
+            },
         )
 
     def fake_policy_diagnostics(
@@ -455,6 +459,16 @@ def test_run_condition_decomposes_carried_and_reset_networks(
     )
 
     assert output["rewiring_schedule"] == []
+    assert output["agent_social_summary"] == []
+
+    checkpoints = {
+        row["checkpoint"]
+        for row in output["network_edges_checkpoints"]
+    }
+    assert checkpoints == {
+        "initial",
+        "terminal",
+    }
 
 
 def test_run_condition_adds_adaptive_robustness_evaluation(
@@ -502,6 +516,10 @@ def test_run_condition_adds_adaptive_robustness_evaluation(
             [],
             initial_sources,
             final_forecasts,
+            {
+                "state_visit_counts": [0] * 9,
+                "agent_social_summary": [],
+            },
         )
 
     monkeypatch.setattr(
