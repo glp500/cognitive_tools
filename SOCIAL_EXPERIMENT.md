@@ -880,7 +880,8 @@ rewire interval:
 ```
 
 Do not move to the full 50-100 replicate confirmatory campaign until the
-remaining Stage 5 social-figure pipeline has been validated on pilot outputs.
+Stage 5 analysis pipeline has been run successfully on the scientific pilot
+outputs.
 
 ---
 
@@ -891,11 +892,44 @@ Completed:
 ```text
 Stage 3 — network evaluation decomposition
 Stage 4 — complete social measurements
+Stage 5 — cross-treatment analysis and figures
 ```
 
-## Stage 5 — cross-treatment analysis and figures
+## Stage 5 analysis contract
 
-At minimum:
+`social_experiment_analysis.py` consumes multiple Stage-4-compatible run
+directories. Primary cross-treatment outcome comparisons use:
+
+```text
+strategy        = q_learning
+evaluation_mode = fresh_reset
+network_start   = terminal
+```
+
+while the network-memory decomposition retains the within-run comparison:
+
+```text
+fresh_reset - fresh_reset_network
+```
+
+The analysis retains replicate-level distributions and writes deterministic
+bootstrap summaries. Final-resource regime probabilities default to:
+
+```text
+low:     final R/K < 1/3
+middle:  1/3 <= final R/K < 2/3
+high:    final R/K >= 2/3
+```
+
+Matched R0 comparisons are resolved against the exact loaded adaptive source
+using the recorded rewiring-schedule SHA-256 when available. Paired effects
+are defined as:
+
+```text
+adaptive - matched R0
+```
+
+The implemented figure suite includes:
 
 ```text
 resource outcome distributions
@@ -907,11 +941,19 @@ degree-action correlation trajectories
 wealth Gini vs visibility Gini
 turnover vs resource outcome
 paired adaptive-minus-R0 effects
+carried-terminal minus reset-initial network-memory effects
 theta x mu heatmaps
+local perceived behavior vs population behavior
 ```
 
-Run-level distributions and paired contrasts should be retained rather
-than relying only on mean +/- SEM summaries.
+See `SOCIAL_ANALYSIS.md` for the exact tables, command line, bootstrap
+semantics, and figure filenames.
+
+## Next experimental stage
+
+Run the scientific pilot across the core treatment matrix, inspect the
+run-level distributions and mechanism diagnostics, then freeze the final
+confirmatory parameter grid before scaling to 50-100 replicates.
 
 ---
 

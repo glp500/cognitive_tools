@@ -444,9 +444,53 @@ for the exact initial and terminal training graphs, together with endpoint
 visibility degree and attention size. This is intended for structural checks
 and network visualizations without writing every edge at every timestep.
 
-New experiment directories are ignored by Git. Final datasets should be
-frozen as deliberate research-release artifacts rather than accumulated
-in ordinary source history.
+## Cross-treatment analysis
+
+Stage 5 adds:
+
+```text
+social_experiment_analysis.py
+SOCIAL_ANALYSIS.md
+```
+
+The analysis script reads multiple Stage-4-compatible experiment directories
+and produces run-level distribution tables, bootstrap summaries, paired
+adaptive-minus-matched-R0 effects, network-memory contrasts, theta x mu
+summaries, and the social figure suite.
+
+Example:
+
+```bash
+python social_experiment_analysis.py \
+    --analysis-name pilot_core_v1 \
+    --run results/q_learning_baseline/experiments/b0_pilot \
+    --run results/q_learning_baseline/experiments/s1_pilot \
+    --run results/q_learning_baseline/experiments/s2_pilot \
+    --run results/q_learning_baseline/experiments/r1_pilot \
+    --run results/q_learning_baseline/experiments/r0_matched_r1_pilot \
+    --run results/q_learning_baseline/experiments/r2_pilot \
+    --run results/q_learning_baseline/experiments/r0_matched_r2_pilot \
+    --run results/q_learning_baseline/experiments/r3_pilot \
+    --run results/q_learning_baseline/experiments/r0_matched_r3_pilot
+```
+
+The default analysis output is:
+
+```text
+results/q_learning_baseline/social_analysis/<analysis-name>/
+```
+
+Matched R0 effects are paired to the exact loaded adaptive source through the
+recorded rewiring-schedule SHA-256 when available. Run-level outcome
+distributions are retained, and aggregate confidence intervals use bootstrap
+resampling rather than mean +/- SEM.
+
+See `SOCIAL_ANALYSIS.md` for the complete input contract, output tables,
+figure definitions, regime thresholds, and pairing semantics.
+
+New experiment and analysis directories are ignored by Git. Final datasets
+and derived analysis products should be frozen as deliberate research-release
+artifacts rather than accumulated in ordinary source history.
 
 ## Tests
 
@@ -465,6 +509,7 @@ python -m py_compile \
     Cognitive_tools/social.py \
     qlearning_experiment.py \
     baseline_validation_experiment.py \
+    social_experiment_analysis.py \
     baseline_validation_figures.py
 ```
 
@@ -583,15 +628,16 @@ experiment hardening
 core social controls: S2 + matched R0
 network evaluation decomposition
 social measurements and normalized network/agent outputs
+cross-treatment analysis and figures
 ```
 
 Next:
 
 ```text
-Stage 5: cross-treatment analysis and figures
 pilot experiments
 confirmatory experiments
 ```
 
 See `SOCIAL_EXPERIMENT.md` for the experimental specification and
+`SOCIAL_ANALYSIS.md` for cross-treatment analysis semantics, and
 `PROVENANCE.md` for mechanism-level scientific and code provenance.

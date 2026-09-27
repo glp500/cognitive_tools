@@ -326,6 +326,29 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
 
     warnings: list[str] = []
     reference = runs[0]
+
+    commit_shas = {
+        run.config.get("run_metadata", {}).get("git_commit_sha")
+        for run in runs
+        if run.config.get("run_metadata", {}).get("git_commit_sha")
+    }
+    if len(commit_shas) > 1:
+        raise ValueError(
+            "Cross-treatment analysis would mix experiment runs from "
+            f"different Git commits: {sorted(commit_shas)}."
+        )
+
+    dirty_runs = [
+        run.run_id
+        for run in runs
+        if run.config.get("run_metadata", {}).get("git_worktree_dirty") is True
+    ]
+    if dirty_runs:
+        warnings.append(
+            "Input runs recorded a dirty Git worktree: "
+            + ", ".join(sorted(dirty_runs))
+        )
+
     for key in STRICT_COMPATIBILITY_KEYS:
         expected = reference.config.get(key)
         for run in runs[1:]:
@@ -460,7 +483,6 @@ def primary_evaluation_rows(run: RunData) -> list[dict]:
         for row in run.tables["evaluation_summary"]
         if row.get("strategy") == PRIMARY_STRATEGY
         and row.get("evaluation_mode") == PRIMARY_EVALUATION_MODE
-        and row.get("network_start", "terminal") == "terminal"
     ]
 
 

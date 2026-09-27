@@ -836,3 +836,72 @@ def test_phase_summary_retains_theta_and_mu(
     }
     assert all(row["rewire_theta"] == pytest.approx(0.25) for row in phase)
     assert all(row["rewire_mu"] == pytest.approx(0.20) for row in phase)
+
+def test_b0_primary_fresh_evaluation_is_included(tmp_path):
+    run_dir = make_run(
+        tmp_path,
+        "b0",
+        treatment="B0",
+        rewiring="none",
+        resources=(0.40, 0.60),
+    )
+
+    config_path = run_dir / "config.json"
+    config = json.loads(config_path.read_text())
+    config["social_mode"] = "none"
+    config_path.write_text(json.dumps(config))
+
+    evaluation_path = run_dir / "data" / "evaluation_summary.csv"
+    rows = list(csv.DictReader(evaluation_path.open()))
+    for row in rows:
+        row["social_mode"] = "none"
+        if row["evaluation_mode"] == "fresh_reset":
+            row["network_start"] = "none"
+    write_csv(evaluation_path, rows)
+
+    run = analysis.load_run(run_dir)
+    analysis.assign_run_labels([run])
+
+    primary = analysis.primary_evaluation_rows(run)
+    assert len(primary) == 2
+    assert all(row["network_start"] == "none" for row in primary)
+
+    distribution, summary = analysis.build_resource_distribution(
+        [run],
+        low_threshold=1.0 / 3.0,
+        high_threshold=2.0 / 3.0,
+        bootstrap_reps=20,
+        bootstrap_seed=1,
+    )
+    assert len(distribution) == 2
+    assert len(summary) == 1
+    assert summary[0]["treatment"] == "B0"
+
+
+def test_validate_compatibility_rejects_mixed_git_commits(tmp_path):
+    first_dir = make_run(
+        tmp_path,
+        "first_commit",
+        treatment="S1",
+        rewiring="none",
+    )
+    second_dir = make_run(
+        tmp_path,
+        "second_commit",
+        treatment="S2",
+        rewiring="none",
+    )
+
+    config_path = second_dir / "config.json"
+    config = json.loads(config_path.read_text())
+    config["run_metadata"]["git_commit_sha"] = "b" * 40
+    config_path.write_text(json.dumps(config))
+
+    runs = [
+        analysis.load_run(first_dir),
+        analysis.load_run(second_dir),
+    ]
+    analysis.assign_run_labels(runs)
+
+    with pytest.raises(ValueError, match="different Git commits"):
+        analysis.validate_compatibility(runs)

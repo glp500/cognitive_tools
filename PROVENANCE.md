@@ -550,6 +550,18 @@ data/network_edges_checkpoints.csv
 The edge checkpoint file contains only exact initial and terminal training
 graphs rather than every edge at every timestep.
 
+Stage 5 cross-treatment analysis additionally writes an
+`analysis_manifest.json` that records:
+
+```text
+input run paths and config SHA-256 hashes
+rewiring-schedule SHA-256 hashes
+resolved adaptive/R0 pair identities
+bootstrap settings
+resource-regime thresholds
+analysis warnings
+```
+
 Generated experiment directories are ignored by Git for new runs and
 should be frozen later as deliberate research-release artifacts.
 
@@ -651,6 +663,13 @@ keep Q-tables frozen during evaluation
 
 ## Stage 4 social-measurement changeset
 
+Implementation state on `main` spans:
+
+```text
+af38b411073aa5564e18cf4dfe60a962ca7f2dfb
+1fb513f5f20b6feae7d60cf6c5f8f0799386519e
+```
+
 Purpose:
 
 ```text
@@ -661,6 +680,26 @@ add per-agent social summary output
 add initial/final network edge checkpoints
 add visit-weighted policy heterogeneity
 ```
+
+## Stage 5 cross-treatment analysis changeset
+
+Purpose:
+
+```text
+retain replicate-level outcome distributions
+report predefined final-resource regime probabilities
+use deterministic bootstrap confidence intervals
+pair matched R0 controls to adaptive source schedules by SHA-256
+report adaptive-minus-R0 paired effects
+report carried-terminal minus reset-initial network-memory effects
+aggregate theta x mu phase diagrams
+generate policy/occupancy heatmaps and network-mechanism trajectories
+generate inequality, turnover, and local-vs-population diagnostic figures
+write a reproducible analysis manifest
+```
+
+The Stage 5 analysis is repository-local code. No external scientific source
+code is copied into the analysis pipeline.
 
 ---
 
