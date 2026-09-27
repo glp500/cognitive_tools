@@ -15,7 +15,7 @@ R0 event-count-matched random turnover
 R1-R3 prediction-error rewiring
 ```
 
-The next development stage is evaluation decomposition. Cross-treatment
+The core evaluation decomposition is now implemented. Cross-treatment
 social figures and additional measurements still need to be completed
 before the final confirmatory experiment campaign.
 
@@ -616,34 +616,112 @@ local_fallbacks
 
 ---
 
-# 19. Current evaluation semantics
+# 19. Network evaluation semantics
 
-All evaluation currently freezes the social graph.
+The default is:
+
+```bash
+--network-eval frozen
+```
+
+It evaluates:
 
 ```text
 continuation:
-    trained Q
-    training-end ecology
-    terminal training graph
+    Q-table: trained
+    ecology: training endpoint
+    graph: terminal training graph
+    network dynamics: frozen
 
 fresh_reset:
-    trained Q
-    reset ecology
-    terminal training graph carried forward
+    Q-table: trained
+    ecology: reset
+    graph: terminal training graph carried forward
+    network dynamics: frozen
+
+fresh_reset_network:
+    Q-table: trained
+    ecology: reset
+    graph: exact initial training graph restored
+    network dynamics: frozen
 ```
 
-This does not yet distinguish learning stored in Q tables from learning
-stored in the network topology.
-
-Stage 3 will add:
+The name `fresh_reset` is retained only for backward compatibility with
+the existing baseline figure pipeline. Its meaning is now explicitly
+recorded as:
 
 ```text
-fresh ecology + carried network
-fresh ecology + reset network
-fresh ecology + adaptive network
+network_start = terminal
+network_adaptive = false
 ```
 
-with frozen-network evaluation retained as the default scientific mode.
+The reset-topology condition records:
+
+```text
+network_start = initial
+network_adaptive = false
+```
+
+The central Stage 3 comparison is therefore:
+
+```text
+fresh_reset
+minus
+fresh_reset_network
+```
+
+with the same trained Q tables and same fresh ecological reset. This
+separates performance associated with the terminal learned topology from
+performance already encoded in the Q tables.
+
+For S1 and S2, no training rewiring occurs, so the terminal and initial
+graphs are identical. Their two fresh evaluations are expected to agree;
+this is also a lifecycle validation check.
+
+## Optional adaptive-network robustness
+
+For prediction-error runs, use:
+
+```bash
+--network-eval adaptive
+```
+
+This retains all frozen conditions and additionally evaluates:
+
+```text
+fresh_adaptive_network:
+    Q-table: trained and frozen
+    ecology: reset
+    graph start: terminal training graph
+    forecast start: terminal training forecast
+    network dynamics: adaptive
+```
+
+The graph and forecast dictionaries are copied before the evaluation. A
+separate evaluation-rewiring RNG stream is used, so this robustness run
+does not alter the stored training endpoint or reuse the training rewiring
+stream.
+
+The adaptive option is not available for fixed S1/S2 or confirmatory
+`random_matched` R0. For matched R0, an additional evaluation-phase
+matching schedule would be required to preserve the event-count control.
+The primary R0-vs-adaptive comparisons should therefore use
+`--network-eval frozen`.
+
+Evaluation rows add:
+
+```text
+network_start
+network_adaptive
+evaluation_total_rewires
+```
+
+and evaluation timeseries rows additionally add:
+
+```text
+evaluation_rewires_step
+evaluation_rewires_cumulative
+```
 
 ---
 
@@ -707,16 +785,14 @@ rewire interval:
 ```
 
 Do not move to the full 50-100 replicate confirmatory campaign until the
-Stage 3-5 evaluation, measurement, and social-figure pipeline has been
+remaining Stage 4-5 measurement and social-figure pipeline has been
 validated on pilot outputs.
 
 ---
 
 # 22. Remaining stages
 
-## Stage 3 — decompose network evaluation
-
-Add explicit carried/reset/adaptive network evaluation.
+Stage 3 network evaluation decomposition is complete.
 
 ## Stage 4 — complete social measurements
 

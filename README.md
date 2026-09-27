@@ -253,11 +253,15 @@ Training follows:
 
 The Q-learning target therefore uses the post-rewiring graph.
 
-## Current evaluation
+## Network evaluation
 
-Evaluation currently freezes the social graph.
+The default evaluation is:
 
-Implemented modes are:
+```bash
+--network-eval frozen
+```
+
+For social treatments this decomposes the learned system into:
 
 ```text
 continuation
@@ -271,10 +275,61 @@ fresh_reset
     fresh ecology
     terminal training graph carried forward
     frozen graph
+
+fresh_reset_network
+    trained Q
+    fresh ecology
+    exact initial training graph restored
+    frozen graph
 ```
 
-The next planned stage will separate fresh carried-network, fresh
-reset-network, and fresh adaptive-network evaluation explicitly.
+The historical label `fresh_reset` is retained for compatibility with
+`baseline_validation_figures.py`; its network semantics are now made
+explicit by the output field:
+
+```text
+network_start = terminal
+```
+
+The reset-network condition instead records:
+
+```text
+evaluation_mode = fresh_reset_network
+network_start   = initial
+```
+
+This comparison isolates learned Q-policy effects from effects stored in
+the rewired terminal topology. For S1 and S2, whose graphs never change,
+the carried- and reset-network evaluations should coincide up to exact
+deterministic evaluation behavior.
+
+For adaptive prediction-error runs, an optional robustness evaluation is
+available with:
+
+```bash
+--network-eval adaptive
+```
+
+This keeps all frozen evaluations and additionally runs:
+
+```text
+fresh_adaptive_network
+    trained Q, frozen
+    fresh ecology
+    terminal training graph
+    terminal training forecast state carried forward
+    network continues adapting
+```
+
+Evaluation rewiring uses a random stream separate from training rewiring.
+The input terminal graph and forecasts are copied before evaluation so the
+training endpoint retained by the runner cannot be mutated by the
+robustness evaluation.
+
+Adaptive evaluation is intentionally not available for `random_matched`
+R0 yet, because no paired evaluation-phase event-count schedule exists.
+The confirmatory R0 comparisons therefore use the default frozen
+evaluation decomposition.
 
 ## Measurements
 
@@ -484,12 +539,12 @@ fixed social observation
 decentralized rewiring
 experiment hardening
 core social controls: S2 + matched R0
+network evaluation decomposition
 ```
 
 Next:
 
 ```text
-Stage 3: decompose network evaluation
 Stage 4: complete social measurements
 Stage 5: cross-treatment analysis and figures
 pilot experiments

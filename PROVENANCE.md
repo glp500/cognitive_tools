@@ -415,32 +415,62 @@ Material inequality (`wealth_gini`) and information inequality
 
 ---
 
-# Current evaluation protocol
+# Network evaluation decomposition
 
-**Status:** ORIGINAL / PARTIALLY COMPLETE EXPERIMENTAL DESIGN
+**Status:** ORIGINAL EXPERIMENTAL DESIGN
 
-Current evaluation freezes the social graph.
+The runner now distinguishes state retained in the Q-tables from state
+retained in the social topology.
 
-Implemented:
+Default `--network-eval frozen` evaluation contains:
 
 ```text
 continuation:
     trained Q
     training-end ecology
     terminal training graph
+    frozen graph
 
 fresh_reset:
     trained Q
     fresh ecology
     terminal training graph carried forward
+    frozen graph
+
+fresh_reset_network:
+    trained Q
+    fresh ecology
+    exact initial training graph restored
+    frozen graph
 ```
 
-Planned next:
+`fresh_reset` retains its historical name so the existing baseline figure
+script continues to select the same primary fresh-ecology condition. New
+rows also record `network_start` explicitly.
+
+The initial graph is stored as an independent snapshot before any training
+rewiring occurs; it is not regenerated after training. This guarantees that
+the reset-network evaluation uses the exact graph instance from the start
+of the corresponding training run.
+
+For prediction-error treatments, optional `--network-eval adaptive` adds:
 
 ```text
-fresh ecology + reset initial graph
-fresh ecology + adaptive graph
+fresh_adaptive_network:
+    trained Q, frozen
+    fresh ecology
+    terminal training graph
+    carried terminal forecast state
+    continued network adaptation
 ```
+
+Adaptive evaluation uses a distinct RNG stream and copies the terminal
+graph/forecast state before evaluation. It therefore cannot alter the
+training endpoint subsequently used by other evaluation conditions.
+
+Matched-random R0 does not currently support adaptive evaluation because
+the project does not yet define a matched evaluation-phase event-count
+schedule. R0 confirmatory evaluation remains frozen.
 
 ---
 
@@ -549,13 +579,12 @@ rewiring, random turnover, and social-network diagnostics.
 Commit: `8703f07b84709bfc206ca4539a30236408e2d169`
 
 Added generated-result ignore rules and run-level Git/runtime metadata.
-The pushed commit did not include all originally planned hardening
-documentation/tests; those omissions are repaired in the next change
-set.
+The remaining planned hardening documentation and lifecycle tests were
+completed in the subsequent core-social-controls changeset.
 
 ## `feat: complete core social controls`
 
-Planned Stage 2 commit.
+Commit: `be78a42845f75498a6da5e4a42e8399b85d60a8f`
 
 Purpose:
 

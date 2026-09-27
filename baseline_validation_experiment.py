@@ -60,6 +60,11 @@ SOCIAL_MODES = (
     "fixed",
 )
 
+NETWORK_EVAL_MODES = (
+    "frozen",
+    "adaptive",
+)
+
 
 # ---------------------------------------------------------------------
 # General utilities
@@ -278,8 +283,16 @@ def treatment_name(args) -> str:
     raise ValueError(f"Unknown rewiring mode: {args.rewiring}")
 
 
+
 def validate_configuration(args) -> None:
-    """Validate ecological, social-network, and rewiring configuration."""
+    """Validate ecological, social-network, rewiring, and evaluation settings."""
+    network_eval = getattr(args, "network_eval", "frozen")
+
+    if network_eval not in NETWORK_EVAL_MODES:
+        raise ValueError(
+            f"Unknown network evaluation mode: {network_eval}"
+        )
+
     for scenario in args.scenarios:
         if scenario not in SCENARIOS:
             raise ValueError(f"Unknown scenario: {scenario}")
@@ -304,6 +317,10 @@ def validate_configuration(args) -> None:
             raise ValueError(
                 "--matched-rewire-schedule requires --social-mode fixed and "
                 "--rewiring random_matched."
+            )
+        if network_eval == "adaptive":
+            raise ValueError(
+                "Adaptive network evaluation requires --social-mode fixed."
             )
         return
 
@@ -343,6 +360,24 @@ def validate_configuration(args) -> None:
                     "--ba-m must be smaller than every population size. "
                     f"Received m={args.ba_m}, population={population}."
                 )
+
+    if network_eval == "adaptive":
+        if args.social_network != "random_k":
+            raise ValueError(
+                "Adaptive network evaluation is currently supported only "
+                "for random_k social networks."
+            )
+        if args.rewiring not in {"prediction_error", "random"}:
+            if args.rewiring == "random_matched":
+                raise ValueError(
+                    "Adaptive network evaluation is not yet available for "
+                    "random_matched R0 because no matched evaluation-phase "
+                    "rewiring schedule exists. Use --network-eval frozen."
+                )
+            raise ValueError(
+                "Adaptive network evaluation requires a training rewiring "
+                "rule: prediction_error or legacy random."
+            )
 
     if args.rewiring == "random_matched":
         if not args.matched_rewire_schedule:
@@ -414,6 +449,15 @@ def social_seed(replicate: int, population: int, base_seed: int) -> int:
 
 def rewiring_seed(replicate: int, population: int, base_seed: int) -> int:
     return base_seed + 500_000 + 10_000 * replicate + population
+
+
+def evaluation_rewiring_seed(
+    replicate: int,
+    population: int,
+    base_seed: int,
+) -> int:
+    """Independent RNG stream for adaptive network evaluation."""
+    return base_seed + 600_000 + 10_000 * replicate + population
 
 
 # ---------------------------------------------------------------------
@@ -691,6 +735,7 @@ def make_network_record(
 # ---------------------------------------------------------------------
 
 
+
 def train_q_learning(
     scenario_name: str,
     population: int,
@@ -706,6 +751,11 @@ def train_q_learning(
         args,
     )
     sources = make_social_sources(env, replicate, args)
+    initial_sources = (
+        None
+        if sources is None
+        else copy_sources(sources)
+    )
     learners = make_learners(env, replicate, args)
 
     timeseries: list[dict] = []
@@ -926,6 +976,15 @@ def train_q_learning(
         else:
             mean_prediction_errors[name] = float("nan")
 
+    final_forecasts = (
+        None
+        if forecasts is None
+        else {
+            name: float(value)
+            for name, value in forecasts.items()
+        }
+    )
+
     return (
         env,
         observations,
@@ -938,6 +997,8 @@ def train_q_learning(
         rewire_counts,
         mean_prediction_errors,
         rewiring_schedule,
+        initial_sources,
+        final_forecasts,
     )
 
 
@@ -1071,6 +1132,7 @@ def action_rule(
     return states, actions
 
 
+
 def evaluate_policy(
     env: EcoEnv,
     observations: dict,
@@ -1084,14 +1146,79 @@ def evaluate_policy(
     sources: dict[str, list[str]] | None,
     previous_actions: dict[str, int] | None,
     args,
+    network_start: str = "none",
+    adaptive_network: bool = False,
+    forecasts: dict[str, float] | None = None,
 ):
-    """Evaluate with the social graph frozen."""
+    """
+    Evaluate a learned or fixed policy.
+
+    Frozen evaluation is the default. When ``adaptive_network`` is true,
+    Q-tables remain frozen but the supplied starting social graph continues
+    to adapt using the run's training rewiring rule. The starting graph and
+    forecast dictionary are copied so evaluation cannot mutate training
+    state retained by the caller.
+    """
     rng = np.random.default_rng(
         args.seed + 400_000 + 10_000 * replicate + population
     )
+
+    evaluation_sources = (
+        None
+        if sources is None
+        else copy_sources(sources)
+    )
+
+    evaluation_forecasts = None
+    evaluation_rewire_rng = None
+
+    if adaptive_network:
+        if evaluation_sources is None:
+            raise ValueError(
+                "Adaptive network evaluation requires a social network."
+            )
+        if getattr(args, "social_network", "random_k") != "random_k":
+            raise ValueError(
+                "Adaptive network evaluation currently requires random_k."
+            )
+        if args.rewiring not in {"prediction_error", "random"}:
+            raise ValueError(
+                "Adaptive network evaluation currently supports only "
+                "prediction_error or legacy random rewiring."
+            )
+
+        if forecasts is None:
+            if args.rewiring == "prediction_error":
+                raise ValueError(
+                    "Prediction-error adaptive evaluation requires carried "
+                    "terminal forecasts."
+                )
+            evaluation_forecasts = {
+                name: 0.5
+                for name in evaluation_sources
+            }
+        else:
+            if set(forecasts) != set(evaluation_sources):
+                raise ValueError(
+                    "Evaluation forecasts must contain every social observer."
+                )
+            evaluation_forecasts = {
+                name: float(value)
+                for name, value in forecasts.items()
+            }
+
+        evaluation_rewire_rng = np.random.default_rng(
+            evaluation_rewiring_seed(
+                replicate,
+                population,
+                args.seed,
+            )
+        )
+
     state_counts = empty_state_counts(args.social_mode)
     snapshots: list[dict] = []
     timeseries: list[dict] = []
+    cumulative_evaluation_rewires = 0
 
     for time in range(1, args.evaluation_steps + 1):
         states, actions = action_rule(
@@ -1100,7 +1227,7 @@ def evaluate_policy(
             learners,
             rng,
             social_mode=args.social_mode,
-            sources=sources,
+            sources=evaluation_sources,
             previous_actions=previous_actions,
         )
         update_state_counts(
@@ -1111,7 +1238,48 @@ def evaluate_policy(
         )
 
         next_observations, _, _, truncations, _ = env.step(actions)
-        metrics = system_metrics(env, actions, sources=sources)
+
+        evaluation_rewires_step = 0
+
+        if adaptive_network:
+            assert evaluation_sources is not None
+            assert evaluation_forecasts is not None
+            assert evaluation_rewire_rng is not None
+
+            observed_before_rewire = social_observations(
+                evaluation_sources,
+                actions,
+            )
+            current_prediction_errors = prediction_errors(
+                evaluation_forecasts,
+                observed_before_rewire,
+            )
+
+            if time % args.rewire_every == 0:
+                events = rewire_epoch(
+                    evaluation_sources,
+                    mode=args.rewiring,
+                    theta=args.rewire_theta,
+                    mu=args.rewire_mu,
+                    rng=evaluation_rewire_rng,
+                    prediction_error_values=current_prediction_errors,
+                    threshold=args.rewire_threshold,
+                    target_count=None,
+                )
+                evaluation_rewires_step = len(events)
+                cumulative_evaluation_rewires += evaluation_rewires_step
+
+            update_forecasts(
+                evaluation_forecasts,
+                observed_before_rewire,
+                alpha=args.forecast_alpha,
+            )
+
+        metrics = system_metrics(
+            env,
+            actions,
+            sources=evaluation_sources,
+        )
         snapshots.append(metrics)
 
         if (
@@ -1129,6 +1297,12 @@ def evaluate_policy(
                     "rewiring": args.rewiring,
                     "strategy": strategy,
                     "evaluation_mode": evaluation_mode,
+                    "network_start": network_start,
+                    "network_adaptive": adaptive_network,
+                    "evaluation_rewires_step": evaluation_rewires_step,
+                    "evaluation_rewires_cumulative": (
+                        cumulative_evaluation_rewires
+                    ),
                     "time": time,
                     **metrics,
                 }
@@ -1150,6 +1324,9 @@ def evaluate_policy(
         "rewiring": args.rewiring,
         "strategy": strategy,
         "evaluation_mode": evaluation_mode,
+        "network_start": network_start,
+        "network_adaptive": adaptive_network,
+        "evaluation_total_rewires": cumulative_evaluation_rewires,
         "steps_evaluated": len(snapshots),
     }
 
@@ -1349,6 +1526,7 @@ def policy_diagnostics(
 # ---------------------------------------------------------------------
 
 
+
 def run_condition(
     scenario_name: str,
     population: int,
@@ -1362,11 +1540,13 @@ def run_condition(
         learners,
         training_timeseries,
         network_timeseries,
-        sources,
+        terminal_sources,
         final_training_actions,
         rewire_counts,
         mean_prediction_errors,
         rewiring_schedule,
+        initial_sources,
+        final_forecasts,
     ) = train_q_learning(
         scenario_name,
         population,
@@ -1383,11 +1563,18 @@ def run_condition(
         replicate,
         social_mode=args.social_mode,
         rewiring=args.rewiring,
-        sources=sources,
+        sources=terminal_sources,
         rewire_counts=rewire_counts,
         mean_prediction_errors=mean_prediction_errors,
     )
 
+    network_start_terminal = (
+        "none"
+        if terminal_sources is None
+        else "terminal"
+    )
+
+    # 1. Continuation: trained ecology + terminal network, frozen.
     continuation_summary, continuation_ts = evaluate_policy(
         trained_env,
         trained_observations,
@@ -1397,12 +1584,19 @@ def run_condition(
         strategy="q_learning",
         evaluation_mode="continuation",
         learners=learners,
-        sources=sources,
+        sources=terminal_sources,
         previous_actions=final_training_actions,
         args=args,
+        network_start=network_start_terminal,
+        adaptive_network=False,
     )
 
-    fresh_env, fresh_obs, _ = make_environment(
+    # 2. Fresh ecology + terminal network, frozen.
+    #
+    # The historical label ``fresh_reset`` is intentionally retained so the
+    # existing baseline figure script continues to work. The explicit
+    # ``network_start=terminal`` field records the network semantics.
+    fresh_carried_env, fresh_carried_obs, _ = make_environment(
         scenario_name,
         population,
         replicate,
@@ -1410,20 +1604,88 @@ def run_condition(
         args,
     )
 
-    fresh_summary, fresh_ts = evaluate_policy(
-        fresh_env,
-        fresh_obs,
+    fresh_carried_summary, fresh_carried_ts = evaluate_policy(
+        fresh_carried_env,
+        fresh_carried_obs,
         scenario_name=scenario_name,
         population=population,
         replicate=replicate,
         strategy="q_learning",
         evaluation_mode="fresh_reset",
         learners=learners,
-        sources=sources,
+        sources=terminal_sources,
         previous_actions=None,
         args=args,
+        network_start=network_start_terminal,
+        adaptive_network=False,
     )
 
+    reset_network_summaries: list[dict] = []
+    reset_network_timeseries: list[dict] = []
+
+    # 3. Fresh ecology + exact initial training graph, frozen.
+    if initial_sources is not None:
+        fresh_reset_env, fresh_reset_obs, _ = make_environment(
+            scenario_name,
+            population,
+            replicate,
+            args.evaluation_steps,
+            args,
+        )
+
+        fresh_reset_summary, fresh_reset_ts = evaluate_policy(
+            fresh_reset_env,
+            fresh_reset_obs,
+            scenario_name=scenario_name,
+            population=population,
+            replicate=replicate,
+            strategy="q_learning",
+            evaluation_mode="fresh_reset_network",
+            learners=learners,
+            sources=initial_sources,
+            previous_actions=None,
+            args=args,
+            network_start="initial",
+            adaptive_network=False,
+        )
+        reset_network_summaries.append(fresh_reset_summary)
+        reset_network_timeseries.extend(fresh_reset_ts)
+
+    adaptive_summaries: list[dict] = []
+    adaptive_timeseries: list[dict] = []
+
+    # 4. Optional robustness evaluation:
+    # fresh ecology + terminal network + continued network adaptation.
+    # Q-tables remain frozen. Prediction-error runs carry terminal forecasts.
+    if getattr(args, "network_eval", "frozen") == "adaptive":
+        adaptive_env, adaptive_obs, _ = make_environment(
+            scenario_name,
+            population,
+            replicate,
+            args.evaluation_steps,
+            args,
+        )
+
+        adaptive_summary, adaptive_ts = evaluate_policy(
+            adaptive_env,
+            adaptive_obs,
+            scenario_name=scenario_name,
+            population=population,
+            replicate=replicate,
+            strategy="q_learning",
+            evaluation_mode="fresh_adaptive_network",
+            learners=learners,
+            sources=terminal_sources,
+            previous_actions=None,
+            args=args,
+            network_start="terminal",
+            adaptive_network=True,
+            forecasts=final_forecasts,
+        )
+        adaptive_summaries.append(adaptive_summary)
+        adaptive_timeseries.extend(adaptive_ts)
+
+    # Fixed-policy controls use fresh ecology and the terminal graph, frozen.
     control_summaries: list[dict] = []
     control_timeseries: list[dict] = []
 
@@ -1448,9 +1710,11 @@ def run_condition(
             strategy=strategy,
             evaluation_mode="fresh_reset",
             learners=None,
-            sources=sources,
+            sources=terminal_sources,
             previous_actions=None,
             args=args,
+            network_start=network_start_terminal,
+            adaptive_network=False,
         )
         control_summaries.append(summary)
         control_timeseries.extend(timeseries)
@@ -1458,13 +1722,17 @@ def run_condition(
     return {
         "evaluation_summary": [
             continuation_summary,
-            fresh_summary,
+            fresh_carried_summary,
+            *reset_network_summaries,
+            *adaptive_summaries,
             *control_summaries,
         ],
         "training_timeseries": training_timeseries,
         "evaluation_timeseries": [
             *continuation_ts,
-            *fresh_ts,
+            *fresh_carried_ts,
+            *reset_network_timeseries,
+            *adaptive_timeseries,
             *control_timeseries,
         ],
         "policy_summary": policy_summary,
@@ -1479,12 +1747,13 @@ def run_condition(
 # ---------------------------------------------------------------------
 
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Ecological Q-learning validation with optional social "
-            "observation, fixed visibility-skew controls, and "
-            "decentralized rewiring."
+            "observation, fixed visibility-skew controls, decentralized "
+            "rewiring, and decomposed network evaluation."
         )
     )
 
@@ -1612,6 +1881,20 @@ def main() -> None:
         help="Interval for network/perception diagnostics.",
     )
 
+    # Network evaluation.
+    parser.add_argument(
+        "--network-eval",
+        choices=NETWORK_EVAL_MODES,
+        default="frozen",
+        help=(
+            "'frozen' performs continuation plus fresh-ecology evaluation "
+            "with carried and reset frozen networks. 'adaptive' keeps those "
+            "frozen evaluations and additionally runs a fresh-ecology "
+            "robustness evaluation in which the terminal random_k network "
+            "continues to adapt while Q-tables remain frozen."
+        ),
+    )
+
     args = parser.parse_args()
     validate_configuration(args)
 
@@ -1637,12 +1920,43 @@ def main() -> None:
             else "fixed_symmetric_ba"
         )
     )
-    config["network_evaluation"] = "frozen"
+    config["network_evaluation"] = args.network_eval
     config["fresh_network"] = (
         "carried_terminal_network"
         if args.social_mode == "fixed"
         else "none"
     )
+    config["fresh_network_evaluations"] = (
+        ["carried_terminal_network", "reset_initial_network"]
+        if args.social_mode == "fixed"
+        else ["none"]
+    )
+    config["adaptive_network_start"] = (
+        "terminal_training_network"
+        if args.network_eval == "adaptive"
+        else None
+    )
+    config["adaptive_forecast_start"] = (
+        "terminal_training_forecast"
+        if args.network_eval == "adaptive"
+        and args.rewiring == "prediction_error"
+        else None
+    )
+    config["evaluation_mode_semantics"] = {
+        "continuation": (
+            "trained ecology; terminal training graph; graph frozen"
+        ),
+        "fresh_reset": (
+            "fresh ecology; terminal training graph carried forward; graph "
+            "frozen; legacy mode name retained for figure compatibility"
+        ),
+        "fresh_reset_network": (
+            "fresh ecology; exact initial training graph restored; graph frozen"
+        ),
+        "fresh_adaptive_network": (
+            "fresh ecology; terminal training graph; Q frozen; network adapts"
+        ),
+    }
     config["matched_rewire_schedule_sha256"] = (
         sha256_file(args.matched_rewire_schedule)
         if args.matched_rewire_schedule
@@ -1670,6 +1984,7 @@ def main() -> None:
     if args.social_mode == "fixed":
         print(f"Social network: {args.social_network}")
     print(f"Rewiring: {args.rewiring}")
+    print(f"Network evaluation: {args.network_eval}")
 
     if args.social_mode == "fixed" and args.social_network == "random_k":
         print(f"Attention capacity k: {args.social_k}")
@@ -1683,7 +1998,17 @@ def main() -> None:
     metadata = config["run_metadata"]
     print(f"Git commit: {metadata['git_commit_sha']}")
     print(f"Git worktree dirty: {metadata['git_worktree_dirty']}")
-    print("Evaluation social graphs are frozen.")
+
+    if args.network_eval == "frozen":
+        print(
+            "Evaluation uses frozen social graphs; social runs include both "
+            "carried-terminal and reset-initial fresh-network evaluations."
+        )
+    else:
+        print(
+            "Evaluation includes the frozen decomposition plus a fresh "
+            "adaptive-network robustness condition."
+        )
 
     for replicate in range(args.replicates):
         for scenario in args.scenarios:
