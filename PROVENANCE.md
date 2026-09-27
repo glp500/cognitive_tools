@@ -1,39 +1,29 @@
 # Scientific and Code Provenance
 
-This document records where the mechanisms implemented in
-`cognitive_tools` originate, how they differ from their source models,
-and whether source code was reused.
+This document records where mechanisms implemented in `cognitive_tools`
+originate, how the project modifies them, and whether external source
+code was reused.
 
-The purpose is to make the simulation mechanically transparent and to
-distinguish reproduced, adapted, inspired, and project-original
-components.
+The purpose is to distinguish scientific lineage from implementation
+lineage.
 
 ## Provenance labels
 
-**REPRODUCED**
+**REPRODUCED** — the implemented mathematical/computational mechanism is
+intended to follow a published source closely.
 
-The mathematical or computational mechanism is intended to reproduce a
-source mechanism closely.
+**ADAPTED** — a recognizable source mechanism is retained but changed for
+the present model.
 
-**ADAPTED**
+**INSPIRED** — a source motivates the modeling principle, but the
+implementation differs substantially.
 
-A recognizable source mechanism is retained but modified for the current
-model.
-
-**INSPIRED**
-
-The source provides the scientific framing or modeling principle, but
-the implementation is substantially different.
-
-**ORIGINAL**
-
-The mechanism was introduced specifically for `cognitive_tools`.
+**ORIGINAL** — the mechanism or experimental construction was introduced
+specifically for `cognitive_tools`.
 
 ---
 
-# Ecology
-
-## Renewable-resource feedback
+# Renewable-resource ecology
 
 **Status:** INSPIRED
 
@@ -44,57 +34,25 @@ The mechanism was introduced specifically for `cognitive_tools`.
 
 **Scientific sources:**
 
-Tilman, A. R., Plotkin, J. B., & Akcay, E. (2020).
-"Evolutionary games with environmental feedbacks."
-Nature Communications, 11, 915.
-https://doi.org/10.1038/s41467-020-14531-6
+- Tilman, Plotkin, & Akcay (2020), *Evolutionary Games with Environmental
+  Feedbacks*, Nature Communications 11, 915.
+  `doi:10.1038/s41467-020-14531-6`
+- Tu et al. (2025), *Balancing Resource and Strategy: Coevolution for
+  Sustainable Common-Pool Resource Management*, Earth Systems and
+  Environment 9, 1529-1542. `doi:10.1007/s41748-024-00489-8`
 
-Tu, C., Wu, Y., Chen, R., Fan, Y., & Yang, Y. (2025).
-"Balancing Resource and Strategy: Coevolution for Sustainable
-Common-Pool Resource Management."
-Earth Systems and Environment, 9, 1529-1542.
-https://doi.org/10.1007/s41748-024-00489-8
+The project implements a spatial renewable resource with heterogeneous
+carrying capacity, regeneration, equilibrium fraction, four-neighbour
+coupling, extraction, and discrete-time renewal.
 
-**Source principle:**
+The project defines depletion so that an isolated unharvested tile has
+approximate positive equilibrium:
 
-Renewable common-pool resources regenerate through logistic dynamics,
-while human extraction changes the resource state. Resource condition
-can in turn alter the consequences and incentives associated with human
-behavior.
+```text
+R*(x) = q(x) K(x)
+```
 
-**cognitive_tools implementation:**
-
-The resource is spatial rather than scalar:
-
-    R(x, t+1)
-    =
-    R(x, t)
-    + r(x) R(x,t) [1 - R(x,t)/K(x)]
-    - d(x) R(x,t)
-    + c [mean_neighbor(R) - R(x,t)]
-
-after realized harvest has been removed.
-
-The project defines:
-
-    d(x) = r(x) [1 - q(x)]
-
-so that an isolated unharvested tile has positive equilibrium:
-
-    R*(x) = q(x) K(x).
-
-**Project-specific changes:**
-
-- spatial resource grid;
-- heterogeneous carrying capacity K(x);
-- heterogeneous regeneration r(x);
-- heterogeneous equilibrium fraction q(x);
-- four-neighbour resource coupling;
-- discrete-time implementation;
-- explicit separation between harvesting and ecological renewal.
-
-No source code from Tilman et al. or Tu et al. is copied into this
-repository. Their work supplies scientific/modeling lineage.
+No source code from Tilman et al. or Tu et al. was copied.
 
 ---
 
@@ -109,194 +67,539 @@ repository. Their work supplies scientific/modeling lineage.
 - `Cognitive_tools/ecology.py::rescale_pattern`
 - `Cognitive_tools/ecology.py::gaussian_hotspot`
 
-These functions were migrated during the ecological-unification
-refactor from this repository's former:
-
-    ecology_patch_scan.py
-
-at repository commit:
-
-    501cb693bc8a48cb957ea14db9212c2f4e0e453a
-
-No external source code was copied for these landscape generators.
+These functions were migrated from the repository's former
+`ecology_patch_scan.py` during ecological unification. No external source
+code was copied for these landscape generators.
 
 ---
 
-# Independent tabular Q-learning
+# Extraction actions, reward, and welfare
 
-## Q-learning algorithm
+**Status:** ORIGINAL PROJECT REPRESENTATION
 
-**Status:** REPRODUCED ALGORITHM / PROJECT IMPLEMENTATION
+```text
+LOW_EXTRACT  = 0
+HIGH_EXTRACT = 1
+```
+
+Default requested harvest amounts are project calibration choices:
+
+```text
+LOW_EXTRACT  -> 0.002
+HIGH_EXTRACT -> 0.020
+```
+
+Historical `COOPERATE` / `DEFECT` aliases remain for compatibility.
+
+Q-learning reward is realized individual harvest. Resource
+sustainability, welfare, wealth inequality, and social/network outcomes
+are measured separately rather than inserted directly into reward.
+
+The project also separately records cumulative wealth and bounded
+reserve/need-satisfaction welfare measures.
+
+---
+
+# PettingZoo environment interface
+
+**Status:** ORIGINAL INTERFACE / THIRD-PARTY SOFTWARE
+
+**Implementation:** `Cognitive_tools/env.py`
+
+PettingZoo and Gymnasium are software dependencies rather than
+scientific mechanism sources.
+
+---
+
+# Tabular Q-learning
+
+**Status:** REPRODUCED ALGORITHM / INDEPENDENT IMPLEMENTATION
+
+**Implementation:** `Cognitive_tools/qlearning.py::QLearningPolicy`
+
+**Scientific source:** Watkins & Dayan (1992), *Q-learning*, Machine
+Learning 8, 279-292. `doi:10.1007/BF00992698`
+
+The implementation uses the standard one-step Q-learning update and is
+independently written. The learner is state/action-count agnostic.
+
+Current dimensions are:
+
+```text
+B0: 3 states x 2 actions
+social treatments: 9 states x 2 actions
+```
+
+Small random Q-value initialization and the ecological-state
+representation are project choices rather than parts of the original
+Q-learning algorithm.
+
+---
+
+# Ecological state encoding
+
+**Status:** ORIGINAL PROJECT ABSTRACTION
+
+Local `R/K` is discretized as:
+
+```text
+scarce:    R/K < 1/3
+moderate:  1/3 <= R/K < 2/3
+abundant:  R/K >= 2/3
+```
+
+---
+
+# Restricted social observation
+
+**Status:** INSPIRED
 
 **Implementation:**
 
-- `Cognitive_tools/qlearning.py::QLearningPolicy`
+- `Cognitive_tools/social.py::observed_low_fraction`
+- `Cognitive_tools/social.py::social_observations`
+- `Cognitive_tools/social.py::social_bin`
+- `Cognitive_tools/social.py::joint_state`
 
-**Scientific source:**
+**Scientific source:** Schrama, Tilman, & Vasconcelos (2025), *Majority
+Illusion Drives the Spontaneous Emergence of Alternative States in
+Common-Pool Resource Games with Network-Based Information*, iScience
+28(7), 112831. `doi:10.1016/j.isci.2025.112831`
 
-Watkins, C. J. C. H., & Dayan, P. (1992).
-"Q-learning."
-Machine Learning, 8, 279-292.
-https://doi.org/10.1007/BF00992698
+The project adopts the principle that agents see behavior through a
+restricted social-information network.
 
-**Source principle:**
+The current implementation does not reproduce Schrama et al.'s full
+Heuristics Switching Model, asynchronous strategy update, payoff model,
+or social-memory process.
 
-The learner applies the standard one-step off-policy Q-learning update:
+The project instead uses previous source actions as a compact social
+signal and combines three social bins with three ecological bins.
 
-    Q(s, a)
-    <-
-    Q(s, a)
-    + alpha [
-        r
-        + gamma max_a' Q(s', a')
-        - Q(s, a)
-    ]
-
-For a terminal transition, the target is:
-
-    target = r
-
-rather than bootstrapping from the next state.
-
-**cognitive_tools implementation:**
-
-The implementation is an independent minimal tabular implementation.
-
-No source code from Watkins & Dayan is copied.
-
-The learner is deliberately domain-agnostic:
-
-- `n_states` determines the number of discrete states;
-- `n_actions` determines the number of discrete actions;
-- states are supplied as integer indices;
-- actions are returned as integer indices;
-- rewards are supplied as scalar values;
-- the learner does not know what a state or action means.
-
-The current ecological baseline uses:
-
-    n_states = 3
-    n_actions = 2
-
-The planned ecological-social model can use:
-
-    n_states = 9
-    n_actions = 2
-
-without modifying the Q-learning algorithm.
-
-The learner uses epsilon-greedy exploration with multiplicative epsilon
-decay.
-
-Small random Q-value initialization is retained from the previous
-cognitive_tools implementation to avoid deterministic action-0
-tie-breaking.
-
-For the default three-state, two-action case, the initialization uses
-the same NumPy RNG call and table dimensions as the pre-refactor
-implementation.
+No Schrama source code was copied.
 
 ---
 
-## Ecological state encoding
+# S1 random fixed-attention network
 
-**Status:** ORIGINAL / project abstraction
+**Status:** ORIGINAL PROJECT INITIALIZATION / STRUCTURALLY RELATED TO OH &
+SCHAUF
+
+**Implementation:** `Cognitive_tools/social.py::init_random_attention`
+
+Every observer receives exactly `k` distinct sources and cannot observe
+itself.
+
+The representation is directed:
+
+```text
+source -> observer
+```
+
+The fixed-attention architecture is structurally close to the limited
+information-source design used by Oh & Schauf, but initialization here is
+independently implemented.
+
+---
+
+# S2 fixed Barabasi-Albert-style observational network
+
+**Status:** ADAPTED / INSPIRED
+
+**Implementation:**
+`Cognitive_tools/social.py::init_barabasi_albert_attention`
+
+**Scientific source:** Schrama et al. (2025).
+
+Schrama et al. use a Barabasi-Albert social network so direct-neighbour
+information access has a skewed degree distribution and highly visible
+nodes.
+
+The `cognitive_tools` S2 treatment independently implements a compact
+preferential-attachment network:
+
+1. begin with a complete graph on `m + 1` agents;
+2. add agents sequentially;
+3. connect each newcomer to `m` distinct existing agents with probability
+   proportional to current degree;
+4. represent every undirected tie as symmetric observation lists.
+
+The default project control uses:
+
+```text
+m = 2
+```
+
+because its finite-N mean degree is close to four, making it a useful
+comparison with S1 `k=4` while introducing strong degree heterogeneity.
+
+This is **not** a reproduction of Schrama et al.'s numerical network
+density. In particular, their published default parameter table uses a
+much larger BA link-density parameter for their `P=1000` model.
+
+No code from Schrama et al. or their replication repository was copied.
+
+---
+
+# Local/global replacement search
+
+**Status:** ADAPTED
 
 **Implementation:**
 
-- `Cognitive_tools/qlearning.py::resource_state_from_fraction`
-- `Cognitive_tools/qlearning.py::resource_state`
+- `Cognitive_tools/social.py::local_candidates`
+- `Cognitive_tools/social.py::global_candidates`
+- `Cognitive_tools/social.py::replace_source`
+- `Cognitive_tools/social.py::rewire_epoch`
 
-The ecological learner state is determined from local:
+**Scientific source:** Oh & Schauf (2025), *Self-organizing Group
+Structure through Rewiring for Collective Decision-Making in Evolving
+Environments*, Scientific Reports 15, 39947.
+`doi:10.1038/s41598-025-23634-3`
 
-    R / K
+The project retains these structural principles:
 
-using three equal-width bins:
+```text
+fixed attention capacity
+one-source replacement
+local sources-of-sources search
+global search
+theta controls local/global search
+```
 
-    state 0: scarce
-    R/K < 1/3
+The implementation adds explicit global fallback when local search has
+no legal candidate and uses a pre-checkpoint network snapshot for
+candidate construction.
 
-    state 1: moderate
-    1/3 <= R/K < 2/3
-
-    state 2: abundant
-    R/K >= 2/3
-
-This discretization is a cognitive_tools modeling choice.
-
-It is not part of the Q-learning algorithm described by Watkins &
-Dayan.
-
-The current `resource_state()` function is a compatibility adapter for
-the present `EcoEnv` observation structure. It extracts local R/K from:
-
-    observation["local"][0]
-
-and delegates the discretization to:
-
-    resource_state_from_fraction()
-
-This separation is intended to allow the observation representation to
-change later without altering `QLearningPolicy`.
+No Oh & Schauf source code was copied.
 
 ---
 
-# Action terminology
+# Local social forecasting
 
-The physical model currently has two extraction actions:
+**Status:** ADAPTED IDEA / PROJECT IMPLEMENTATION
 
-    LOW_EXTRACT = 0
-    HIGH_EXTRACT = 1
+**Implementation:** `Cognitive_tools/social.py::update_forecasts`
 
-Some existing experiment scripts still use the historical aliases:
+Each observer maintains one EWMA forecast:
 
-    COOPERATE = 0
-    DEFECT = 1
+```text
+forecast_i(t+1)
+=
+(1-alpha) forecast_i(t)
++ alpha observed_i(t)
+```
 
-Those aliases are retained temporarily for backward compatibility.
+This is related to adaptive-expectation ideas in the source literature
+but is not a reproduction of Schrama et al.'s HSM.
 
-They should not be interpreted as implying that low extraction is always
-equivalent to social cooperation or that high extraction is always
-equivalent to social defection.
+---
 
-The direct modeled variable is extraction intensity.
+# Prediction-error rewiring
 
-A later cleanup will remove the historical aliases after the legacy
-experiment runner has been retired.
+**Status:** ORIGINAL
+
+**Implementation:**
+
+- `Cognitive_tools/social.py::prediction_errors`
+- `Cognitive_tools/social.py::rewire_epoch(mode="prediction_error")`
+
+```text
+error_i(t) = |observed_i(t) - forecast_i(t)|
+```
+
+An observer is eligible when:
+
+```text
+error_i(t) > threshold
+```
+
+and then rewires with probability `mu`.
+
+This trigger is not Oh & Schauf's objective-correctness rule. CPR
+low/high extraction actions do not receive an externally revealed binary
+correctness label in this model.
+
+Prediction error therefore measures local social surprise, not truth,
+misinformation, deception, competence, or sustainability.
+
+---
+
+# Random rewiring controls
+
+## Probabilistic random rewiring
+
+**Status:** ORIGINAL EXPLORATORY CONTROL
+
+**Implementation:** `rewire_epoch(mode="random")`
+
+Every observer is eligible and independently rewires with probability
+`mu`.
+
+This mode is retained for exploratory/backward-compatible runs, but it
+does not guarantee the same realized amount of topology change as an
+adaptive treatment.
+
+## Event-count-matched random rewiring
+
+**Status:** ORIGINAL CONFIRMATORY CONTROL
+
+**Implementation:** `rewire_epoch(mode="random_matched")` plus the
+canonical experiment runner's rewiring-schedule loader.
+
+A paired adaptive run first records the number of successful rewires at
+each checkpoint. The matched random control then:
+
+1. uses the same initial random-`k` graph construction and seed;
+2. uses the same ecological condition, population, replicate, and
+   rewiring checkpoint times;
+3. uses the same `theta` search scope;
+4. randomly chooses exactly the adaptive run's realized number of
+   observers at each checkpoint;
+5. gives each selected observer one source replacement.
+
+This isolates adaptive source selection from the amount of network
+turnover more cleanly than equal-`mu` random rewiring.
+
+`mu` does not determine the event count in `random_matched` mode.
+
+---
+
+# Temporal ordering
+
+**Status:** ORIGINAL INTEGRATION DESIGN
+
+```text
+(G_t, a_(t-1), R_t)
+    -> s_t
+    -> a_t
+    -> R_(t+1)
+    -> observe a_t through G_t
+    -> prediction error
+    -> optional rewiring
+    -> G_(t+1)
+    -> forecast update from pre-rewire observations
+    -> s_(t+1)
+    -> Q update
+```
+
+The Q target therefore uses the post-rewiring network.
+
+---
+
+# Social diagnostics
+
+**Status:** PROJECT OPERATIONALIZATION
+
+Current diagnostics include:
+
+```text
+visibility-degree Gini
+maximum visibility share
+zero-visibility fraction
+population low-extraction fraction
+visible low-extraction fraction
+mean local perception error
+signed perception bias
+majority mismatch
+degree/action correlation
+prediction error
+network turnover
+rewire counts
+requested/used search scope
+local-search fallback counts
+```
+
+Material inequality (`wealth_gini`) and information inequality
+(`visibility_gini`) are kept distinct.
+
+---
+
+# Current evaluation protocol
+
+**Status:** ORIGINAL / PARTIALLY COMPLETE EXPERIMENTAL DESIGN
+
+Current evaluation freezes the social graph.
+
+Implemented:
+
+```text
+continuation:
+    trained Q
+    training-end ecology
+    terminal training graph
+
+fresh_reset:
+    trained Q
+    fresh ecology
+    terminal training graph carried forward
+```
+
+Planned next:
+
+```text
+fresh ecology + reset initial graph
+fresh ecology + adaptive graph
+```
+
+---
+
+# Reproducibility infrastructure
+
+**Status:** ORIGINAL
+
+The canonical runner separates random streams for:
+
+```text
+landscape
+agent positions
+Q-learning
+initial social graph
+rewiring
+evaluation random policy
+```
+
+It records in `config.json`:
+
+```text
+CLI parameters
+scenario definitions
+network/evaluation semantics
+UTC timestamp
+Git commit and branch
+Git worktree status
+Python/platform information
+major package versions
+invocation command
+```
+
+Active rewiring runs additionally write:
+
+```text
+data/rewiring_schedule.csv
+```
+
+so matched controls can reproduce the adaptive run's realized rewiring
+frequency checkpoint by checkpoint.
+
+Generated experiment directories are ignored by Git for new runs and
+should be frozen later as deliberate research-release artifacts.
+
+---
+
+# External code reuse status
+
+No scientific mechanism source code from the papers listed in
+`REFERENCES.bib` has been copied into this repository.
+
+Published work supplies scientific/mechanistic provenance. Current
+implementations are independently written.
+
+If direct external code reuse occurs later, record:
+
+```text
+source repository
+source commit
+source path/function
+license
+specific modifications
+```
+
+both in code comments and here.
 
 ---
 
 # Commit-level provenance
 
-## refactor: unify ecological dynamics
+## `refactor: unify ecological dynamics`
+
+Commit: `b31478295ce7987db72066b592278995e5d297eb`
+
+Centralized ecology and removed duplicate ecological simulators.
+
+## `generic tabular q learner`
+
+Commit: `b8baef4bf041982d10ada37830c187cf6cec821f`
+
+Made the learner state/action-count agnostic while preserving the
+3-state baseline.
+
+## scientific provenance documentation
+
+Commit: `298bdbea483b336eb1b8249518f713a7101d2b88`
+
+Established source/code provenance documentation and bibliography.
+
+## `fixed social observation`
+
+Commit: `6e7d7cc9fb89a641e77fd116c646ba7988ee2aad`
+
+Added directed fixed-attention observation and the 9-state
+ ecology-social learner.
+
+## `feat: decentralized rewiring`
+
+Commit: `286cb3a5c2c8ae6929dc0ec0109830655012f4a4`
+
+Added local/global source replacement, EWMA prediction, prediction-error
+rewiring, random turnover, and social-network diagnostics.
+
+## `chore: experiment hardening`
+
+Commit: `8703f07b84709bfc206ca4539a30236408e2d169`
+
+Added generated-result ignore rules and run-level Git/runtime metadata.
+The pushed commit did not include all originally planned hardening
+documentation/tests; those omissions are repaired in the next change
+set.
+
+## `feat: complete core social controls`
+
+Planned Stage 2 commit.
 
 Purpose:
 
-- eliminate duplicate ecological simulators;
-- establish one renewable-resource update function;
-- move landscape construction into the package;
-- preserve existing numerical ecological dynamics.
-
-Deleted obsolete ecology experiment implementations:
-
-- `ecology_run.py`
-- `ecology_experiment.py`
-- `ecology_patch_scan.py`
-
-The historical versions remain available through Git history.
+```text
+add fixed BA-style S2 network
+add matched-random R0
+write per-checkpoint rewiring schedules
+validate matched theta and run keys
+add control-specific tests
+repair missing hardening documentation/lifecycle tests
+```
 
 ---
 
-## refactor: make tabular q learner generic
+# Current scientific boundary
 
-Purpose:
+The repository currently targets:
 
-- remove hard-coded three-state assumptions from the Q-learning class;
-- remove hard-coded two-action assumptions from action selection;
-- parameterize Q-table dimensions with `n_states` and `n_actions`;
-- preserve the existing three-state/two-action baseline by default;
-- separate ecological state interpretation from the Q-learning algorithm;
-- establish support for the planned nine-state ecological-social model;
-- add direct unit tests of the Q-learning update;
-- preserve legacy action aliases temporarily so this refactor does not
-  alter unrelated experiment code.
+```text
+spatial renewable ecology
++
+independent tabular learning
++
+network-limited previous-action observation
++
+fixed random or fixed BA-style information topology
++
+random or prediction-error-driven decentralized rewiring
+```
+
+It does not currently implement:
+
+```text
+full Schrama HSM
+full Oh-Schauf DeGroot model
+misinformation
+homophily
+prestige
+payoff-based rewiring
+movement
+sanctioning
+transfers
+variable-k adaptive attention
+GNN planning
+```
+
+See `REFERENCES.bib` for bibliographic records.

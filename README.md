@@ -12,43 +12,489 @@ The central social-network question is:
 > decentralized rewiring improve or destabilize common-pool-resource
 > sustainability?
 
-The project keeps physical resource dynamics and social information
+The project keeps ecological dynamics and social information
 mechanically separate.
 
----
+## Current treatments
 
-## Current implementation
+| ID | Social information | Initial social network | Network dynamics |
+|---|---|---|---|
+| `B0` | none | none | none |
+| `S1` | previous peer actions | random directed fixed-`k` | fixed |
+| `S2` | previous peer actions | fixed BA-style network | fixed |
+| `R0` | previous peer actions | random directed fixed-`k` | event-count-matched random rewiring |
+| `R1` | previous peer actions | random directed fixed-`k` | prediction-error rewiring, `theta=0` |
+| `R2` | previous peer actions | random directed fixed-`k` | prediction-error rewiring, `theta=0.25` |
+| `R3` | previous peer actions | random directed fixed-`k` | prediction-error rewiring, `theta=1` |
 
-The implemented model contains:
+The older probabilistic `--rewiring random` mode is retained for
+exploratory/backward-compatible runs. Confirmatory `R0` runs should use
+`--rewiring random_matched` and a rewiring schedule produced by the
+paired adaptive run.
 
-1. a spatial renewable resource;
-2. stationary resource users;
-3. low- and high-extraction actions;
-4. independent tabular Q-learning;
-5. a three-state ecological representation based on local `R/K`;
-6. an optional directed fixed-attention social-information network;
-7. previous-action social observation;
-8. a nine-state ecology x social learner;
-9. random social-network turnover;
-10. prediction-error-triggered decentralized rewiring;
-11. local/global replacement search;
-12. ecological, welfare, inequality, perception, and network diagnostics.
-
-The current implementation supports the following core treatments:
-
-| Treatment | Social information | Network dynamics |
-|---|---|---|
-| `B0` | none | none |
-| `S1` | previous peer actions | fixed random directed network |
-| `R0` | previous peer actions | random rewiring |
-| `R1` | previous peer actions | prediction-error rewiring, local search |
-| `R2` | previous peer actions | prediction-error rewiring, mixed local/global search |
-| `R3` | previous peer actions | prediction-error rewiring, global search |
-
-`R1`, `R2`, and `R3` use the same prediction-error mechanism and differ
-through the global-search probability `theta`:
+## Architecture
 
 ```text
-R1: theta = 0.00
-R2: theta = 0.25
-R3: theta = 1.00
+Cognitive_tools/
+    ecology.py       renewable-resource dynamics and landscapes
+    model.py         agents and physical resource use
+    env.py           PettingZoo ecology interface
+    qlearning.py     generic tabular Q learner
+    social.py        social observation, topology, prediction, rewiring
+    visualization.py
+
+baseline_validation_experiment.py   canonical experiment runner
+baseline_validation_figures.py      baseline figures
+qlearning_experiment.py              legacy scenario definitions/helpers
+
+BASELINE_EXPERIMENT.md
+SOCIAL_EXPERIMENT.md
+PROVENANCE.md
+REFERENCES.bib
+
+tests/
+```
+
+## Actions
+
+```text
+LOW_EXTRACT  = 0
+HIGH_EXTRACT = 1
+```
+
+Historical `COOPERATE` / `DEFECT` aliases remain only for compatibility
+with older code.
+
+Default requested extraction amounts are:
+
+```text
+low  = 0.002
+high = 0.020
+```
+
+Reward is realized individual harvest. Sustainability, welfare,
+inequality, conformity, prediction accuracy, and network position are
+outcomes rather than direct reward terms.
+
+## Ecological learner state
+
+The ecological state is based on local `R/K`:
+
+```text
+scarce:    R/K < 1/3
+moderate:  1/3 <= R/K < 2/3
+abundant:  R/K >= 2/3
+```
+
+The no-social baseline therefore uses a `3 x 2` Q-table.
+
+## Social observation
+
+The social representation is:
+
+```text
+sources[observer] = agents whose previous actions the observer sees
+```
+
+Information flows conceptually:
+
+```text
+source -> observer
+```
+
+The social signal is the fraction of observed sources that chose
+`LOW_EXTRACT` on the previous step.
+
+```text
+mostly_high: low fraction < 1/3
+mixed:       1/3 <= low fraction < 2/3
+mostly_low:  low fraction >= 2/3
+```
+
+The joint learner state is:
+
+```text
+joint_state = 3 * ecological_state + social_state
+```
+
+so social treatments use a `9 x 2` Q-table.
+
+## Social-network modes
+
+### `random_k`
+
+```bash
+--social-mode fixed \
+--social-network random_k \
+--social-k 4
+```
+
+Every observer has exactly `k` distinct sources. Self-observation and
+duplicate sources are forbidden.
+
+This is the initial network used for `S1` and all rewiring treatments.
+
+### `ba`
+
+```bash
+--social-mode fixed \
+--social-network ba \
+--ba-m 2 \
+--rewiring none
+```
+
+This creates a fixed Barabasi-Albert-style observational network. The
+underlying social ties are undirected and are represented as symmetric
+observation lists, so attention and visibility vary with degree.
+
+`m=2` gives mean degree close to four at moderate/large population sizes,
+which makes it a useful visibility-skew comparison with the default
+`S1` setting `k=4`. This is a project control choice; it is not a claim
+that the numerical network density reproduces Schrama et al.
+
+BA networks are fixed in the current core experiment. Rewiring a BA
+network is deliberately not supported in this stage.
+
+## Prediction error
+
+Each social observer maintains an EWMA forecast of locally observed
+low-extraction frequency.
+
+```text
+error_i(t) = |observed_i(t) - forecast_i(t)|
+```
+
+```text
+forecast_i(t+1)
+=
+(1 - forecast_alpha) * forecast_i(t)
++ forecast_alpha * observed_i(t)
+```
+
+The current defaults are:
+
+```text
+forecast_alpha   = 0.50
+rewire_threshold = 0.25
+rewire_mu        = 0.10
+rewire_every     = 50
+```
+
+Prediction error measures local social surprise. It does not measure
+truth, misinformation, or objective competence.
+
+## Local/global replacement search
+
+A rewire replaces one existing source and therefore preserves attention
+capacity in `random_k` treatments.
+
+`theta` is the probability of requesting global search:
+
+```text
+theta = 0.00   local search
+theta = 0.25   mostly local, some global search
+theta = 1.00   global search
+```
+
+Local candidates are sources of current sources. If local search has no
+legal candidate, the implementation explicitly falls back to global
+search.
+
+All agents at one rewiring checkpoint construct candidates from a
+snapshot of the network at the start of that checkpoint.
+
+## Matched random-turnover control
+
+The confirmatory random control uses the realized number of successful
+rewires from a paired adaptive run.
+
+An adaptive run writes:
+
+```text
+data/rewiring_schedule.csv
+```
+
+with one row per rewiring checkpoint.
+
+A paired `R0` run then uses:
+
+```bash
+--rewiring random_matched \
+--matched-rewire-schedule <adaptive-run>/data/rewiring_schedule.csv
+```
+
+At every checkpoint, `R0` randomly selects exactly the recorded number
+of observers and rewires them using the same `theta` search rule.
+
+The runner checks that the schedule came from
+`prediction_error` rewiring and that its `theta` matches the current
+run.
+
+The `mu` argument does not determine the event count in
+`random_matched` mode. The paired adaptive schedule does.
+
+## Temporal order
+
+Training follows:
+
+```text
+(G_t, a_(t-1), R_t)
+        -> s_t
+        -> a_t
+        -> R_(t+1)
+        -> observe a_t through G_t
+        -> prediction error
+        -> optional rewiring
+        -> G_(t+1)
+        -> forecast update from the pre-rewire observation
+        -> s_(t+1)
+        -> Q update
+```
+
+The Q-learning target therefore uses the post-rewiring graph.
+
+## Current evaluation
+
+Evaluation currently freezes the social graph.
+
+Implemented modes are:
+
+```text
+continuation
+    trained Q
+    training-end ecology
+    terminal training graph
+    frozen graph
+
+fresh_reset
+    trained Q
+    fresh ecology
+    terminal training graph carried forward
+    frozen graph
+```
+
+The next planned stage will separate fresh carried-network, fresh
+reset-network, and fresh adaptive-network evaluation explicitly.
+
+## Measurements
+
+Ecological/behavioral outputs include:
+
+```text
+low_extraction_rate
+collective_order
+action_entropy
+mean_resource_fraction
+total_resource
+```
+
+Material/welfare outputs include:
+
+```text
+mean_reserve_welfare
+mean_need_satisfaction
+deprivation_rate
+mean_metabolic_shortfall
+mean_energy
+wealth_gini
+mean_wealth
+```
+
+Social/network outputs include:
+
+```text
+visibility_gini
+max_visibility_share
+zero_visibility_fraction
+population_low_fraction
+visible_low_fraction
+mean_perception_error
+signed_perception_bias
+majority_mismatch_rate
+degree_action_correlation
+mean_prediction_error
+edge_turnover
+rewires_since_record
+cumulative_rewires
+global_rewire_fraction
+requested_global_fraction
+local_fallbacks
+```
+
+## Output files
+
+Runs are written under:
+
+```text
+results/q_learning_baseline/experiments/<run-name>/
+```
+
+The canonical runner writes:
+
+```text
+config.json
+
+data/
+    evaluation_summary.csv
+    training_timeseries.csv
+    evaluation_timeseries.csv
+    policy_summary.csv
+    agent_policies.csv
+    network_timeseries.csv
+    rewiring_schedule.csv    # when rewiring is active
+```
+
+`config.json` includes command-line parameters plus Git, Python,
+platform, package-version, and invocation metadata.
+
+New experiment directories are ignored by Git. Final datasets should be
+frozen as deliberate research-release artifacts rather than accumulated
+in ordinary source history.
+
+## Tests
+
+```bash
+pytest -q
+```
+
+Optional syntax check:
+
+```bash
+python -m py_compile \
+    Cognitive_tools/ecology.py \
+    Cognitive_tools/model.py \
+    Cognitive_tools/env.py \
+    Cognitive_tools/qlearning.py \
+    Cognitive_tools/social.py \
+    qlearning_experiment.py \
+    baseline_validation_experiment.py \
+    baseline_validation_figures.py
+```
+
+## Core smoke tests
+
+### B0
+
+```bash
+python baseline_validation_experiment.py \
+    --run-name b0_smoke \
+    --social-mode none \
+    --rewiring none \
+    --scenarios uniform_high patchy_high \
+    --populations 8 \
+    --replicates 1 \
+    --training-steps 300 \
+    --evaluation-steps 100 \
+    --record-every 20
+```
+
+### S1
+
+```bash
+python baseline_validation_experiment.py \
+    --run-name s1_smoke \
+    --social-mode fixed \
+    --social-network random_k \
+    --social-k 4 \
+    --rewiring none \
+    --scenarios uniform_high patchy_high \
+    --populations 8 \
+    --replicates 1 \
+    --training-steps 300 \
+    --evaluation-steps 100 \
+    --record-every 20 \
+    --record-network-every 20
+```
+
+### S2
+
+```bash
+python baseline_validation_experiment.py \
+    --run-name s2_smoke \
+    --social-mode fixed \
+    --social-network ba \
+    --ba-m 2 \
+    --rewiring none \
+    --scenarios uniform_high patchy_high \
+    --populations 8 \
+    --replicates 1 \
+    --training-steps 300 \
+    --evaluation-steps 100 \
+    --record-every 20 \
+    --record-network-every 20
+```
+
+### Adaptive R2 schedule source
+
+```bash
+python baseline_validation_experiment.py \
+    --run-name r2_adaptive_smoke \
+    --social-mode fixed \
+    --social-network random_k \
+    --social-k 4 \
+    --rewiring prediction_error \
+    --rewire-theta 0.25 \
+    --rewire-mu 0.10 \
+    --rewire-every 50 \
+    --rewire-threshold 0.25 \
+    --forecast-alpha 0.50 \
+    --scenarios uniform_high patchy_high \
+    --populations 8 \
+    --replicates 1 \
+    --training-steps 500 \
+    --evaluation-steps 100 \
+    --record-every 20 \
+    --record-network-every 50
+```
+
+### Matched R0 for that R2 run
+
+```bash
+python baseline_validation_experiment.py \
+    --run-name r0_matched_r2_smoke \
+    --social-mode fixed \
+    --social-network random_k \
+    --social-k 4 \
+    --rewiring random_matched \
+    --rewire-theta 0.25 \
+    --matched-rewire-schedule \
+        results/q_learning_baseline/experiments/r2_adaptive_smoke/data/rewiring_schedule.csv \
+    --scenarios uniform_high patchy_high \
+    --populations 8 \
+    --replicates 1 \
+    --training-steps 500 \
+    --evaluation-steps 100 \
+    --record-every 20 \
+    --record-network-every 50
+```
+
+The adaptive and matched runs must use the same base seed, scenarios,
+populations, replicate count, training length, rewiring interval, and
+`theta`.
+
+## Development sequence
+
+Completed:
+
+```text
+unified ecology
+generic tabular Q learner
+scientific provenance foundation
+fixed social observation
+decentralized rewiring
+experiment hardening
+core social controls: S2 + matched R0
+```
+
+Next:
+
+```text
+Stage 3: decompose network evaluation
+Stage 4: complete social measurements
+Stage 5: cross-treatment analysis and figures
+pilot experiments
+confirmatory experiments
+```
+
+See `SOCIAL_EXPERIMENT.md` for the experimental specification and
+`PROVENANCE.md` for mechanism-level scientific and code provenance.
