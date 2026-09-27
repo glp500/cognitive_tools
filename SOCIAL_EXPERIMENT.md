@@ -599,11 +599,15 @@ Mechanism quantities:
 visibility_gini
 max_visibility_share
 zero_visibility_fraction
+reciprocity
+degree_assortativity
 population_low_fraction
 visible_low_fraction
+visible_population_bias
 mean_perception_error
 signed_perception_bias
 majority_mismatch_rate
+majority_tie_rate
 degree_action_correlation
 mean_prediction_error
 edge_turnover
@@ -613,6 +617,97 @@ global_rewire_fraction
 requested_global_fraction
 local_fallbacks
 ```
+
+## Stage 4 social-measurement semantics
+
+For focal observer `i`, the local observed fraction remains:
+
+```text
+o_i = fraction of current sources choosing LOW_EXTRACT
+```
+
+and the comparison population remains:
+
+```text
+c_-i = LOW_EXTRACT fraction among all other agents
+```
+
+The per-observer perception quantities are:
+
+```text
+absolute error = |o_i - c_-i|
+signed bias    = o_i - c_-i
+```
+
+Majority comparison uses the sign of each fraction relative to `0.5`. A
+comparison is marked tied if either the local sample or `c_-i` is exactly
+`0.5`. The reported:
+
+```text
+majority_mismatch_rate
+```
+
+is calculated only over non-tied comparisons, while:
+
+```text
+majority_tie_rate
+```
+
+is the fraction of focal comparisons excluded for a tie.
+
+`visible_population_bias` is:
+
+```text
+edge-weighted visible LOW fraction
+- population LOW fraction
+```
+
+so it directly records whether visibility weighting over-represents low or
+high extraction relative to the population.
+
+Structural measurements are:
+
+```text
+reciprocity
+    fraction of directed source -> observer edges whose reverse edge exists
+
+degree_assortativity
+    Pearson correlation between source visibility degree and observer
+    visibility degree along directed information edges
+```
+
+For symmetric BA-style graphs, the latter reduces to ordinary degree
+assortativity. Undefined correlations remain `NaN`.
+
+Policy heterogeneity now includes:
+
+```text
+policy_hamming_mean
+policy_hamming_visit_weighted_mean
+visited_state_fraction
+training_visit_fraction_<state>
+```
+
+The visit-weighted Hamming measure uses aggregate training state occupancy
+as the weight over Q states. Disagreement in never-visited states therefore
+receives zero weight.
+
+The runner additionally writes:
+
+```text
+data/agent_social_summary.csv
+data/network_edges_checkpoints.csv
+```
+
+`agent_social_summary.csv` contains one row per agent/run with training-time
+mean observed behavior, comparison-population behavior, perception error,
+signed bias, majority tie/mismatch rates, mean/final visibility, rewiring
+count, prediction error, and final material/welfare quantities.
+
+`network_edges_checkpoints.csv` contains exact initial and terminal training
+edge lists in `source -> observer` orientation, with endpoint visibility
+degree and attention size. It is intentionally a selected-checkpoint output
+rather than a full edge-level timeseries.
 
 ---
 
@@ -785,26 +880,17 @@ rewire interval:
 ```
 
 Do not move to the full 50-100 replicate confirmatory campaign until the
-remaining Stage 4-5 measurement and social-figure pipeline has been
-validated on pilot outputs.
+remaining Stage 5 social-figure pipeline has been validated on pilot outputs.
 
 ---
 
 # 22. Remaining stages
 
-Stage 3 network evaluation decomposition is complete.
-
-## Stage 4 — complete social measurements
-
-Priority additions:
+Completed:
 
 ```text
-majority tie rate
-reciprocity
-degree assortativity
-agent_social_summary.csv
-selected initial/final graph snapshots
-visit-weighted policy diagnostics
+Stage 3 — network evaluation decomposition
+Stage 4 — complete social measurements
 ```
 
 ## Stage 5 — cross-treatment analysis and figures

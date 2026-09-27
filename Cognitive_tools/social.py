@@ -883,15 +883,188 @@ def _majority_label(
     return 0
 
 
+def network_reciprocity(
+    sources: dict[str, list[str]],
+) -> float:
+    """
+    Fraction of directed information edges that have a reverse edge.
+
+    Edges use the project convention ``(source, observer)``. An edge is
+    reciprocal when the observer also appears as a source of the original
+    source. A symmetric undirected network represented as two directed edges
+    therefore has reciprocity 1.
+    """
+
+    edges = network_edges(sources)
+
+    if not edges:
+        return 0.0
+
+    reciprocated = sum(
+        (observer, source) in edges
+        for source, observer in edges
+    )
+
+    return float(
+        reciprocated / len(edges)
+    )
+
+
+def visibility_degree_assortativity(
+    sources: dict[str, list[str]],
+) -> float:
+    """
+    Pearson assortativity of visibility degree along information edges.
+
+    For every directed edge ``source -> observer`` we correlate the source's
+    visibility degree with the observer's visibility degree. This reduces to
+    ordinary degree assortativity for symmetric BA-style observation graphs.
+
+    Return NaN when the correlation is undefined because one endpoint degree
+    sequence has effectively zero variance.
+    """
+
+    edges = sorted(
+        network_edges(sources)
+    )
+
+    if len(edges) < 2:
+        return float("nan")
+
+    visibility = visibility_counts(sources)
+
+    source_degrees = np.asarray(
+        [
+            visibility[source]
+            for source, _
+            in edges
+        ],
+        dtype=float,
+    )
+
+    observer_degrees = np.asarray(
+        [
+            visibility[observer]
+            for _, observer
+            in edges
+        ],
+        dtype=float,
+    )
+
+    if (
+        np.std(source_degrees) <= 1e-12
+        or np.std(observer_degrees) <= 1e-12
+    ):
+        return float("nan")
+
+    return float(
+        np.corrcoef(
+            source_degrees,
+            observer_degrees,
+        )[0, 1]
+    )
+
+
+def observer_social_diagnostics(
+    sources: dict[str, list[str]],
+    actions: dict[str, int],
+) -> dict[str, dict[str, float | bool]]:
+    """
+    Return focal social-perception diagnostics for every observer.
+
+    The comparison population excludes the focal observer. ``majority_tied``
+    is true when either the observer's local sample or the comparison
+    population is exactly tied. ``majority_mismatch`` is NaN for those tied
+    comparisons and otherwise 0/1.
+    """
+
+    if set(actions) != set(sources):
+        raise ValueError(
+            "actions must contain every social-network agent."
+        )
+
+    observed = social_observations(
+        sources,
+        actions,
+    )
+
+    visibility = visibility_counts(
+        sources
+    )
+
+    diagnostics: dict[
+        str,
+        dict[str, float | bool],
+    ] = {}
+
+    for observer in sources:
+        actual = population_low_fraction_excluding(
+            observer,
+            actions,
+        )
+
+        local = float(
+            observed[observer]
+        )
+
+        if np.isfinite(actual):
+            error = abs(
+                local - actual
+            )
+            bias = local - actual
+
+            local_majority = _majority_label(
+                local
+            )
+            actual_majority = _majority_label(
+                actual
+            )
+
+            tied = (
+                local_majority == 0
+                or actual_majority == 0
+            )
+
+            mismatch = (
+                float("nan")
+                if tied
+                else float(
+                    local_majority
+                    != actual_majority
+                )
+            )
+        else:
+            error = float("nan")
+            bias = float("nan")
+            tied = False
+            mismatch = float("nan")
+
+        diagnostics[observer] = {
+            "observed_low_fraction": local,
+            "population_low_fraction_excluding": float(actual),
+            "perception_error": float(error),
+            "signed_perception_bias": float(bias),
+            "majority_tied": bool(tied),
+            "majority_mismatch": float(mismatch),
+            "visibility_degree": float(
+                visibility[observer]
+            ),
+        }
+
+    return diagnostics
+
+
 def social_metrics(
     sources: dict[str, list[str]],
     actions: dict[str, int] | None,
 ) -> dict[str, float]:
     """
-    Compute inexpensive social-network and perception diagnostics.
+    Compute social-network and perception diagnostics.
 
     Perception metrics compare each observer's information neighborhood with
-    the rest of the population excluding that observer.
+    the rest of the population excluding that observer. Majority mismatch is
+    computed only for non-tied comparisons; ``majority_tie_rate`` reports the
+    excluded share explicitly.
     """
 
     visibility = visibility_counts(sources)
@@ -916,11 +1089,21 @@ def social_metrics(
         "zero_visibility_fraction": float(
             np.mean(degrees == 0.0)
         ),
+        "reciprocity": network_reciprocity(
+            sources
+        ),
+        "degree_assortativity": (
+            visibility_degree_assortativity(
+                sources
+            )
+        ),
         "population_low_fraction": float("nan"),
         "visible_low_fraction": float("nan"),
+        "visible_population_bias": float("nan"),
         "mean_perception_error": float("nan"),
         "signed_perception_bias": float("nan"),
         "majority_mismatch_rate": float("nan"),
+        "majority_tie_rate": float("nan"),
         "degree_action_correlation": float("nan"),
     }
 
@@ -948,40 +1131,44 @@ def social_metrics(
         else float("nan")
     )
 
-    observed = social_observations(
+    focal = observer_social_diagnostics(
         sources,
         actions,
     )
 
-    absolute_errors = []
-    signed_biases = []
-    majority_mismatches = []
-
-    for observer in sources:
-        actual = population_low_fraction_excluding(
-            observer,
-            actions,
+    absolute_errors = [
+        float(row["perception_error"])
+        for row in focal.values()
+        if np.isfinite(
+            float(row["perception_error"])
         )
+    ]
 
-        if not np.isfinite(actual):
-            continue
-
-        local = float(observed[observer])
-
-        absolute_errors.append(
-            abs(local - actual)
+    signed_biases = [
+        float(row["signed_perception_bias"])
+        for row in focal.values()
+        if np.isfinite(
+            float(row["signed_perception_bias"])
         )
-        signed_biases.append(
-            local - actual
-        )
+    ]
 
-        local_majority = _majority_label(local)
-        actual_majority = _majority_label(actual)
-
-        if local_majority != 0 and actual_majority != 0:
-            majority_mismatches.append(
-                local_majority != actual_majority
+    majority_ties = [
+        bool(row["majority_tied"])
+        for row in focal.values()
+        if np.isfinite(
+            float(
+                row["population_low_fraction_excluding"]
             )
+        )
+    ]
+
+    majority_mismatches = [
+        float(row["majority_mismatch"])
+        for row in focal.values()
+        if np.isfinite(
+            float(row["majority_mismatch"])
+        )
+    ]
 
     high_actions = np.asarray(
         [
@@ -1009,6 +1196,11 @@ def social_metrics(
         {
             "population_low_fraction": population_low,
             "visible_low_fraction": visible_low,
+            "visible_population_bias": (
+                visible_low - population_low
+                if np.isfinite(visible_low)
+                else float("nan")
+            ),
             "mean_perception_error": (
                 float(np.mean(absolute_errors))
                 if absolute_errors
@@ -1024,7 +1216,14 @@ def social_metrics(
                 if majority_mismatches
                 else float("nan")
             ),
-            "degree_action_correlation": degree_action_correlation,
+            "majority_tie_rate": (
+                float(np.mean(majority_ties))
+                if majority_ties
+                else float("nan")
+            ),
+            "degree_action_correlation": (
+                degree_action_correlation
+            ),
         }
     )
 

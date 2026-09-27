@@ -361,11 +361,15 @@ Social/network outputs include:
 visibility_gini
 max_visibility_share
 zero_visibility_fraction
+reciprocity
+degree_assortativity
 population_low_fraction
 visible_low_fraction
+visible_population_bias
 mean_perception_error
 signed_perception_bias
 majority_mismatch_rate
+majority_tie_rate
 degree_action_correlation
 mean_prediction_error
 edge_turnover
@@ -375,6 +379,32 @@ global_rewire_fraction
 requested_global_fraction
 local_fallbacks
 ```
+
+`majority_mismatch_rate` is calculated only over comparisons in which
+neither the local sample nor the population-excluding-focal comparison
+is tied. `majority_tie_rate` reports the excluded share explicitly.
+
+`reciprocity` is the fraction of directed information edges whose reverse
+edge also exists. `degree_assortativity` is the Pearson correlation between
+source and observer visibility degree along directed information edges. For
+symmetric BA-style observation graphs this reduces to ordinary degree
+assortativity.
+
+`visible_population_bias` is the edge-weighted visible low-extraction
+fraction minus the population low-extraction fraction.
+
+Policy diagnostics retain the unweighted Hamming measure and additionally
+report:
+
+```text
+policy_hamming_visit_weighted_mean
+visited_state_fraction
+training_visit_fraction_<state>
+```
+
+The visit-weighted Hamming measure weights state disagreements by aggregate
+training state occupancy, so arbitrary policy choices in never-visited
+states do not contribute to the main heterogeneity diagnostic.
 
 ## Output files
 
@@ -395,12 +425,24 @@ data/
     evaluation_timeseries.csv
     policy_summary.csv
     agent_policies.csv
+    agent_social_summary.csv
     network_timeseries.csv
-    rewiring_schedule.csv    # when rewiring is active
+    network_edges_checkpoints.csv   # social runs: initial + terminal graphs
+    rewiring_schedule.csv           # when rewiring is active
 ```
 
 `config.json` includes command-line parameters plus Git, Python,
 platform, package-version, and invocation metadata.
+
+`agent_social_summary.csv` contains one row per agent and run with training-
+time mean exposure, perception error, signed bias, majority tie/mismatch
+rates, mean/final visibility, rewiring count, prediction error, and final
+wealth/welfare quantities.
+
+`network_edges_checkpoints.csv` stores directed `source -> observer` edges
+for the exact initial and terminal training graphs, together with endpoint
+visibility degree and attention size. This is intended for structural checks
+and network visualizations without writing every edge at every timestep.
 
 New experiment directories are ignored by Git. Final datasets should be
 frozen as deliberate research-release artifacts rather than accumulated
@@ -540,12 +582,12 @@ decentralized rewiring
 experiment hardening
 core social controls: S2 + matched R0
 network evaluation decomposition
+social measurements and normalized network/agent outputs
 ```
 
 Next:
 
 ```text
-Stage 4: complete social measurements
 Stage 5: cross-treatment analysis and figures
 pilot experiments
 confirmatory experiments

@@ -397,11 +397,15 @@ Current diagnostics include:
 visibility-degree Gini
 maximum visibility share
 zero-visibility fraction
+reciprocity
+visibility-degree assortativity
 population low-extraction fraction
-visible low-extraction fraction
+edge-weighted visible low-extraction fraction
+visible-minus-population low-extraction bias
 mean local perception error
 signed perception bias
-majority mismatch
+majority mismatch among non-tied comparisons
+majority tie rate
 degree/action correlation
 prediction error
 network turnover
@@ -410,8 +414,32 @@ requested/used search scope
 local-search fallback counts
 ```
 
+The majority mismatch denominator excludes observations where either the
+local sample or the population-excluding-focal comparison is exactly tied.
+The project now reports the excluded share directly as
+`majority_tie_rate`.
+
+`reciprocity` is the share of directed information edges whose reverse edge
+also exists. `degree_assortativity` is the Pearson correlation between
+source and observer visibility degree along directed information edges.
+For symmetric BA-style graphs this reduces to ordinary degree
+assortativity.
+
+`visible_population_bias` is the edge-weighted visible low-extraction
+fraction minus the population low-extraction fraction.
+
 Material inequality (`wealth_gini`) and information inequality
 (`visibility_gini`) are kept distinct.
+
+The experiment runner also records one normalized per-agent social summary
+and exact initial/final directed edge snapshots. These outputs are project
+measurement infrastructure rather than mechanisms that alter behavior.
+
+Policy heterogeneity retains the original equal-state Hamming measure and
+adds `policy_hamming_visit_weighted_mean`, which weights disagreements by
+aggregate training state occupancy. This prevents never-visited Q states
+from contributing the same weight as states actually encountered during
+learning.
 
 ---
 
@@ -512,6 +540,16 @@ data/rewiring_schedule.csv
 so matched controls can reproduce the adaptive run's realized rewiring
 frequency checkpoint by checkpoint.
 
+Social-measurement hardening additionally writes:
+
+```text
+data/agent_social_summary.csv
+data/network_edges_checkpoints.csv
+```
+
+The edge checkpoint file contains only exact initial and terminal training
+graphs rather than every edge at every timestep.
+
 Generated experiment directories are ignored by Git for new runs and
 should be frozen later as deliberate research-release artifacts.
 
@@ -595,6 +633,33 @@ write per-checkpoint rewiring schedules
 validate matched theta and run keys
 add control-specific tests
 repair missing hardening documentation/lifecycle tests
+```
+
+## `feat: decompose network evaluation`
+
+Commit: `f159c0ab16f0d0a76e922105d85e73ea0839ceed`
+
+Purpose:
+
+```text
+preserve exact initial and terminal social graphs
+separate fresh carried-network and reset-network evaluation
+retain frozen-network evaluation as the default
+add optional adaptive-network robustness evaluation
+keep Q-tables frozen during evaluation
+```
+
+## Stage 4 social-measurement changeset
+
+Purpose:
+
+```text
+report majority tie rate explicitly
+add reciprocity and visibility-degree assortativity
+add edge-weighted visible-versus-population bias
+add per-agent social summary output
+add initial/final network edge checkpoints
+add visit-weighted policy heterogeneity
 ```
 
 ---

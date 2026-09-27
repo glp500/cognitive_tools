@@ -29,8 +29,10 @@ from Cognitive_tools.social import (
     init_barabasi_albert_attention,
     init_random_attention,
     joint_state,
+    network_edges,
     network_turnover,
     observed_low_fraction,
+    observer_social_diagnostics,
     prediction_errors,
     rewire_epoch,
     social_bin,
@@ -615,11 +617,15 @@ def system_metrics(
             "visibility_gini": float("nan"),
             "max_visibility_share": float("nan"),
             "zero_visibility_fraction": float("nan"),
+            "reciprocity": float("nan"),
+            "degree_assortativity": float("nan"),
             "population_low_fraction": float("nan"),
             "visible_low_fraction": float("nan"),
+            "visible_population_bias": float("nan"),
             "mean_perception_error": float("nan"),
             "signed_perception_bias": float("nan"),
             "majority_mismatch_rate": float("nan"),
+            "majority_tie_rate": float("nan"),
             "degree_action_correlation": float("nan"),
         }
     else:
@@ -652,9 +658,13 @@ def system_metrics(
         "visibility_gini": social["visibility_gini"],
         "max_visibility_share": social["max_visibility_share"],
         "zero_visibility_fraction": social["zero_visibility_fraction"],
+        "reciprocity": social["reciprocity"],
+        "degree_assortativity": social["degree_assortativity"],
+        "visible_population_bias": social["visible_population_bias"],
         "social_perception_error": social["mean_perception_error"],
         "signed_perception_bias": social["signed_perception_bias"],
         "majority_mismatch_rate": social["majority_mismatch_rate"],
+        "majority_tie_rate": social["majority_tie_rate"],
         "degree_action_correlation": social["degree_action_correlation"],
     }
 
@@ -714,11 +724,15 @@ def make_network_record(
         "visibility_gini": metrics["visibility_gini"],
         "max_visibility_share": metrics["max_visibility_share"],
         "zero_visibility_fraction": metrics["zero_visibility_fraction"],
+        "reciprocity": metrics["reciprocity"],
+        "degree_assortativity": metrics["degree_assortativity"],
         "population_low_fraction": metrics["population_low_fraction"],
         "visible_low_fraction": metrics["visible_low_fraction"],
+        "visible_population_bias": metrics["visible_population_bias"],
         "mean_perception_error": metrics["mean_perception_error"],
         "signed_perception_bias": metrics["signed_perception_bias"],
         "majority_mismatch_rate": metrics["majority_mismatch_rate"],
+        "majority_tie_rate": metrics["majority_tie_rate"],
         "degree_action_correlation": metrics["degree_action_correlation"],
         "mean_prediction_error": mean_prediction_error,
         "edge_turnover": turnover,
@@ -728,6 +742,306 @@ def make_network_record(
         "requested_global_fraction": requested_global_fraction,
         "local_fallbacks": local_fallbacks,
     }
+
+
+# ---------------------------------------------------------------------
+# Per-agent social summaries and network snapshots
+# ---------------------------------------------------------------------
+
+
+def make_agent_social_accumulators(
+    agent_names,
+) -> dict[str, dict[str, float | int]]:
+    """Create zeroed training-time social diagnostic accumulators."""
+
+    return {
+        str(name): {
+            "social_steps": 0,
+            "observed_low_sum": 0.0,
+            "population_low_excluding_sum": 0.0,
+            "perception_error_sum": 0.0,
+            "signed_bias_sum": 0.0,
+            "majority_tie_count": 0,
+            "majority_valid_count": 0,
+            "majority_mismatch_count": 0,
+            "visibility_degree_sum": 0.0,
+        }
+        for name in agent_names
+    }
+
+
+def update_agent_social_accumulators(
+    accumulators: dict[str, dict[str, float | int]],
+    focal_diagnostics: dict[str, dict[str, float | bool]],
+) -> None:
+    """Accumulate one pre-rewiring social observation for each observer."""
+
+    if set(accumulators) != set(focal_diagnostics):
+        raise ValueError(
+            "Social accumulators and focal diagnostics must contain the same agents."
+        )
+
+    for name, diagnostic in focal_diagnostics.items():
+        actual = float(
+            diagnostic["population_low_fraction_excluding"]
+        )
+
+        if not np.isfinite(actual):
+            continue
+
+        accumulator = accumulators[name]
+        accumulator["social_steps"] = int(
+            accumulator["social_steps"]
+        ) + 1
+        accumulator["observed_low_sum"] = float(
+            accumulator["observed_low_sum"]
+        ) + float(
+            diagnostic["observed_low_fraction"]
+        )
+        accumulator["population_low_excluding_sum"] = float(
+            accumulator["population_low_excluding_sum"]
+        ) + actual
+        accumulator["perception_error_sum"] = float(
+            accumulator["perception_error_sum"]
+        ) + float(
+            diagnostic["perception_error"]
+        )
+        accumulator["signed_bias_sum"] = float(
+            accumulator["signed_bias_sum"]
+        ) + float(
+            diagnostic["signed_perception_bias"]
+        )
+        accumulator["visibility_degree_sum"] = float(
+            accumulator["visibility_degree_sum"]
+        ) + float(
+            diagnostic["visibility_degree"]
+        )
+
+        if bool(
+            diagnostic["majority_tied"]
+        ):
+            accumulator["majority_tie_count"] = int(
+                accumulator["majority_tie_count"]
+            ) + 1
+        else:
+            mismatch = float(
+                diagnostic["majority_mismatch"]
+            )
+
+            if np.isfinite(mismatch):
+                accumulator["majority_valid_count"] = int(
+                    accumulator["majority_valid_count"]
+                ) + 1
+                accumulator["majority_mismatch_count"] = int(
+                    accumulator["majority_mismatch_count"]
+                ) + int(
+                    mismatch > 0.5
+                )
+
+
+def summarize_agent_social_training(
+    env: EcoEnv,
+    regions: np.ndarray,
+    *,
+    scenario_name: str,
+    population: int,
+    replicate: int,
+    args,
+    terminal_sources: dict[str, list[str]] | None,
+    rewire_counts: dict[str, int],
+    mean_prediction_errors: dict[str, float],
+    accumulators: dict[str, dict[str, float | int]],
+) -> list[dict]:
+    """Build one normalized training/social outcome row per agent."""
+
+    if terminal_sources is None:
+        final_visibility = {
+            name: 0
+            for name in env.possible_agents
+        }
+    else:
+        final_visibility = visibility_counts(
+            terminal_sources
+        )
+
+    rows: list[dict] = []
+
+    for name in env.possible_agents:
+        agent = env.model.by_name[name]
+        x = int(
+            agent.position[0]
+        )
+        y = int(
+            agent.position[1]
+        )
+
+        accumulator = accumulators[name]
+        social_steps = int(
+            accumulator["social_steps"]
+        )
+        valid_majority_steps = int(
+            accumulator["majority_valid_count"]
+        )
+
+        def mean_from_sum(
+            key: str,
+        ) -> float:
+            if social_steps <= 0:
+                return float("nan")
+
+            return float(
+                accumulator[key]
+            ) / social_steps
+
+        rows.append(
+            {
+                "scenario": scenario_name,
+                "population": population,
+                "replicate": replicate,
+                "treatment": treatment_name(args),
+                "social_mode": args.social_mode,
+                "social_network": getattr(
+                    args,
+                    "social_network",
+                    "random_k",
+                ),
+                "rewiring": args.rewiring,
+                "agent": name,
+                "x": x,
+                "y": y,
+                "region": str(
+                    regions[y, x]
+                ),
+                "social_steps": social_steps,
+                "mean_observed_low_fraction": mean_from_sum(
+                    "observed_low_sum"
+                ),
+                "mean_population_low_fraction_excluding": mean_from_sum(
+                    "population_low_excluding_sum"
+                ),
+                "mean_perception_error": mean_from_sum(
+                    "perception_error_sum"
+                ),
+                "mean_signed_perception_bias": mean_from_sum(
+                    "signed_bias_sum"
+                ),
+                "majority_tie_rate": (
+                    float(
+                        accumulator["majority_tie_count"]
+                    )
+                    / social_steps
+                    if social_steps > 0
+                    else float("nan")
+                ),
+                "majority_valid_steps": valid_majority_steps,
+                "majority_mismatch_rate": (
+                    float(
+                        accumulator["majority_mismatch_count"]
+                    )
+                    / valid_majority_steps
+                    if valid_majority_steps > 0
+                    else float("nan")
+                ),
+                "mean_visibility_degree": mean_from_sum(
+                    "visibility_degree_sum"
+                ),
+                "final_visibility_degree": int(
+                    final_visibility[name]
+                ),
+                "final_attention_size": (
+                    0
+                    if terminal_sources is None
+                    else len(
+                        terminal_sources[name]
+                    )
+                ),
+                "rewires_initiated": int(
+                    rewire_counts[name]
+                ),
+                "mean_prediction_error": float(
+                    mean_prediction_errors[name]
+                ),
+                "final_wealth": float(
+                    agent.wealth
+                ),
+                "final_energy": float(
+                    agent.energy
+                ),
+                "final_reserve_welfare": float(
+                    agent.reserve_welfare
+                ),
+                "final_need_satisfaction": float(
+                    agent.need_satisfaction
+                ),
+                "final_metabolic_shortfall": float(
+                    agent.metabolic_shortfall
+                ),
+                "final_cumulative_shortfall": float(
+                    agent.cumulative_shortfall
+                ),
+                "final_deprivation_steps": int(
+                    agent.deprivation_steps
+                ),
+            }
+        )
+
+    return rows
+
+
+def network_snapshot_rows(
+    *,
+    scenario_name: str,
+    population: int,
+    replicate: int,
+    args,
+    checkpoint: str,
+    time: int,
+    sources: dict[str, list[str]] | None,
+) -> list[dict]:
+    """Return normalized directed edge rows for a selected graph snapshot."""
+
+    if sources is None:
+        return []
+
+    visibility = visibility_counts(
+        sources
+    )
+
+    return [
+        {
+            "scenario": scenario_name,
+            "population": population,
+            "replicate": replicate,
+            "treatment": treatment_name(args),
+            "social_mode": args.social_mode,
+            "social_network": getattr(
+                args,
+                "social_network",
+                "random_k",
+            ),
+            "rewiring": args.rewiring,
+            "checkpoint": checkpoint,
+            "time": time,
+            "source": source,
+            "observer": observer,
+            "source_visibility_degree": int(
+                visibility[source]
+            ),
+            "observer_visibility_degree": int(
+                visibility[observer]
+            ),
+            "source_attention_size": len(
+                sources[source]
+            ),
+            "observer_attention_size": len(
+                sources[observer]
+            ),
+        }
+        for source, observer
+        in sorted(
+            network_edges(sources)
+        )
+    ]
 
 
 # ---------------------------------------------------------------------
@@ -757,6 +1071,14 @@ def train_q_learning(
         else copy_sources(sources)
     )
     learners = make_learners(env, replicate, args)
+
+    state_visit_counts = np.zeros(
+        learner_state_count(args.social_mode),
+        dtype=int,
+    )
+    agent_social_accumulators = make_agent_social_accumulators(
+        env.possible_agents
+    )
 
     timeseries: list[dict] = []
     network_timeseries: list[dict] = []
@@ -805,6 +1127,9 @@ def train_q_learning(
             previous_actions=previous_actions,
         )
 
+        for state in states.values():
+            state_visit_counts[int(state)] += 1
+
         # s_t -> a_t
         actions = {
             name: learners[name].choose_action(states[name], explore=True)
@@ -828,6 +1153,16 @@ def train_q_learning(
             assert rewire_rng is not None
 
             observed_before_rewire = social_observations(sources, actions)
+
+            focal_diagnostics = observer_social_diagnostics(
+                sources,
+                actions,
+            )
+            update_agent_social_accumulators(
+                agent_social_accumulators,
+                focal_diagnostics,
+            )
+
             current_prediction_errors = prediction_errors(
                 forecasts,
                 observed_before_rewire,
@@ -985,6 +1320,24 @@ def train_q_learning(
         }
     )
 
+    agent_social_rows = summarize_agent_social_training(
+        env,
+        regions,
+        scenario_name=scenario_name,
+        population=population,
+        replicate=replicate,
+        args=args,
+        terminal_sources=sources,
+        rewire_counts=rewire_counts,
+        mean_prediction_errors=mean_prediction_errors,
+        accumulators=agent_social_accumulators,
+    )
+
+    training_measurements = {
+        "state_visit_counts": state_visit_counts,
+        "agent_social_summary": agent_social_rows,
+    }
+
     return (
         env,
         observations,
@@ -999,6 +1352,7 @@ def train_q_learning(
         rewiring_schedule,
         initial_sources,
         final_forecasts,
+        training_measurements,
     )
 
 
@@ -1366,6 +1720,7 @@ def policy_diagnostics(
     sources: dict[str, list[str]] | None,
     rewire_counts: dict[str, int],
     mean_prediction_errors: dict[str, float],
+    state_visit_counts: np.ndarray,
 ):
     agent_rows: list[dict] = []
     policies = {name: learner.greedy_policy() for name, learner in learners.items()}
@@ -1431,6 +1786,49 @@ def policy_diagnostics(
         for first, second in combinations(policy_list, 2)
     ]
 
+    policy_length = len(policy_list[0]) if policy_list else 0
+    state_visit_counts = np.asarray(
+        state_visit_counts,
+        dtype=float,
+    )
+
+    if len(state_visit_counts) != policy_length:
+        raise ValueError(
+            "state_visit_counts must match the learned policy length."
+        )
+
+    total_state_visits = float(
+        state_visit_counts.sum()
+    )
+
+    if total_state_visits > 0.0:
+        state_visit_weights = (
+            state_visit_counts
+            / total_state_visits
+        )
+    else:
+        state_visit_weights = np.zeros(
+            policy_length,
+            dtype=float,
+        )
+
+    pairwise_visit_weighted = [
+        float(
+            np.sum(
+                state_visit_weights
+                * (
+                    np.asarray(first)
+                    != np.asarray(second)
+                )
+            )
+        )
+        for first, second
+        in combinations(
+            policy_list,
+            2,
+        )
+    ]
+
     counts = Counter(policy_list)
     probabilities = np.asarray(list(counts.values()), dtype=float)
     probabilities /= probabilities.sum()
@@ -1444,7 +1842,6 @@ def policy_diagnostics(
         )
     )
 
-    policy_length = len(policy_list[0]) if policy_list else 0
     max_types = min(len(policy_list), 2**policy_length)
     if max_types > 1:
         entropy /= math.log2(max_types)
@@ -1460,6 +1857,27 @@ def policy_diagnostics(
         "unique_policy_count": len(counts),
         "policy_entropy": entropy,
         "policy_hamming_mean": float(np.mean(pairwise)) if pairwise else 0.0,
+        "policy_hamming_visit_weighted_mean": (
+            float(
+                np.mean(
+                    pairwise_visit_weighted
+                )
+            )
+            if pairwise_visit_weighted
+            else 0.0
+        ),
+        "visited_state_fraction": (
+            float(
+                np.mean(
+                    state_visit_counts > 0.0
+                )
+            )
+            if policy_length > 0
+            else float("nan")
+        ),
+        "total_training_state_visits": int(
+            total_state_visits
+        ),
         "total_rewires": int(sum(rewire_counts.values())),
         "mean_rewires_per_agent": float(np.mean(list(rewire_counts.values()))),
     }
@@ -1475,6 +1893,8 @@ def policy_diagnostics(
         summary["visibility_gini"] = float("nan")
         summary["max_visibility_degree"] = float("nan")
         summary["max_visibility_share"] = float("nan")
+        summary["reciprocity"] = float("nan")
+        summary["degree_assortativity"] = float("nan")
     else:
         visibility_values = list(visibility.values())
         summary["visibility_gini"] = gini(visibility_values)
@@ -1484,6 +1904,14 @@ def policy_diagnostics(
             float(max(visibility_values) / total_visibility)
             if total_visibility > 0.0
             else 0.0
+        )
+        terminal_network_metrics = social_metrics(
+            sources,
+            None,
+        )
+        summary["reciprocity"] = terminal_network_metrics["reciprocity"]
+        summary["degree_assortativity"] = (
+            terminal_network_metrics["degree_assortativity"]
         )
 
     if social_mode == "none":
@@ -1495,6 +1923,11 @@ def policy_diagnostics(
                         for policy in policy_list
                     ]
                 )
+            )
+            summary[
+                f"training_visit_fraction_{ecological_name}"
+            ] = float(
+                state_visit_weights[ecological_index]
             )
     else:
         for ecological_index, ecological_name in enumerate(STATE_NAMES):
@@ -1508,6 +1941,27 @@ def policy_diagnostics(
                     ]
                 )
             )
+            summary[
+                f"training_visit_fraction_{ecological_name}"
+            ] = float(
+                np.sum(
+                    state_visit_weights[
+                        ecological_index * 3
+                        : ecological_index * 3 + 3
+                    ]
+                )
+            )
+
+        for social_index, social_name in enumerate(SOCIAL_STATE_NAMES):
+            summary[
+                f"training_visit_fraction_social_{social_name}"
+            ] = float(
+                np.sum(
+                    state_visit_weights[
+                        social_index::3
+                    ]
+                )
+            )
 
         for ecological_index, ecological_name in enumerate(STATE_NAMES):
             for social_index, social_name in enumerate(SOCIAL_STATE_NAMES):
@@ -1516,6 +1970,11 @@ def policy_diagnostics(
                     f"policy_low_{ecological_name}_{social_name}"
                 ] = float(
                     np.mean([policy[state] == LOW_EXTRACT for policy in policy_list])
+                )
+                summary[
+                    f"training_visit_fraction_{ecological_name}_{social_name}"
+                ] = float(
+                    state_visit_weights[state]
                 )
 
     return summary, agent_rows
@@ -1547,6 +2006,7 @@ def run_condition(
         rewiring_schedule,
         initial_sources,
         final_forecasts,
+        training_measurements,
     ) = train_q_learning(
         scenario_name,
         population,
@@ -1566,7 +2026,29 @@ def run_condition(
         sources=terminal_sources,
         rewire_counts=rewire_counts,
         mean_prediction_errors=mean_prediction_errors,
+        state_visit_counts=training_measurements["state_visit_counts"],
     )
+
+    network_snapshots = [
+        *network_snapshot_rows(
+            scenario_name=scenario_name,
+            population=population,
+            replicate=replicate,
+            args=args,
+            checkpoint="initial",
+            time=0,
+            sources=initial_sources,
+        ),
+        *network_snapshot_rows(
+            scenario_name=scenario_name,
+            population=population,
+            replicate=replicate,
+            args=args,
+            checkpoint="terminal",
+            time=args.training_steps,
+            sources=terminal_sources,
+        ),
+    ]
 
     network_start_terminal = (
         "none"
@@ -1739,6 +2221,10 @@ def run_condition(
         "agent_policies": agent_policy_rows,
         "network_timeseries": network_timeseries,
         "rewiring_schedule": rewiring_schedule,
+        "agent_social_summary": training_measurements[
+            "agent_social_summary"
+        ],
+        "network_edges_checkpoints": network_snapshots,
     }
 
 
@@ -1911,6 +2397,7 @@ def main() -> None:
     }
     config["learner_n_states"] = learner_state_count(args.social_mode)
     config["treatment"] = treatment_name(args)
+    config["social_measurement_schema"] = "stage4_v1"
     config["social_network_semantics"] = (
         "none"
         if args.social_mode == "none"
@@ -1974,6 +2461,8 @@ def main() -> None:
     agent_policy_rows: list[dict] = []
     network_rows: list[dict] = []
     rewiring_schedule_rows: list[dict] = []
+    agent_social_rows: list[dict] = []
+    network_edge_rows: list[dict] = []
 
     total = len(args.scenarios) * len(args.populations) * args.replicates
     completed = 0
@@ -2026,6 +2515,8 @@ def main() -> None:
                 agent_policy_rows.extend(output["agent_policies"])
                 network_rows.extend(output["network_timeseries"])
                 rewiring_schedule_rows.extend(output["rewiring_schedule"])
+                agent_social_rows.extend(output["agent_social_summary"])
+                network_edge_rows.extend(output["network_edges_checkpoints"])
 
                 completed += 1
                 print(
@@ -2040,6 +2531,11 @@ def main() -> None:
     write_csv(data_dir / "agent_policies.csv", agent_policy_rows)
     write_csv(data_dir / "network_timeseries.csv", network_rows)
     write_csv(data_dir / "rewiring_schedule.csv", rewiring_schedule_rows)
+    write_csv(data_dir / "agent_social_summary.csv", agent_social_rows)
+    write_csv(
+        data_dir / "network_edges_checkpoints.csv",
+        network_edge_rows,
+    )
 
     print("\nSimulation complete.")
     print(f"Results: {run_dir.resolve()}")
