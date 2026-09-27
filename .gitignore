@@ -5,15 +5,15 @@ __pycache__/
 # Test/cache artifacts
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 
-# Generated experiment outputs.
+# Generated experiment and analysis outputs.
 #
-# Existing result files that are already tracked by Git remain tracked
-# until they are explicitly removed from the index. New experiment
-# directories should remain local/release artifacts rather than normal
-# source-code commits.
-results/q_learning_baseline/experiments/
+# Keep research outputs local or publish them as explicit release/research
+# artifacts. The source repository keeps only results/README.md.
+results/*
+!results/README.md
 
 # Editor / OS noise
 .DS_Store
