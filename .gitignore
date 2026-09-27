@@ -7,6 +7,14 @@ __pycache__/
 .coverage
 htmlcov/
 
+# Generated experiment outputs.
+#
+# Existing result files that are already tracked by Git remain tracked
+# until they are explicitly removed from the index. New experiment
+# directories should remain local/release artifacts rather than normal
+# source-code commits.
+results/q_learning_baseline/experiments/
+
 # Editor / OS noise
 .DS_Store
 .vscode/

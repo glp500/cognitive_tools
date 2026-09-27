@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import argparse
 import csv
+import importlib.metadata
 import json
 import math
+import platform
+import shlex
+import subprocess
+import sys
 from collections import Counter
+from datetime import (
+    datetime,
+    timezone,
+)
 from itertools import combinations
 from pathlib import Path
 
@@ -48,6 +57,22 @@ RESULTS_ROOT = (
     / "experiments"
 )
 
+REPOSITORY_ROOT = (
+    Path(__file__)
+    .resolve()
+    .parent
+)
+
+RUNTIME_PACKAGES = (
+    "numpy",
+    "mesa",
+    "pettingzoo",
+    "gymnasium",
+    "matplotlib",
+    "networkx",
+    "pytest",
+)
+
 SOCIAL_MODES = (
     "none",
     "fixed",
@@ -57,6 +82,125 @@ SOCIAL_MODES = (
 # ---------------------------------------------------------------------
 # General utilities
 # ---------------------------------------------------------------------
+
+
+def _git_output(
+    *arguments: str,
+) -> str | None:
+    """
+    Run a read-only Git command from the repository root.
+
+    Return None rather than failing the experiment if Git is unavailable
+    or the script is being run outside a Git worktree.
+    """
+
+    try:
+        completed = (
+            subprocess.run(
+                [
+                    "git",
+                    *arguments,
+                ],
+                cwd=(
+                    REPOSITORY_ROOT
+                ),
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        )
+
+    except (
+        FileNotFoundError,
+        subprocess.CalledProcessError,
+    ):
+        return None
+
+    return (
+        completed.stdout.strip()
+    )
+
+
+def _package_version(
+    package_name: str,
+) -> str | None:
+    """
+    Return an installed package version when available.
+    """
+
+    try:
+        return (
+            importlib.metadata.version(
+                package_name
+            )
+        )
+
+    except (
+        importlib.metadata.PackageNotFoundError
+    ):
+        return None
+
+
+def build_run_metadata(
+) -> dict[str, object]:
+    """
+    Return reproducibility metadata that does not affect simulation
+    mechanics or random-number consumption.
+    """
+
+    status = _git_output(
+        "status",
+        "--porcelain",
+    )
+
+    return {
+        "schema_version": 1,
+        "created_at_utc": (
+            datetime.now(
+                timezone.utc
+            ).isoformat()
+        ),
+        "git_commit_sha": (
+            _git_output(
+                "rev-parse",
+                "HEAD",
+            )
+        ),
+        "git_branch": (
+            _git_output(
+                "rev-parse",
+                "--abbrev-ref",
+                "HEAD",
+            )
+        ),
+        "git_worktree_dirty": (
+            None
+            if status is None
+            else bool(
+                status
+            )
+        ),
+        "python_version": (
+            platform.python_version()
+        ),
+        "platform": (
+            platform.platform()
+        ),
+        "package_versions": {
+            package_name: (
+                _package_version(
+                    package_name
+                )
+            )
+            for package_name
+            in RUNTIME_PACKAGES
+        },
+        "command": (
+            shlex.join(
+                sys.argv
+            )
+        ),
+    }
 
 
 def write_csv(
@@ -3181,6 +3325,12 @@ def main() -> None:
         else "none"
     )
 
+    config[
+        "run_metadata"
+    ] = (
+        build_run_metadata()
+    )
+
     with (
         run_dir
         / "config.json"
@@ -3240,6 +3390,20 @@ def main() -> None:
             f"Search scope theta: "
             f"{args.rewire_theta}"
         )
+
+    metadata = config[
+        "run_metadata"
+    ]
+
+    print(
+        "Git commit: "
+        f"{metadata['git_commit_sha']}"
+    )
+
+    print(
+        "Git worktree dirty: "
+        f"{metadata['git_worktree_dirty']}"
+    )
 
     print(
         "Evaluation social graphs are frozen."
