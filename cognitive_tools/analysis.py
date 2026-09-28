@@ -18,7 +18,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 ANALYSIS_ROOT = Path("results") / "q_learning_baseline" / "social_analysis"
 ECOLOGICAL_STATES = ("scarce", "moderate", "abundant")
 SOCIAL_STATES = ("mostly_high", "mixed", "mostly_low")
@@ -166,11 +165,7 @@ def numeric_values(rows: list[dict], metric: str) -> list[float]:
 
 
 def bootstrap_mean_ci(
-    values,
-    *,
-    bootstrap_reps: int,
-    seed: int,
-    confidence: float = 0.95,
+    values, *, bootstrap_reps: int, seed: int, confidence: float = 0.95
 ) -> tuple[float, float, float]:
     array = np.asarray(list(values), dtype=float)
     array = array[np.isfinite(array)]
@@ -276,10 +271,7 @@ def assign_run_labels(runs: list[RunData]) -> None:
             else:
                 run.label = run.treatment
         elif run.treatment == "R_adaptive":
-            run.label = (
-                f"R (theta={format_parameter(run.theta)}, "
-                f"mu={format_parameter(run.mu)})"
-            )
+            run.label = f"R (theta={format_parameter(run.theta)}, mu={format_parameter(run.mu)})"
         else:
             run.label = run.treatment
 
@@ -338,8 +330,7 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
     ]
     if dirty_runs:
         warnings.append(
-            "Input runs recorded a dirty Git worktree: "
-            + ", ".join(sorted(dirty_runs))
+            "Input runs recorded a dirty Git worktree: " + ", ".join(sorted(dirty_runs))
         )
 
     for key in STRICT_COMPATIBILITY_KEYS:
@@ -368,13 +359,11 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
     ba_values = {
         int(run.config.get("ba_m", 0))
         for run in runs
-        if run.config.get("social_mode") == "fixed"
-        and run.config.get("social_network") == "ba"
+        if run.config.get("social_mode") == "fixed" and run.config.get("social_network") == "ba"
     }
     if len(ba_values) > 1:
         raise ValueError(
-            "Cross-treatment analysis would mix different BA m values: "
-            f"{sorted(ba_values)}."
+            f"Cross-treatment analysis would mix different BA m values: {sorted(ba_values)}."
         )
 
     if len({tuple(run.config.get("scenarios", [])) for run in runs}) > 1:
@@ -407,16 +396,13 @@ def resolve_r0_pairs(runs: list[RunData]) -> list[str]:
             candidates = by_schedule_hash.get(str(r0.matched_schedule_sha256), [])
         if not candidates:
             candidates = [
-                run
-                for run in adaptive
-                if np.isclose(run.theta, r0.theta, rtol=0.0, atol=1e-12)
+                run for run in adaptive if np.isclose(run.theta, r0.theta, rtol=0.0, atol=1e-12)
             ]
         if len(candidates) == 1:
             source = candidates[0]
             r0.paired_adaptive_run_id = source.run_id
             r0.label = (
-                f"R0 (theta={format_parameter(r0.theta)}, "
-                f"matched mu={format_parameter(source.mu)})"
+                f"R0 (theta={format_parameter(r0.theta)}, matched mu={format_parameter(source.mu)})"
             )
         elif not candidates:
             warnings.append(
@@ -484,12 +470,7 @@ def primary_evaluation_rows(run: RunData) -> list[dict]:
 # -----------------------------------------------------------------------------
 
 
-def resource_regime(
-    value: float,
-    *,
-    low_threshold: float,
-    high_threshold: float,
-) -> str:
+def resource_regime(value: float, *, low_threshold: float, high_threshold: float) -> str:
     if not np.isfinite(value):
         return "unknown"
     if value < low_threshold:
@@ -522,14 +503,10 @@ def build_resource_distribution(
                     "population": as_int(source, "population"),
                     "replicate": as_int(source, "replicate"),
                     "evaluation_mode": PRIMARY_EVALUATION_MODE,
-                    "eval_mean_resource_fraction": as_float(
-                        source, PRIMARY_RESOURCE_METRIC
-                    ),
+                    "eval_mean_resource_fraction": as_float(source, PRIMARY_RESOURCE_METRIC),
                     "final_resource_fraction": final_resource,
                     "resource_regime": resource_regime(
-                        final_resource,
-                        low_threshold=low_threshold,
-                        high_threshold=high_threshold,
+                        final_resource, low_threshold=low_threshold, high_threshold=high_threshold
                     ),
                 }
             )
@@ -589,10 +566,7 @@ def build_resource_distribution(
 
 
 def build_policy_heatmap_summary(
-    runs: list[RunData],
-    *,
-    bootstrap_reps: int,
-    bootstrap_seed: int,
+    runs: list[RunData], *, bootstrap_reps: int, bootstrap_seed: int
 ) -> list[dict]:
     grouped: dict[tuple, list[dict]] = defaultdict(list)
     for run in runs:
@@ -619,16 +593,12 @@ def build_policy_heatmap_summary(
                 behavior = bootstrap_mean_ci(
                     numeric_values(rows, behavior_metric),
                     bootstrap_reps=bootstrap_reps,
-                    seed=stable_seed(
-                        bootstrap_seed, "policy", *key, ecological, social
-                    ),
+                    seed=stable_seed(bootstrap_seed, "policy", *key, ecological, social),
                 )
                 occupancy = bootstrap_mean_ci(
                     numeric_values(rows, occupancy_metric),
                     bootstrap_reps=bootstrap_reps,
-                    seed=stable_seed(
-                        bootstrap_seed, "occupancy", *key, ecological, social
-                    ),
+                    seed=stable_seed(bootstrap_seed, "occupancy", *key, ecological, social),
                 )
                 output.append(
                     {
@@ -653,10 +623,7 @@ def build_policy_heatmap_summary(
 
 
 def build_trajectory_summary(
-    runs: list[RunData],
-    *,
-    bootstrap_reps: int,
-    bootstrap_seed: int,
+    runs: list[RunData], *, bootstrap_reps: int, bootstrap_seed: int
 ) -> list[dict]:
     grouped: dict[tuple, list[float]] = defaultdict(list)
     metadata: dict[tuple, tuple] = {}
@@ -710,9 +677,7 @@ def build_trajectory_summary(
     )
 
 
-def build_terminal_training_rows(
-    runs: list[RunData], resource_rows: list[dict]
-) -> list[dict]:
+def build_terminal_training_rows(runs: list[RunData], resource_rows: list[dict]) -> list[dict]:
     resource_index = {
         (row["run_id"], row["scenario"], int(row["population"]), int(row["replicate"])): row
         for row in resource_rows
@@ -734,17 +699,12 @@ def build_terminal_training_rows(
             turnovers = [
                 as_float(row, "edge_turnover")
                 for row in network_rows
-                if as_int(row, "time") > 0
-                and np.isfinite(as_float(row, "edge_turnover"))
+                if as_int(row, "time") > 0 and np.isfinite(as_float(row, "edge_turnover"))
             ]
             final_network = (
-                max(network_rows, key=lambda row: as_int(row, "time"))
-                if network_rows
-                else None
+                max(network_rows, key=lambda row: as_int(row, "time")) if network_rows else None
             )
-            resource = resource_index.get(
-                (run.run_id, scenario, population, replicate)
-            )
+            resource = resource_index.get((run.run_id, scenario, population, replicate))
             output.append(
                 {
                     "run_id": run.run_id,
@@ -756,39 +716,25 @@ def build_terminal_training_rows(
                     "population": population,
                     "replicate": replicate,
                     "training_time": as_int(terminal, "time"),
-                    "training_resource_fraction": as_float(
-                        terminal, "mean_resource_fraction"
-                    ),
+                    "training_resource_fraction": as_float(terminal, "mean_resource_fraction"),
                     "training_wealth_gini": as_float(terminal, "wealth_gini"),
-                    "training_visibility_gini": as_float(
-                        terminal, "visibility_gini"
-                    ),
-                    "training_perception_error": as_float(
-                        terminal, "social_perception_error"
-                    ),
+                    "training_visibility_gini": as_float(terminal, "visibility_gini"),
+                    "training_perception_error": as_float(terminal, "social_perception_error"),
                     "training_degree_action_correlation": as_float(
                         terminal, "degree_action_correlation"
                     ),
                     "mean_edge_turnover": (
                         float(np.mean(turnovers)) if turnovers else float("nan")
                     ),
-                    "sum_edge_turnover": (
-                        float(np.sum(turnovers)) if turnovers else float("nan")
-                    ),
+                    "sum_edge_turnover": (float(np.sum(turnovers)) if turnovers else float("nan")),
                     "cumulative_rewires": (
-                        as_int(final_network, "cumulative_rewires")
-                        if final_network
-                        else 0
+                        as_int(final_network, "cumulative_rewires") if final_network else 0
                     ),
                     "eval_mean_resource_fraction": (
-                        resource["eval_mean_resource_fraction"]
-                        if resource
-                        else float("nan")
+                        resource["eval_mean_resource_fraction"] if resource else float("nan")
                     ),
                     "eval_final_resource_fraction": (
-                        resource["final_resource_fraction"]
-                        if resource
-                        else float("nan")
+                        resource["final_resource_fraction"] if resource else float("nan")
                     ),
                 }
             )
@@ -811,10 +757,7 @@ def index_primary_rows(run: RunData) -> dict[tuple[str, int, int], dict]:
 
 
 def build_paired_effects(
-    runs: list[RunData],
-    *,
-    bootstrap_reps: int,
-    bootstrap_seed: int,
+    runs: list[RunData], *, bootstrap_reps: int, bootstrap_seed: int
 ) -> tuple[list[dict], list[dict]]:
     run_by_id = {run.run_id: run for run in runs}
     paired_rows: list[dict] = []
@@ -907,10 +850,7 @@ def build_paired_effects(
 
 
 def build_network_memory_effects(
-    runs: list[RunData],
-    *,
-    bootstrap_reps: int,
-    bootstrap_seed: int,
+    runs: list[RunData], *, bootstrap_reps: int, bootstrap_seed: int
 ) -> tuple[list[dict], list[dict], list[str]]:
     rows: list[dict] = []
     warnings: list[str] = []
@@ -1008,30 +948,44 @@ def build_phase_summary(
     bootstrap_reps: int,
     bootstrap_seed: int,
 ) -> list[dict]:
-    adaptive_ids = {
-        run.run_id for run in runs if run.config.get("rewiring") == "prediction_error"
-    }
+    adaptive_ids = {run.run_id for run in runs if run.config.get("rewiring") == "prediction_error"}
     raw: list[dict] = []
 
     for row in resource_rows:
-        if row["run_id"] in adaptive_ids and np.isfinite(
-            row["eval_mean_resource_fraction"]
-        ):
+        if row["run_id"] in adaptive_ids and np.isfinite(row["eval_mean_resource_fraction"]):
             raw.append(
                 {
-                    **{key: row[key] for key in ("run_id", "rewire_theta", "rewire_mu", "scenario", "population", "replicate")},
+                    **{
+                        key: row[key]
+                        for key in (
+                            "run_id",
+                            "rewire_theta",
+                            "rewire_mu",
+                            "scenario",
+                            "population",
+                            "replicate",
+                        )
+                    },
                     "metric": "resource_fraction",
                     "value": row["eval_mean_resource_fraction"],
                 }
             )
 
     for row in terminal_rows:
-        if row["run_id"] in adaptive_ids and np.isfinite(
-            row["training_visibility_gini"]
-        ):
+        if row["run_id"] in adaptive_ids and np.isfinite(row["training_visibility_gini"]):
             raw.append(
                 {
-                    **{key: row[key] for key in ("run_id", "rewire_theta", "rewire_mu", "scenario", "population", "replicate")},
+                    **{
+                        key: row[key]
+                        for key in (
+                            "run_id",
+                            "rewire_theta",
+                            "rewire_mu",
+                            "scenario",
+                            "population",
+                            "replicate",
+                        )
+                    },
                     "metric": "visibility_gini",
                     "value": row["training_visibility_gini"],
                 }
@@ -1052,9 +1006,7 @@ def build_phase_summary(
     for key, values in groups.items():
         theta, mu, scenario, population, metric = key
         mean, low, high = bootstrap_mean_ci(
-            values,
-            bootstrap_reps=bootstrap_reps,
-            seed=stable_seed(bootstrap_seed, "phase", *key),
+            values, bootstrap_reps=bootstrap_reps, seed=stable_seed(bootstrap_seed, "phase", *key)
         )
         output.append(
             {
@@ -1111,11 +1063,7 @@ def scenario_population_grid(
 
 
 def save_resource_distribution_figure(
-    rows: list[dict],
-    runs: list[RunData],
-    figures_dir: Path,
-    *,
-    bootstrap_seed: int,
+    rows: list[dict], runs: list[RunData], figures_dir: Path, *, bootstrap_seed: int
 ) -> None:
     if not rows:
         return
@@ -1147,10 +1095,7 @@ def save_resource_distribution_figure(
                     stable_seed(bootstrap_seed, "jitter", scenario, population, label)
                 ).normal(0.0, 0.045, size=len(values))
                 axis.scatter(
-                    np.full(len(values), position, dtype=float) + jitter,
-                    values,
-                    s=16,
-                    alpha=0.65,
+                    np.full(len(values), position, dtype=float) + jitter, values, s=16, alpha=0.65
                 )
             if data:
                 axis.boxplot(data, positions=positions, widths=0.55, showfliers=False)
@@ -1169,12 +1114,7 @@ def save_resource_distribution_figure(
 
 
 def heatmap_matrix(
-    rows: list[dict],
-    *,
-    label: str,
-    scenario: str,
-    population: int,
-    value_field: str,
+    rows: list[dict], *, label: str, scenario: str, population: int, value_field: str
 ) -> np.ndarray:
     matrix = np.full((3, 3), np.nan, dtype=float)
     for row in rows:
@@ -1260,9 +1200,7 @@ def save_policy_heatmaps(
             figure.suptitle(f"{title_prefix}: {scenario}, N={population}")
             if image is not None:
                 figure.colorbar(image, ax=list(axes.ravel()), shrink=0.75)
-            path = figures_dir / (
-                f"{filename_prefix}_{safe_filename(scenario)}_N{population}.png"
-            )
+            path = figures_dir / (f"{filename_prefix}_{safe_filename(scenario)}_N{population}.png")
             figure.savefig(path, dpi=200, bbox_inches="tight")
             plt.close(figure)
             print(f"Saved {path}")
@@ -1305,12 +1243,8 @@ def save_trajectory_figure(
                     continue
                 x = np.asarray([int(row["time"]) for row in subset], dtype=float)
                 y = np.asarray([float(row["mean"]) for row in subset], dtype=float)
-                low = np.asarray(
-                    [float(row["bootstrap_ci_low"]) for row in subset], dtype=float
-                )
-                high = np.asarray(
-                    [float(row["bootstrap_ci_high"]) for row in subset], dtype=float
-                )
+                low = np.asarray([float(row["bootstrap_ci_low"]) for row in subset], dtype=float)
+                high = np.asarray([float(row["bootstrap_ci_high"]) for row in subset], dtype=float)
                 line = axis.plot(x, y, label=label)[0]
                 axis.fill_between(x, low, high, alpha=0.15)
                 if i == 0 and j == 0 and label not in handle_labels:
@@ -1440,8 +1374,7 @@ def save_effect_figure(
                 [
                     row
                     for row in subset
-                    if row["scenario"] == scenario
-                    and int(row["population"]) == population
+                    if row["scenario"] == scenario and int(row["population"]) == population
                 ],
                 key=lambda row: (as_float(row, "rewire_theta"), str(row[label_field])),
             )
@@ -1452,18 +1385,10 @@ def save_effect_figure(
             if panel:
                 lower_error = np.maximum(0.0, y - low)
                 upper_error = np.maximum(0.0, high - y)
-                axis.errorbar(
-                    x,
-                    y,
-                    yerr=np.vstack([lower_error, upper_error]),
-                    fmt="o",
-                    capsize=3,
-                )
+                axis.errorbar(x, y, yerr=np.vstack([lower_error, upper_error]), fmt="o", capsize=3)
             axis.axhline(0.0, linewidth=1.0)
             axis.set_xticks(x)
-            axis.set_xticklabels(
-                [str(row[label_field]) for row in panel], rotation=35, ha="right"
-            )
+            axis.set_xticklabels([str(row[label_field]) for row in panel], rotation=35, ha="right")
             axis.set_title(f"{scenario} | N={population}")
             axis.grid(alpha=0.25, axis="y")
             if j == 0:
@@ -1476,12 +1401,7 @@ def save_effect_figure(
 
 
 def save_phase_heatmaps(
-    rows: list[dict],
-    figures_dir: Path,
-    *,
-    metric: str,
-    filename_prefix: str,
-    title: str,
+    rows: list[dict], figures_dir: Path, *, metric: str, filename_prefix: str, title: str
 ) -> None:
     subset = [row for row in rows if row["metric"] == metric]
     if not subset:
@@ -1503,8 +1423,7 @@ def save_phase_heatmaps(
             matrix = np.full((len(mus), len(thetas)), np.nan, dtype=float)
             for row in panel:
                 matrix[
-                    mus.index(float(row["rewire_mu"])),
-                    thetas.index(float(row["rewire_theta"])),
+                    mus.index(float(row["rewire_mu"])), thetas.index(float(row["rewire_theta"]))
                 ] = float(row["mean"])
 
             figure, axis = plt.subplots(
@@ -1525,17 +1444,13 @@ def save_phase_heatmaps(
                     if np.isfinite(value):
                         axis.text(theta_i, mu_i, f"{value:.3f}", ha="center", va="center")
             figure.colorbar(image, ax=axis)
-            path = figures_dir / (
-                f"{filename_prefix}_{safe_filename(scenario)}_N{population}.png"
-            )
+            path = figures_dir / (f"{filename_prefix}_{safe_filename(scenario)}_N{population}.png")
             figure.savefig(path, dpi=200, bbox_inches="tight")
             plt.close(figure)
             print(f"Saved {path}")
 
 
-def save_local_population_scatter(
-    rows: list[dict], runs: list[RunData], figures_dir: Path
-) -> None:
+def save_local_population_scatter(rows: list[dict], runs: list[RunData], figures_dir: Path) -> None:
     finite = [
         row
         for row in rows
@@ -1565,10 +1480,7 @@ def save_local_population_scatter(
                 if not panel:
                     continue
                 artist = axis.scatter(
-                    [
-                        as_float(row, "mean_population_low_fraction_excluding")
-                        for row in panel
-                    ],
+                    [as_float(row, "mean_population_low_fraction_excluding") for row in panel],
                     [as_float(row, "mean_observed_low_fraction") for row in panel],
                     s=18,
                     alpha=0.55,
@@ -1621,9 +1533,7 @@ def analysis_manifest(*, args, runs: list[RunData], warnings: list[str]) -> dict
 
 
 def run_analysis(args) -> Path:
-    if not (
-        0.0 <= args.resource_low_threshold < args.resource_high_threshold <= 1.0
-    ):
+    if not (0.0 <= args.resource_low_threshold < args.resource_high_threshold <= 1.0):
         raise ValueError("Resource thresholds must satisfy 0 <= low < high <= 1.")
     if args.bootstrap_reps < 0:
         raise ValueError("--bootstrap-reps must be non-negative.")
@@ -1655,25 +1565,17 @@ def run_analysis(args) -> Path:
         bootstrap_seed=args.bootstrap_seed,
     )
     policy_rows = build_policy_heatmap_summary(
-        runs,
-        bootstrap_reps=args.bootstrap_reps,
-        bootstrap_seed=args.bootstrap_seed,
+        runs, bootstrap_reps=args.bootstrap_reps, bootstrap_seed=args.bootstrap_seed
     )
     trajectory_rows = build_trajectory_summary(
-        runs,
-        bootstrap_reps=args.bootstrap_reps,
-        bootstrap_seed=args.bootstrap_seed,
+        runs, bootstrap_reps=args.bootstrap_reps, bootstrap_seed=args.bootstrap_seed
     )
     terminal_rows = build_terminal_training_rows(runs, resource_rows)
     paired_rows, paired_summary = build_paired_effects(
-        runs,
-        bootstrap_reps=args.bootstrap_reps,
-        bootstrap_seed=args.bootstrap_seed,
+        runs, bootstrap_reps=args.bootstrap_reps, bootstrap_seed=args.bootstrap_seed
     )
     memory_rows, memory_summary, memory_warnings = build_network_memory_effects(
-        runs,
-        bootstrap_reps=args.bootstrap_reps,
-        bootstrap_seed=args.bootstrap_seed,
+        runs, bootstrap_reps=args.bootstrap_reps, bootstrap_seed=args.bootstrap_seed
     )
     warnings.extend(memory_warnings)
     phase_rows = build_phase_summary(
@@ -1687,20 +1589,14 @@ def run_analysis(args) -> Path:
 
     write_csv_rows(tables_dir / "run_catalog.csv", run_catalog_rows(runs))
     write_csv_rows(tables_dir / "resource_distribution.csv", resource_rows)
-    write_csv_rows(
-        tables_dir / "resource_distribution_summary.csv", resource_summary
-    )
+    write_csv_rows(tables_dir / "resource_distribution_summary.csv", resource_summary)
     write_csv_rows(tables_dir / "policy_heatmap_summary.csv", policy_rows)
     write_csv_rows(tables_dir / "trajectory_summary.csv", trajectory_rows)
     write_csv_rows(tables_dir / "terminal_training_summary.csv", terminal_rows)
     write_csv_rows(tables_dir / "paired_adaptive_minus_r0.csv", paired_rows)
-    write_csv_rows(
-        tables_dir / "paired_adaptive_minus_r0_summary.csv", paired_summary
-    )
+    write_csv_rows(tables_dir / "paired_adaptive_minus_r0_summary.csv", paired_summary)
     write_csv_rows(tables_dir / "network_memory_effects.csv", memory_rows)
-    write_csv_rows(
-        tables_dir / "network_memory_effects_summary.csv", memory_summary
-    )
+    write_csv_rows(tables_dir / "network_memory_effects_summary.csv", memory_summary)
     write_csv_rows(tables_dir / "theta_mu_summary.csv", phase_rows)
 
     save_resource_distribution_figure(
@@ -1838,9 +1734,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--analysis-name",
         default="social_core_analysis",
-        help=(
-            "Output name under results/q_learning_baseline/social_analysis/."
-        ),
+        help=("Output name under results/q_learning_baseline/social_analysis/."),
     )
     parser.add_argument(
         "--output",

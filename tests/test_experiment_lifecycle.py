@@ -5,20 +5,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from cognitive_tools.model import (
-    HIGH_EXTRACT,
-    LOW_EXTRACT,
-)
-from cognitive_tools.social import (
-    copy_sources,
-)
-
 import cognitive_tools.experiment as experiment
+from cognitive_tools.model import HIGH_EXTRACT, LOW_EXTRACT
+from cognitive_tools.social import copy_sources
 
 
-def make_args(
-    **overrides,
-):
+def make_args(**overrides):
     """Small deterministic configuration for lifecycle tests."""
 
     values = {
@@ -53,21 +45,13 @@ def make_args(
         "evaluation_steps": 3,
         "matched_rewire_schedule": None,
         "network_eval": "frozen",
-        "scenarios": [
-            "uniform_high",
-        ],
-        "populations": [
-            6,
-        ],
+        "scenarios": ["uniform_high"],
+        "populations": [6],
     }
 
-    values.update(
-        overrides
-    )
+    values.update(overrides)
 
-    return SimpleNamespace(
-        **values
-    )
+    return SimpleNamespace(**values)
 
 
 def test_run_metadata_has_reproducibility_fields():
@@ -80,14 +64,7 @@ def test_run_metadata_has_reproducibility_fields():
     assert metadata["command"]
     assert isinstance(metadata["package_versions"], dict)
 
-    expected_packages = {
-        "numpy",
-        "mesa",
-        "pettingzoo",
-        "gymnasium",
-        "matplotlib",
-        "pytest",
-    }
+    expected_packages = {"numpy", "mesa", "pettingzoo", "gymnasium", "matplotlib", "pytest"}
 
     assert set(metadata["package_versions"]) == expected_packages
 
@@ -101,70 +78,35 @@ def test_run_metadata_has_reproducibility_fields():
 
 
 def test_initial_random_k_graph_is_matched_across_scenarios():
-    args = make_args(
-        social_network="random_k",
-        social_k=2,
-    )
+    args = make_args(social_network="random_k", social_k=2)
 
     uniform_env, _, _ = experiment.make_environment(
-        "uniform_high",
-        population=6,
-        replicate=2,
-        max_steps=2,
-        args=args,
+        "uniform_high", population=6, replicate=2, max_steps=2, args=args
     )
 
     patchy_env, _, _ = experiment.make_environment(
-        "patchy_high",
-        population=6,
-        replicate=2,
-        max_steps=2,
-        args=args,
+        "patchy_high", population=6, replicate=2, max_steps=2, args=args
     )
 
-    uniform_sources = experiment.make_social_sources(
-        uniform_env,
-        replicate=2,
-        args=args,
-    )
+    uniform_sources = experiment.make_social_sources(uniform_env, replicate=2, args=args)
 
-    patchy_sources = experiment.make_social_sources(
-        patchy_env,
-        replicate=2,
-        args=args,
-    )
+    patchy_sources = experiment.make_social_sources(patchy_env, replicate=2, args=args)
 
     assert uniform_sources == patchy_sources
 
 
 def test_initial_random_k_graph_is_independent_of_rewiring_mode():
-    fixed_args = make_args(
-        rewiring="none",
-    )
+    fixed_args = make_args(rewiring="none")
 
-    adaptive_args = make_args(
-        rewiring="prediction_error",
-    )
+    adaptive_args = make_args(rewiring="prediction_error")
 
     env, _, _ = experiment.make_environment(
-        "uniform_high",
-        population=6,
-        replicate=1,
-        max_steps=2,
-        args=fixed_args,
+        "uniform_high", population=6, replicate=1, max_steps=2, args=fixed_args
     )
 
-    fixed_sources = experiment.make_social_sources(
-        env,
-        replicate=1,
-        args=fixed_args,
-    )
+    fixed_sources = experiment.make_social_sources(env, replicate=1, args=fixed_args)
 
-    adaptive_sources = experiment.make_social_sources(
-        env,
-        replicate=1,
-        args=adaptive_args,
-    )
+    adaptive_sources = experiment.make_social_sources(env, replicate=1, args=adaptive_args)
 
     assert fixed_sources == adaptive_sources
 
@@ -179,18 +121,10 @@ def test_frozen_evaluation_does_not_mutate_social_network():
     )
 
     env, observations, _ = experiment.make_environment(
-        "uniform_high",
-        population=6,
-        replicate=0,
-        max_steps=args.evaluation_steps,
-        args=args,
+        "uniform_high", population=6, replicate=0, max_steps=args.evaluation_steps, args=args
     )
 
-    sources = experiment.make_social_sources(
-        env,
-        replicate=0,
-        args=args,
-    )
+    sources = experiment.make_social_sources(env, replicate=0, args=args)
 
     assert sources is not None
 
@@ -233,26 +167,15 @@ def test_adaptive_evaluation_rewires_copy_not_input_graph():
     )
 
     env, observations, _ = experiment.make_environment(
-        "uniform_high",
-        population=6,
-        replicate=0,
-        max_steps=args.evaluation_steps,
-        args=args,
+        "uniform_high", population=6, replicate=0, max_steps=args.evaluation_steps, args=args
     )
 
-    sources = experiment.make_social_sources(
-        env,
-        replicate=0,
-        args=args,
-    )
+    sources = experiment.make_social_sources(env, replicate=0, args=args)
 
     assert sources is not None
 
     before = copy_sources(sources)
-    forecasts = {
-        name: 0.5
-        for name in sources
-    }
+    forecasts = {name: 0.5 for name in sources}
 
     summary, timeseries = experiment.evaluate_policy(
         env,
@@ -272,54 +195,20 @@ def test_adaptive_evaluation_rewires_copy_not_input_graph():
     )
 
     assert sources == before
-    assert forecasts == {
-        name: 0.5
-        for name in sources
-    }
+    assert forecasts == {name: 0.5 for name in sources}
     assert summary["network_adaptive"] is True
     assert summary["evaluation_total_rewires"] > 0
     assert timeseries[-1]["evaluation_rewires_cumulative"] > 0
 
 
-def test_run_condition_decomposes_carried_and_reset_networks(
-    monkeypatch,
-):
-    terminal_sources = {
-        "agent_0": [
-            "agent_2",
-        ],
-        "agent_1": [
-            "agent_0",
-        ],
-        "agent_2": [
-            "agent_1",
-        ],
-    }
+def test_run_condition_decomposes_carried_and_reset_networks(monkeypatch):
+    terminal_sources = {"agent_0": ["agent_2"], "agent_1": ["agent_0"], "agent_2": ["agent_1"]}
 
-    initial_sources = {
-        "agent_0": [
-            "agent_1",
-        ],
-        "agent_1": [
-            "agent_2",
-        ],
-        "agent_2": [
-            "agent_0",
-        ],
-    }
+    initial_sources = {"agent_0": ["agent_1"], "agent_1": ["agent_2"], "agent_2": ["agent_0"]}
 
-    final_forecasts = {
-        "agent_0": 0.2,
-        "agent_1": 0.5,
-        "agent_2": 0.8,
-    }
+    final_forecasts = {"agent_0": 0.2, "agent_1": 0.5, "agent_2": 0.8}
 
-    def fake_train(
-        scenario_name,
-        population,
-        replicate,
-        args,
-    ):
+    def fake_train(scenario_name, population, replicate, args):
         return (
             object(),
             {},
@@ -329,52 +218,23 @@ def test_run_condition_decomposes_carried_and_reset_networks(
             [],
             terminal_sources,
             None,
-            {
-                "agent_0": 0,
-                "agent_1": 0,
-                "agent_2": 0,
-            },
-            {
-                "agent_0": 0.0,
-                "agent_1": 0.0,
-                "agent_2": 0.0,
-            },
+            {"agent_0": 0, "agent_1": 0, "agent_2": 0},
+            {"agent_0": 0.0, "agent_1": 0.0, "agent_2": 0.0},
             [],
             initial_sources,
             final_forecasts,
-            {
-                "state_visit_counts": [0] * 9,
-                "agent_social_summary": [],
-            },
+            {"state_visit_counts": [0] * 9, "agent_social_summary": []},
         )
 
-    def fake_policy_diagnostics(
-        *args,
-        **kwargs,
-    ):
-        return (
-            {
-                "scenario": "uniform_high",
-            },
-            [],
-        )
+    def fake_policy_diagnostics(*args, **kwargs):
+        return ({"scenario": "uniform_high"}, [])
 
-    def fake_make_environment(
-        *args,
-        **kwargs,
-    ):
-        return (
-            object(),
-            {},
-            None,
-        )
+    def fake_make_environment(*args, **kwargs):
+        return (object(), {}, None)
 
     calls = []
 
-    def fake_evaluate_policy(
-        *args,
-        **kwargs,
-    ):
+    def fake_evaluate_policy(*args, **kwargs):
         calls.append(
             {
                 "strategy": kwargs["strategy"],
@@ -386,34 +246,12 @@ def test_run_condition_decomposes_carried_and_reset_networks(
             }
         )
 
-        return (
-            {
-                "strategy": kwargs["strategy"],
-                "evaluation_mode": kwargs["evaluation_mode"],
-            },
-            [],
-        )
+        return ({"strategy": kwargs["strategy"], "evaluation_mode": kwargs["evaluation_mode"]}, [])
 
-    monkeypatch.setattr(
-        experiment,
-        "train_q_learning",
-        fake_train,
-    )
-    monkeypatch.setattr(
-        experiment,
-        "policy_diagnostics",
-        fake_policy_diagnostics,
-    )
-    monkeypatch.setattr(
-        experiment,
-        "make_environment",
-        fake_make_environment,
-    )
-    monkeypatch.setattr(
-        experiment,
-        "evaluate_policy",
-        fake_evaluate_policy,
-    )
+    monkeypatch.setattr(experiment, "train_q_learning", fake_train)
+    monkeypatch.setattr(experiment, "policy_diagnostics", fake_policy_diagnostics)
+    monkeypatch.setattr(experiment, "make_environment", fake_make_environment)
+    monkeypatch.setattr(experiment, "evaluate_policy", fake_evaluate_policy)
 
     output = experiment.run_condition(
         "uniform_high",
@@ -430,10 +268,7 @@ def test_run_condition_decomposes_carried_and_reset_networks(
 
     assert len(calls) == 6
 
-    assert [
-        call["evaluation_mode"]
-        for call in calls
-    ] == [
+    assert [call["evaluation_mode"] for call in calls] == [
         "continuation",
         "fresh_reset",
         "fresh_reset_network",
@@ -452,49 +287,21 @@ def test_run_condition_decomposes_carried_and_reset_networks(
     assert calls[0]["network_start"] == "terminal"
     assert calls[1]["network_start"] == "terminal"
     assert calls[2]["network_start"] == "initial"
-    assert all(
-        call["adaptive_network"] is False
-        for call in calls
-    )
+    assert all(call["adaptive_network"] is False for call in calls)
 
     assert output["rewiring_schedule"] == []
     assert output["agent_social_summary"] == []
 
-    checkpoints = {
-        row["checkpoint"]
-        for row in output["network_edges_checkpoints"]
-    }
-    assert checkpoints == {
-        "initial",
-        "terminal",
-    }
+    checkpoints = {row["checkpoint"] for row in output["network_edges_checkpoints"]}
+    assert checkpoints == {"initial", "terminal"}
 
 
-def test_run_condition_adds_adaptive_robustness_evaluation(
-    monkeypatch,
-):
-    terminal_sources = {
-        "agent_0": [
-            "agent_1",
-        ],
-        "agent_1": [
-            "agent_2",
-        ],
-        "agent_2": [
-            "agent_0",
-        ],
-    }
+def test_run_condition_adds_adaptive_robustness_evaluation(monkeypatch):
+    terminal_sources = {"agent_0": ["agent_1"], "agent_1": ["agent_2"], "agent_2": ["agent_0"]}
     initial_sources = copy_sources(terminal_sources)
-    final_forecasts = {
-        "agent_0": 0.3,
-        "agent_1": 0.4,
-        "agent_2": 0.5,
-    }
+    final_forecasts = {"agent_0": 0.3, "agent_1": 0.4, "agent_2": 0.5}
 
-    def fake_train(
-        *args,
-        **kwargs,
-    ):
+    def fake_train(*args, **kwargs):
         return (
             object(),
             {},
@@ -504,71 +311,38 @@ def test_run_condition_adds_adaptive_robustness_evaluation(
             [],
             terminal_sources,
             None,
-            {
-                name: 0
-                for name in terminal_sources
-            },
-            {
-                name: 0.0
-                for name in terminal_sources
-            },
+            {name: 0 for name in terminal_sources},
+            {name: 0.0 for name in terminal_sources},
             [],
             initial_sources,
             final_forecasts,
-            {
-                "state_visit_counts": [0] * 9,
-                "agent_social_summary": [],
-            },
+            {"state_visit_counts": [0] * 9, "agent_social_summary": []},
         )
 
+    monkeypatch.setattr(experiment, "train_q_learning", fake_train)
+    monkeypatch.setattr(experiment, "policy_diagnostics", lambda *args, **kwargs: ({}, []))
     monkeypatch.setattr(
-        experiment,
-        "train_q_learning",
-        fake_train,
-    )
-    monkeypatch.setattr(
-        experiment,
-        "policy_diagnostics",
-        lambda *args, **kwargs: ({}, []),
-    )
-    monkeypatch.setattr(
-        experiment,
-        "make_environment",
-        lambda *args, **kwargs: (object(), {}, None),
+        experiment, "make_environment", lambda *args, **kwargs: (object(), {}, None)
     )
 
     calls = []
 
-    def fake_evaluate_policy(
-        *args,
-        **kwargs,
-    ):
+    def fake_evaluate_policy(*args, **kwargs):
         calls.append(kwargs)
         return ({}, [])
 
-    monkeypatch.setattr(
-        experiment,
-        "evaluate_policy",
-        fake_evaluate_policy,
-    )
+    monkeypatch.setattr(experiment, "evaluate_policy", fake_evaluate_policy)
 
     experiment.run_condition(
         "uniform_high",
         population=3,
         replicate=0,
         args=make_args(
-            rewiring="prediction_error",
-            network_eval="adaptive",
-            social_k=1,
-            populations=[3],
+            rewiring="prediction_error", network_eval="adaptive", social_k=1, populations=[3]
         ),
     )
 
-    adaptive_calls = [
-        call
-        for call in calls
-        if call["evaluation_mode"] == "fresh_adaptive_network"
-    ]
+    adaptive_calls = [call for call in calls if call["evaluation_mode"] == "fresh_adaptive_network"]
 
     assert len(adaptive_calls) == 1
     adaptive_call = adaptive_calls[0]
@@ -578,9 +352,7 @@ def test_run_condition_adds_adaptive_robustness_evaluation(
     assert adaptive_call["forecasts"] is final_forecasts
 
 
-def test_q_update_uses_post_rewire_social_state(
-    monkeypatch,
-):
+def test_q_update_uses_post_rewire_social_state(monkeypatch):
     """
     A rewiring event between a_t and the Q update must affect s_(t+1),
     while Stage 3 preserves an independent snapshot of the initial graph.
@@ -601,17 +373,7 @@ def test_q_update_uses_post_rewire_social_state(
         populations=[3],
     )
 
-    initial_sources = {
-        "agent_0": [
-            "agent_1",
-        ],
-        "agent_1": [
-            "agent_2",
-        ],
-        "agent_2": [
-            "agent_0",
-        ],
-    }
+    initial_sources = {"agent_0": ["agent_1"], "agent_1": ["agent_2"], "agent_2": ["agent_0"]}
 
     class FakeLearner:
         def __init__(self, action: int):
@@ -619,23 +381,10 @@ def test_q_update_uses_post_rewire_social_state(
             self.epsilon = 0.20
             self.updates = []
 
-        def choose_action(
-            self,
-            state,
-            *,
-            explore=True,
-        ):
+        def choose_action(self, state, *, explore=True):
             return self.action
 
-        def update(
-            self,
-            state,
-            action,
-            reward,
-            next_state,
-            *,
-            done=False,
-        ):
+        def update(self, state, action, reward, next_state, *, done=False):
             self.updates.append(
                 {
                     "state": int(state),
@@ -654,27 +403,14 @@ def test_q_update_uses_post_rewire_social_state(
         "agent_2": FakeLearner(HIGH_EXTRACT),
     }
 
-    def fake_make_social_sources(
-        env,
-        replicate,
-        args,
-    ):
+    def fake_make_social_sources(env, replicate, args):
         return copy_sources(initial_sources)
 
-    def fake_make_learners(
-        env,
-        replicate,
-        args,
-    ):
+    def fake_make_learners(env, replicate, args):
         return learners
 
-    def fake_rewire_epoch(
-        sources,
-        **kwargs,
-    ):
-        sources["agent_0"] = [
-            "agent_2",
-        ]
+    def fake_rewire_epoch(sources, **kwargs):
+        sources["agent_0"] = ["agent_2"]
 
         return [
             {
@@ -689,28 +425,11 @@ def test_q_update_uses_post_rewire_social_state(
             }
         ]
 
-    monkeypatch.setattr(
-        experiment,
-        "make_social_sources",
-        fake_make_social_sources,
-    )
-    monkeypatch.setattr(
-        experiment,
-        "make_learners",
-        fake_make_learners,
-    )
-    monkeypatch.setattr(
-        experiment,
-        "rewire_epoch",
-        fake_rewire_epoch,
-    )
+    monkeypatch.setattr(experiment, "make_social_sources", fake_make_social_sources)
+    monkeypatch.setattr(experiment, "make_learners", fake_make_learners)
+    monkeypatch.setattr(experiment, "rewire_epoch", fake_rewire_epoch)
 
-    output = experiment.train_q_learning(
-        "uniform_high",
-        population=3,
-        replicate=0,
-        args=args,
-    )
+    output = experiment.train_q_learning("uniform_high", population=3, replicate=0, args=args)
 
     returned_learners = output[3]
     terminal_sources = output[6]
@@ -718,9 +437,7 @@ def test_q_update_uses_post_rewire_social_state(
     returned_initial_sources = output[11]
     final_forecasts = output[12]
 
-    update = returned_learners[
-        "agent_0"
-    ].updates[0]
+    update = returned_learners["agent_0"].updates[0]
 
     # First decision: neutral/mixed social state.
     assert update["state"] % 3 == 1
@@ -730,9 +447,7 @@ def test_q_update_uses_post_rewire_social_state(
     assert rewire_counts["agent_0"] == 1
 
     # The training endpoint changed, but the Stage 3 initial snapshot did not.
-    assert terminal_sources["agent_0"] == [
-        "agent_2",
-    ]
+    assert terminal_sources["agent_0"] == ["agent_2"]
     assert returned_initial_sources == initial_sources
     assert returned_initial_sources is not terminal_sources
 
@@ -751,10 +466,7 @@ def test_adaptive_network_eval_rejects_random_matched():
     # is the behavior under test, so substitute a harmless existing path.
     args.matched_rewire_schedule = __file__
 
-    with pytest.raises(
-        ValueError,
-        match="random_matched",
-    ):
+    with pytest.raises(ValueError, match="random_matched"):
         experiment.validate_configuration(args)
 
 
@@ -770,30 +482,12 @@ def test_b0_condition_is_deterministic_for_same_seed():
         populations=[3],
     )
 
-    first = experiment.run_condition(
-        "uniform_high",
-        population=3,
-        replicate=0,
-        args=args,
-    )
+    first = experiment.run_condition("uniform_high", population=3, replicate=0, args=args)
 
-    second = experiment.run_condition(
-        "uniform_high",
-        population=3,
-        replicate=0,
-        args=args,
-    )
+    second = experiment.run_condition("uniform_high", population=3, replicate=0, args=args)
 
-    first_serialized = json.dumps(
-        first,
-        sort_keys=True,
-        allow_nan=True,
-    )
+    first_serialized = json.dumps(first, sort_keys=True, allow_nan=True)
 
-    second_serialized = json.dumps(
-        second,
-        sort_keys=True,
-        allow_nan=True,
-    )
+    second_serialized = json.dumps(second, sort_keys=True, allow_nan=True)
 
     assert first_serialized == second_serialized

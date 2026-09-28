@@ -39,23 +39,11 @@ import numpy as np
 
 from .model import HIGH_EXTRACT, LOW_EXTRACT
 
+SOCIAL_STATE_NAMES = ("mostly_high", "mixed", "mostly_low")
 
-SOCIAL_STATE_NAMES = (
-    "mostly_high",
-    "mixed",
-    "mostly_low",
-)
+SOCIAL_NETWORK_MODES = ("random_k", "ba")
 
-SOCIAL_NETWORK_MODES = (
-    "random_k",
-    "ba",
-)
-
-REWIRING_MODES = (
-    "none",
-    "random_matched",
-    "prediction_error",
-)
+REWIRING_MODES = ("none", "random_matched", "prediction_error")
 
 
 # ---------------------------------------------------------------------
@@ -63,20 +51,13 @@ REWIRING_MODES = (
 # ---------------------------------------------------------------------
 
 
-def copy_sources(
-    sources: dict[str, list[str]],
-) -> dict[str, list[str]]:
+def copy_sources(sources: dict[str, list[str]]) -> dict[str, list[str]]:
     """Return an independent copy of an attention network."""
 
-    return {
-        observer: list(observer_sources)
-        for observer, observer_sources in sources.items()
-    }
+    return {observer: list(observer_sources) for observer, observer_sources in sources.items()}
 
 
-def _validate_agent_names(
-    agents: list[str],
-) -> list[str]:
+def _validate_agent_names(agents: list[str]) -> list[str]:
     names = list(agents)
 
     if len(set(names)) != len(names):
@@ -86,9 +67,7 @@ def _validate_agent_names(
 
 
 def init_random_attention(
-    agents: list[str],
-    k: int,
-    rng: np.random.Generator,
+    agents: list[str], k: int, rng: np.random.Generator
 ) -> dict[str, list[str]]:
     """
     Create a directed random fixed-k attention network.
@@ -100,37 +79,22 @@ def init_random_attention(
     names = _validate_agent_names(agents)
 
     if not 1 <= k < len(names):
-        raise ValueError(
-            "k must satisfy 1 <= k < number of agents."
-        )
+        raise ValueError("k must satisfy 1 <= k < number of agents.")
 
     sources: dict[str, list[str]] = {}
 
     for observer in names:
-        candidates = [
-            name
-            for name in names
-            if name != observer
-        ]
+        candidates = [name for name in names if name != observer]
 
-        chosen = rng.choice(
-            candidates,
-            size=k,
-            replace=False,
-        )
+        chosen = rng.choice(candidates, size=k, replace=False)
 
-        sources[observer] = [
-            str(name)
-            for name in chosen
-        ]
+        sources[observer] = [str(name) for name in chosen]
 
     return sources
 
 
 def init_barabasi_albert_attention(
-    agents: list[str],
-    m: int,
-    rng: np.random.Generator,
+    agents: list[str], m: int, rng: np.random.Generator
 ) -> dict[str, list[str]]:
     """
     Create a fixed Barabasi-Albert-style observational network.
@@ -159,21 +123,14 @@ def init_barabasi_albert_attention(
     n_agents = len(names)
 
     if not 1 <= m < n_agents:
-        raise ValueError(
-            "m must satisfy 1 <= m < number of agents."
-        )
+        raise ValueError("m must satisfy 1 <= m < number of agents.")
 
     seed_size = m + 1
 
     if seed_size > n_agents:
-        raise ValueError(
-            "Barabasi-Albert initialization requires at least m + 1 agents."
-        )
+        raise ValueError("Barabasi-Albert initialization requires at least m + 1 agents.")
 
-    adjacency: list[set[int]] = [
-        set()
-        for _ in names
-    ]
+    adjacency: list[set[int]] = [set() for _ in names]
 
     # Initial clique.
     for first in range(seed_size):
@@ -181,31 +138,18 @@ def init_barabasi_albert_attention(
             adjacency[first].add(second)
             adjacency[second].add(first)
 
-    degrees = np.asarray(
-        [
-            len(neighbors)
-            for neighbors in adjacency
-        ],
-        dtype=float,
-    )
+    degrees = np.asarray([len(neighbors) for neighbors in adjacency], dtype=float)
 
     for newcomer in range(seed_size, n_agents):
         existing_degrees = degrees[:newcomer]
         degree_total = float(existing_degrees.sum())
 
         if degree_total <= 0.0:
-            raise RuntimeError(
-                "Preferential attachment requires positive existing degree."
-            )
+            raise RuntimeError("Preferential attachment requires positive existing degree.")
 
         probabilities = existing_degrees / degree_total
 
-        targets = rng.choice(
-            newcomer,
-            size=m,
-            replace=False,
-            p=probabilities,
-        )
+        targets = rng.choice(newcomer, size=m, replace=False, p=probabilities)
 
         for raw_target in targets:
             target = int(raw_target)
@@ -217,16 +161,13 @@ def init_barabasi_albert_attention(
 
     return {
         names[observer_index]: [
-            names[source_index]
-            for source_index in sorted(adjacency[observer_index])
+            names[source_index] for source_index in sorted(adjacency[observer_index])
         ]
         for observer_index in range(n_agents)
     }
 
 
-def network_edges(
-    sources: dict[str, list[str]],
-) -> set[tuple[str, str]]:
+def network_edges(sources: dict[str, list[str]]) -> set[tuple[str, str]]:
     """
     Return directed social edges as ``(source, observer)``.
 
@@ -240,17 +181,10 @@ def network_edges(
     }
 
 
-def visibility_counts(
-    sources: dict[str, list[str]],
-) -> dict[str, int]:
+def visibility_counts(sources: dict[str, list[str]]) -> dict[str, int]:
     """Count how many observers see each agent."""
 
-    counts = Counter(
-        {
-            name: 0
-            for name in sources
-        }
-    )
+    counts = Counter({name: 0 for name in sources})
 
     for observer_sources in sources.values():
         counts.update(observer_sources)
@@ -258,10 +192,7 @@ def visibility_counts(
     return dict(counts)
 
 
-def network_turnover(
-    before: dict[str, list[str]],
-    after: dict[str, list[str]],
-) -> float:
+def network_turnover(before: dict[str, list[str]], after: dict[str, list[str]]) -> float:
     """
     Jaccard edge turnover between two directed attention networks.
 
@@ -278,10 +209,7 @@ def network_turnover(
 
     intersection = before_edges & after_edges
 
-    return float(
-        1.0
-        - len(intersection) / len(union)
-    )
+    return float(1.0 - len(intersection) / len(union))
 
 
 # ---------------------------------------------------------------------
@@ -303,55 +231,34 @@ def observed_low_fraction(
     """
 
     if not 0.0 <= neutral <= 1.0:
-        raise ValueError(
-            "neutral must be between 0 and 1."
-        )
+        raise ValueError("neutral must be between 0 and 1.")
 
     observer_sources = sources[observer]
 
     if actions is None or not observer_sources:
         return float(neutral)
 
-    return float(
-        np.mean(
-            [
-                actions[source] == LOW_EXTRACT
-                for source in observer_sources
-            ]
-        )
-    )
+    return float(np.mean([actions[source] == LOW_EXTRACT for source in observer_sources]))
 
 
 def social_observations(
-    sources: dict[str, list[str]],
-    actions: dict[str, int] | None,
-    *,
-    neutral: float = 0.5,
+    sources: dict[str, list[str]], actions: dict[str, int] | None, *, neutral: float = 0.5
 ) -> dict[str, float]:
     """Return observed low-extraction fraction for every observer."""
 
     return {
-        observer: observed_low_fraction(
-            observer,
-            sources,
-            actions,
-            neutral=neutral,
-        )
+        observer: observed_low_fraction(observer, sources, actions, neutral=neutral)
         for observer in sources
     }
 
 
-def social_bin(
-    low_fraction: float,
-) -> int:
+def social_bin(low_fraction: float) -> int:
     """Discretize a low-extraction fraction into three social states."""
 
     value = float(low_fraction)
 
     if not 0.0 <= value <= 1.0:
-        raise ValueError(
-            "low_fraction must be between 0 and 1."
-        )
+        raise ValueError("low_fraction must be between 0 and 1.")
 
     if value < 1.0 / 3.0:
         return 0
@@ -362,24 +269,17 @@ def social_bin(
     return 2
 
 
-def joint_state(
-    ecological_state: int,
-    social_state: int,
-) -> int:
+def joint_state(ecological_state: int, social_state: int) -> int:
     """Combine ecological and social states into a nine-state index."""
 
     ecological_state = int(ecological_state)
     social_state = int(social_state)
 
     if not 0 <= ecological_state < 3:
-        raise ValueError(
-            "ecological_state must be 0, 1, or 2."
-        )
+        raise ValueError("ecological_state must be 0, 1, or 2.")
 
     if not 0 <= social_state < 3:
-        raise ValueError(
-            "social_state must be 0, 1, or 2."
-        )
+        raise ValueError("social_state must be 0, 1, or 2.")
 
     return 3 * ecological_state + social_state
 
@@ -389,10 +289,7 @@ def joint_state(
 # ---------------------------------------------------------------------
 
 
-def local_candidates(
-    observer: str,
-    sources: dict[str, list[str]],
-) -> list[str]:
+def local_candidates(observer: str, sources: dict[str, list[str]]) -> list[str]:
     """
     Legal local replacement candidates.
 
@@ -402,32 +299,17 @@ def local_candidates(
 
     current = set(sources[observer])
 
-    two_hop = {
-        candidate
-        for source in current
-        for candidate in sources[source]
-    }
+    two_hop = {candidate for source in current for candidate in sources[source]}
 
-    return sorted(
-        two_hop
-        - current
-        - {observer}
-    )
+    return sorted(two_hop - current - {observer})
 
 
-def global_candidates(
-    observer: str,
-    sources: dict[str, list[str]],
-) -> list[str]:
+def global_candidates(observer: str, sources: dict[str, list[str]]) -> list[str]:
     """Return legal population-wide replacement candidates."""
 
     current = set(sources[observer])
 
-    return sorted(
-        set(sources)
-        - current
-        - {observer}
-    )
+    return sorted(set(sources) - current - {observer})
 
 
 def replace_source(
@@ -442,70 +324,45 @@ def replace_source(
     """Replace one information source while preserving attention capacity."""
 
     if not 0.0 <= theta <= 1.0:
-        raise ValueError(
-            "theta must be between 0 and 1."
-        )
+        raise ValueError("theta must be between 0 and 1.")
 
     if observer not in sources:
-        raise KeyError(
-            f"Unknown observer: {observer}"
-        )
+        raise KeyError(f"Unknown observer: {observer}")
 
     if drop not in sources[observer]:
-        raise ValueError(
-            f"{drop} is not currently observed by {observer}."
-        )
+        raise ValueError(f"{drop} is not currently observed by {observer}.")
 
-    search_network = (
-        sources
-        if candidate_sources is None
-        else candidate_sources
-    )
+    search_network = sources if candidate_sources is None else candidate_sources
 
     requested_global = rng.random() < theta
     requested_scope = "global" if requested_global else "local"
 
     if requested_global:
-        pool = global_candidates(
-            observer,
-            search_network,
-        )
+        pool = global_candidates(observer, search_network)
     else:
-        pool = local_candidates(
-            observer,
-            search_network,
-        )
+        pool = local_candidates(observer, search_network)
 
     fallback = False
     used_scope = requested_scope
 
     if not pool and requested_scope == "local":
-        pool = global_candidates(
-            observer,
-            search_network,
-        )
+        pool = global_candidates(observer, search_network)
         fallback = True
         used_scope = "global"
 
     if not pool:
         return None
 
-    replacement = pool[
-        int(rng.integers(len(pool)))
-    ]
+    replacement = pool[int(rng.integers(len(pool)))]
 
     updated = list(sources[observer])
     updated[updated.index(drop)] = replacement
 
     if len(updated) != len(set(updated)):
-        raise RuntimeError(
-            "Rewiring produced duplicate sources."
-        )
+        raise RuntimeError("Rewiring produced duplicate sources.")
 
     if observer in updated:
-        raise RuntimeError(
-            "Rewiring produced a self-link."
-        )
+        raise RuntimeError("Rewiring produced a self-link.")
 
     sources[observer] = updated
 
@@ -524,49 +381,28 @@ def replace_source(
 # ---------------------------------------------------------------------
 
 
-def prediction_errors(
-    forecasts: dict[str, float],
-    observed: dict[str, float],
-) -> dict[str, float]:
+def prediction_errors(forecasts: dict[str, float], observed: dict[str, float]) -> dict[str, float]:
     """Absolute prediction error for every observer."""
 
     if set(forecasts) != set(observed):
-        raise ValueError(
-            "forecasts and observed must have the same agent names."
-        )
+        raise ValueError("forecasts and observed must have the same agent names.")
 
-    return {
-        name: abs(
-            float(observed[name])
-            - float(forecasts[name])
-        )
-        for name in forecasts
-    }
+    return {name: abs(float(observed[name]) - float(forecasts[name])) for name in forecasts}
 
 
 def update_forecasts(
-    forecasts: dict[str, float],
-    observed: dict[str, float],
-    *,
-    alpha: float,
+    forecasts: dict[str, float], observed: dict[str, float], *, alpha: float
 ) -> None:
     """Apply the EWMA social forecast update in place."""
 
     if not 0.0 <= alpha <= 1.0:
-        raise ValueError(
-            "alpha must be between 0 and 1."
-        )
+        raise ValueError("alpha must be between 0 and 1.")
 
     if set(forecasts) != set(observed):
-        raise ValueError(
-            "forecasts and observed must have the same agent names."
-        )
+        raise ValueError("forecasts and observed must have the same agent names.")
 
     for name in forecasts:
-        forecasts[name] = (
-            (1.0 - alpha) * float(forecasts[name])
-            + alpha * float(observed[name])
-        )
+        forecasts[name] = (1.0 - alpha) * float(forecasts[name]) + alpha * float(observed[name])
 
 
 # ---------------------------------------------------------------------
@@ -589,17 +425,10 @@ def _apply_one_rewire(
     if not observer_sources:
         return None
 
-    drop = observer_sources[
-        int(rng.integers(len(observer_sources)))
-    ]
+    drop = observer_sources[int(rng.integers(len(observer_sources)))]
 
     event = replace_source(
-        observer,
-        drop,
-        sources,
-        theta=theta,
-        rng=rng,
-        candidate_sources=snapshot,
+        observer, drop, sources, theta=theta, rng=rng, candidate_sources=snapshot
     )
 
     if event is None:
@@ -612,25 +441,19 @@ def _apply_one_rewire(
 
 
 def _random_matched_observers(
-    snapshot: dict[str, list[str]],
-    *,
-    target_count: int,
-    rng: np.random.Generator,
+    snapshot: dict[str, list[str]], *, target_count: int, rng: np.random.Generator
 ) -> list[str]:
     """
     Select exactly ``target_count`` observers that can legally replace a tie.
     """
 
     if target_count < 0:
-        raise ValueError(
-            "target_count must be non-negative."
-        )
+        raise ValueError("target_count must be non-negative.")
 
     eligible = [
         observer
         for observer in sorted(snapshot)
-        if snapshot[observer]
-        and global_candidates(observer, snapshot)
+        if snapshot[observer] and global_candidates(observer, snapshot)
     ]
 
     if target_count > len(eligible):
@@ -642,16 +465,9 @@ def _random_matched_observers(
     if target_count == 0:
         return []
 
-    selected = rng.choice(
-        eligible,
-        size=target_count,
-        replace=False,
-    )
+    selected = rng.choice(eligible, size=target_count, replace=False)
 
-    return [
-        str(observer)
-        for observer in selected
-    ]
+    return [str(observer) for observer in selected]
 
 
 def rewire_epoch(
@@ -687,64 +503,39 @@ def rewire_epoch(
     """
 
     if mode not in REWIRING_MODES:
-        raise ValueError(
-            f"Unknown rewiring mode: {mode}"
-        )
+        raise ValueError(f"Unknown rewiring mode: {mode}")
 
     if not 0.0 <= theta <= 1.0:
-        raise ValueError(
-            "theta must be between 0 and 1."
-        )
+        raise ValueError("theta must be between 0 and 1.")
 
     if not 0.0 <= mu <= 1.0:
-        raise ValueError(
-            "mu must be between 0 and 1."
-        )
+        raise ValueError("mu must be between 0 and 1.")
 
     if not 0.0 <= threshold <= 1.0:
-        raise ValueError(
-            "threshold must be between 0 and 1."
-        )
+        raise ValueError("threshold must be between 0 and 1.")
 
     if mode == "none":
         if target_count not in (None, 0):
-            raise ValueError(
-                "target_count is only used by random_matched rewiring."
-            )
+            raise ValueError("target_count is only used by random_matched rewiring.")
         return []
 
     if mode == "prediction_error" and prediction_error_values is None:
-        raise ValueError(
-            "prediction_error rewiring requires prediction_error_values."
-        )
+        raise ValueError("prediction_error rewiring requires prediction_error_values.")
 
-    if (
-        prediction_error_values is not None
-        and set(prediction_error_values) != set(sources)
-    ):
-        raise ValueError(
-            "prediction_error_values must contain every observer."
-        )
+    if prediction_error_values is not None and set(prediction_error_values) != set(sources):
+        raise ValueError("prediction_error_values must contain every observer.")
 
     if mode == "random_matched" and target_count is None:
-        raise ValueError(
-            "random_matched rewiring requires target_count."
-        )
+        raise ValueError("random_matched rewiring requires target_count.")
 
     if mode != "random_matched" and target_count is not None:
-        raise ValueError(
-            "target_count is only used by random_matched rewiring."
-        )
+        raise ValueError("target_count is only used by random_matched rewiring.")
 
     snapshot = copy_sources(sources)
     events: list[dict[str, object]] = []
 
     if mode == "random_matched":
-        observers = _random_matched_observers(
-            snapshot,
-            target_count=int(target_count),
-            rng=rng,
-        )
+        observers = _random_matched_observers(snapshot, target_count=int(target_count), rng=rng)
 
         for observer in observers:
             event = _apply_one_rewire(
@@ -767,8 +558,7 @@ def rewire_epoch(
 
         if len(events) != int(target_count):
             raise RuntimeError(
-                "Matched-random rewiring failed to realize the requested "
-                "number of events."
+                "Matched-random rewiring failed to realize the requested number of events."
             )
 
         return events
@@ -784,13 +574,7 @@ def rewire_epoch(
             continue
 
         event = _apply_one_rewire(
-            observer,
-            sources,
-            snapshot,
-            theta=theta,
-            rng=rng,
-            trigger=mode,
-            prediction_error=error,
+            observer, sources, snapshot, theta=theta, rng=rng, trigger=mode, prediction_error=error
         )
 
         if event is not None:
@@ -804,15 +588,8 @@ def rewire_epoch(
 # ---------------------------------------------------------------------
 
 
-def _gini_nonnegative(
-    values,
-) -> float:
-    values = np.sort(
-        np.asarray(
-            values,
-            dtype=float,
-        )
-    )
+def _gini_nonnegative(values) -> float:
+    values = np.sort(np.asarray(values, dtype=float))
 
     if len(values) == 0:
         return 0.0
@@ -825,42 +602,23 @@ def _gini_nonnegative(
     n = len(values)
     index = np.arange(1, n + 1)
 
-    value = (
-        2.0 * np.sum(index * values) / (n * total)
-        - (n + 1.0) / n
-    )
+    value = 2.0 * np.sum(index * values) / (n * total) - (n + 1.0) / n
 
     return float(max(0.0, value))
 
 
-def population_low_fraction_excluding(
-    observer: str,
-    actions: dict[str, int],
-) -> float:
+def population_low_fraction_excluding(observer: str, actions: dict[str, int]) -> float:
     """Population low-extraction frequency excluding the focal observer."""
 
-    others = [
-        action
-        for name, action in actions.items()
-        if name != observer
-    ]
+    others = [action for name, action in actions.items() if name != observer]
 
     if not others:
         return float("nan")
 
-    return float(
-        np.mean(
-            [
-                action == LOW_EXTRACT
-                for action in others
-            ]
-        )
-    )
+    return float(np.mean([action == LOW_EXTRACT for action in others]))
 
 
-def _majority_label(
-    low_fraction: float,
-) -> int:
+def _majority_label(low_fraction: float) -> int:
     """Return -1 for high majority, 0 for tie, 1 for low majority."""
 
     if low_fraction > 0.5:
@@ -872,9 +630,7 @@ def _majority_label(
     return 0
 
 
-def network_reciprocity(
-    sources: dict[str, list[str]],
-) -> float:
+def network_reciprocity(sources: dict[str, list[str]]) -> float:
     """
     Fraction of directed information edges that have a reverse edge.
 
@@ -889,19 +645,12 @@ def network_reciprocity(
     if not edges:
         return 0.0
 
-    reciprocated = sum(
-        (observer, source) in edges
-        for source, observer in edges
-    )
+    reciprocated = sum((observer, source) in edges for source, observer in edges)
 
-    return float(
-        reciprocated / len(edges)
-    )
+    return float(reciprocated / len(edges))
 
 
-def visibility_degree_assortativity(
-    sources: dict[str, list[str]],
-) -> float:
+def visibility_degree_assortativity(sources: dict[str, list[str]]) -> float:
     """
     Pearson assortativity of visibility degree along information edges.
 
@@ -913,50 +662,25 @@ def visibility_degree_assortativity(
     sequence has effectively zero variance.
     """
 
-    edges = sorted(
-        network_edges(sources)
-    )
+    edges = sorted(network_edges(sources))
 
     if len(edges) < 2:
         return float("nan")
 
     visibility = visibility_counts(sources)
 
-    source_degrees = np.asarray(
-        [
-            visibility[source]
-            for source, _
-            in edges
-        ],
-        dtype=float,
-    )
+    source_degrees = np.asarray([visibility[source] for source, _ in edges], dtype=float)
 
-    observer_degrees = np.asarray(
-        [
-            visibility[observer]
-            for _, observer
-            in edges
-        ],
-        dtype=float,
-    )
+    observer_degrees = np.asarray([visibility[observer] for _, observer in edges], dtype=float)
 
-    if (
-        np.std(source_degrees) <= 1e-12
-        or np.std(observer_degrees) <= 1e-12
-    ):
+    if np.std(source_degrees) <= 1e-12 or np.std(observer_degrees) <= 1e-12:
         return float("nan")
 
-    return float(
-        np.corrcoef(
-            source_degrees,
-            observer_degrees,
-        )[0, 1]
-    )
+    return float(np.corrcoef(source_degrees, observer_degrees)[0, 1])
 
 
 def observer_social_diagnostics(
-    sources: dict[str, list[str]],
-    actions: dict[str, int],
+    sources: dict[str, list[str]], actions: dict[str, int]
 ) -> dict[str, dict[str, float | bool]]:
     """
     Return focal social-perception diagnostics for every observer.
@@ -968,60 +692,29 @@ def observer_social_diagnostics(
     """
 
     if set(actions) != set(sources):
-        raise ValueError(
-            "actions must contain every social-network agent."
-        )
+        raise ValueError("actions must contain every social-network agent.")
 
-    observed = social_observations(
-        sources,
-        actions,
-    )
+    observed = social_observations(sources, actions)
 
-    visibility = visibility_counts(
-        sources
-    )
+    visibility = visibility_counts(sources)
 
-    diagnostics: dict[
-        str,
-        dict[str, float | bool],
-    ] = {}
+    diagnostics: dict[str, dict[str, float | bool]] = {}
 
     for observer in sources:
-        actual = population_low_fraction_excluding(
-            observer,
-            actions,
-        )
+        actual = population_low_fraction_excluding(observer, actions)
 
-        local = float(
-            observed[observer]
-        )
+        local = float(observed[observer])
 
         if np.isfinite(actual):
-            error = abs(
-                local - actual
-            )
+            error = abs(local - actual)
             bias = local - actual
 
-            local_majority = _majority_label(
-                local
-            )
-            actual_majority = _majority_label(
-                actual
-            )
+            local_majority = _majority_label(local)
+            actual_majority = _majority_label(actual)
 
-            tied = (
-                local_majority == 0
-                or actual_majority == 0
-            )
+            tied = local_majority == 0 or actual_majority == 0
 
-            mismatch = (
-                float("nan")
-                if tied
-                else float(
-                    local_majority
-                    != actual_majority
-                )
-            )
+            mismatch = float("nan") if tied else float(local_majority != actual_majority)
         else:
             error = float("nan")
             bias = float("nan")
@@ -1035,17 +728,14 @@ def observer_social_diagnostics(
             "signed_perception_bias": float(bias),
             "majority_tied": bool(tied),
             "majority_mismatch": float(mismatch),
-            "visibility_degree": float(
-                visibility[observer]
-            ),
+            "visibility_degree": float(visibility[observer]),
         }
 
     return diagnostics
 
 
 def social_metrics(
-    sources: dict[str, list[str]],
-    actions: dict[str, int] | None,
+    sources: dict[str, list[str]], actions: dict[str, int] | None
 ) -> dict[str, float]:
     """
     Compute social-network and perception diagnostics.
@@ -1058,34 +748,16 @@ def social_metrics(
 
     visibility = visibility_counts(sources)
 
-    degrees = np.asarray(
-        [
-            visibility[name]
-            for name in sources
-        ],
-        dtype=float,
-    )
+    degrees = np.asarray([visibility[name] for name in sources], dtype=float)
 
     total_edges = float(degrees.sum())
 
     result = {
         "visibility_gini": _gini_nonnegative(degrees),
-        "max_visibility_share": (
-            float(degrees.max() / total_edges)
-            if total_edges > 0.0
-            else 0.0
-        ),
-        "zero_visibility_fraction": float(
-            np.mean(degrees == 0.0)
-        ),
-        "reciprocity": network_reciprocity(
-            sources
-        ),
-        "degree_assortativity": (
-            visibility_degree_assortativity(
-                sources
-            )
-        ),
+        "max_visibility_share": (float(degrees.max() / total_edges) if total_edges > 0.0 else 0.0),
+        "zero_visibility_fraction": float(np.mean(degrees == 0.0)),
+        "reciprocity": network_reciprocity(sources),
+        "degree_assortativity": (visibility_degree_assortativity(sources)),
         "population_low_fraction": float("nan"),
         "visible_low_fraction": float("nan"),
         "visible_population_bias": float("nan"),
@@ -1099,14 +771,7 @@ def social_metrics(
     if actions is None:
         return result
 
-    population_low = float(
-        np.mean(
-            [
-                action == LOW_EXTRACT
-                for action in actions.values()
-            ]
-        )
-    )
+    population_low = float(np.mean([action == LOW_EXTRACT for action in actions.values()]))
 
     visible_actions = [
         actions[source] == LOW_EXTRACT
@@ -1114,70 +779,38 @@ def social_metrics(
         for source in observer_sources
     ]
 
-    visible_low = (
-        float(np.mean(visible_actions))
-        if visible_actions
-        else float("nan")
-    )
+    visible_low = float(np.mean(visible_actions)) if visible_actions else float("nan")
 
-    focal = observer_social_diagnostics(
-        sources,
-        actions,
-    )
+    focal = observer_social_diagnostics(sources, actions)
 
     absolute_errors = [
         float(row["perception_error"])
         for row in focal.values()
-        if np.isfinite(
-            float(row["perception_error"])
-        )
+        if np.isfinite(float(row["perception_error"]))
     ]
 
     signed_biases = [
         float(row["signed_perception_bias"])
         for row in focal.values()
-        if np.isfinite(
-            float(row["signed_perception_bias"])
-        )
+        if np.isfinite(float(row["signed_perception_bias"]))
     ]
 
     majority_ties = [
         bool(row["majority_tied"])
         for row in focal.values()
-        if np.isfinite(
-            float(
-                row["population_low_fraction_excluding"]
-            )
-        )
+        if np.isfinite(float(row["population_low_fraction_excluding"]))
     ]
 
     majority_mismatches = [
         float(row["majority_mismatch"])
         for row in focal.values()
-        if np.isfinite(
-            float(row["majority_mismatch"])
-        )
+        if np.isfinite(float(row["majority_mismatch"]))
     ]
 
-    high_actions = np.asarray(
-        [
-            actions[name] == HIGH_EXTRACT
-            for name in sources
-        ],
-        dtype=float,
-    )
+    high_actions = np.asarray([actions[name] == HIGH_EXTRACT for name in sources], dtype=float)
 
-    if (
-        len(degrees) > 1
-        and np.std(degrees) > 1e-12
-        and np.std(high_actions) > 1e-12
-    ):
-        degree_action_correlation = float(
-            np.corrcoef(
-                degrees,
-                high_actions,
-            )[0, 1]
-        )
+    if len(degrees) > 1 and np.std(degrees) > 1e-12 and np.std(high_actions) > 1e-12:
+        degree_action_correlation = float(np.corrcoef(degrees, high_actions)[0, 1])
     else:
         degree_action_correlation = float("nan")
 
@@ -1186,33 +819,19 @@ def social_metrics(
             "population_low_fraction": population_low,
             "visible_low_fraction": visible_low,
             "visible_population_bias": (
-                visible_low - population_low
-                if np.isfinite(visible_low)
-                else float("nan")
+                visible_low - population_low if np.isfinite(visible_low) else float("nan")
             ),
             "mean_perception_error": (
-                float(np.mean(absolute_errors))
-                if absolute_errors
-                else float("nan")
+                float(np.mean(absolute_errors)) if absolute_errors else float("nan")
             ),
             "signed_perception_bias": (
-                float(np.mean(signed_biases))
-                if signed_biases
-                else float("nan")
+                float(np.mean(signed_biases)) if signed_biases else float("nan")
             ),
             "majority_mismatch_rate": (
-                float(np.mean(majority_mismatches))
-                if majority_mismatches
-                else float("nan")
+                float(np.mean(majority_mismatches)) if majority_mismatches else float("nan")
             ),
-            "majority_tie_rate": (
-                float(np.mean(majority_ties))
-                if majority_ties
-                else float("nan")
-            ),
-            "degree_action_correlation": (
-                degree_action_correlation
-            ),
+            "majority_tie_rate": (float(np.mean(majority_ties)) if majority_ties else float("nan")),
+            "degree_action_correlation": (degree_action_correlation),
         }
     )
 

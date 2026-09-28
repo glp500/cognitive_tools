@@ -18,9 +18,7 @@ class EcoEnv(ParallelEnv):
     diagnostics, but the current tabular Q-learner uses only local R/K.
     """
 
-    metadata = {
-        "name": "eco_commons_qlearning_v1",
-    }
+    metadata = {"name": "eco_commons_qlearning_v1"}
 
     def __init__(
         self,
@@ -53,9 +51,7 @@ class EcoEnv(ParallelEnv):
 
         # Backward-compatible alias for older experiment scripts.
         self.defective_harvest_amount = (
-            defective_harvest_amount
-            if harvest_amount is None
-            else harvest_amount
+            defective_harvest_amount if harvest_amount is None else harvest_amount
         )
 
         self.metabolism_rate = metabolism_rate
@@ -64,53 +60,22 @@ class EcoEnv(ParallelEnv):
         self.initial_resource_fraction = initial_resource_fraction
 
         self.capacity_map = (
-            None
-            if capacity_map is None
-            else np.asarray(
-                capacity_map,
-                dtype=float,
-            ).copy()
+            None if capacity_map is None else np.asarray(capacity_map, dtype=float).copy()
         )
 
-        self.possible_agents = [
-            f"agent_{i}"
-            for i in range(n_agents)
-        ]
+        self.possible_agents = [f"agent_{i}" for i in range(n_agents)]
 
-        self.action_spaces = {
-            agent: spaces.Discrete(2)
-            for agent in self.possible_agents
-        }
+        self.action_spaces = {agent: spaces.Discrete(2) for agent in self.possible_agents}
 
         self.observation_spaces = {
             agent: spaces.Dict(
                 {
-                    "resources": spaces.Box(
-                        low=0.0,
-                        high=1.0,
-                        shape=(3, 3),
-                        dtype=np.float32,
-                    ),
-                    "capacities": spaces.Box(
-                        low=0.0,
-                        high=1.0,
-                        shape=(3, 3),
-                        dtype=np.float32,
-                    ),
+                    "resources": spaces.Box(low=0.0, high=1.0, shape=(3, 3), dtype=np.float32),
+                    "capacities": spaces.Box(low=0.0, high=1.0, shape=(3, 3), dtype=np.float32),
                     # [x_norm, y_norm, wealth, energy]
-                    "self": spaces.Box(
-                        low=0.0,
-                        high=np.inf,
-                        shape=(4,),
-                        dtype=np.float32,
-                    ),
+                    "self": spaces.Box(low=0.0, high=np.inf, shape=(4,), dtype=np.float32),
                     # [R/K, wealth, energy]
-                    "local": spaces.Box(
-                        low=0.0,
-                        high=np.inf,
-                        shape=(3,),
-                        dtype=np.float32,
-                    ),
+                    "local": spaces.Box(low=0.0, high=np.inf, shape=(3,), dtype=np.float32),
                 }
             )
             for agent in self.possible_agents
@@ -118,11 +83,7 @@ class EcoEnv(ParallelEnv):
 
         self.model: model.EcoModel | None = None
 
-    def reset(
-        self,
-        seed: int | None = None,
-        options=None,
-    ):
+    def reset(self, seed: int | None = None, options=None):
         self.model = model.EcoModel(
             width=self.width,
             height=self.height,
@@ -143,22 +104,12 @@ class EcoEnv(ParallelEnv):
         self.agents = self.possible_agents.copy()
 
         if seed is not None:
-            for i, agent in enumerate(
-                self.possible_agents
-            ):
-                self.action_spaces[agent].seed(
-                    seed + i
-                )
+            for i, agent in enumerate(self.possible_agents):
+                self.action_spaces[agent].seed(seed + i)
 
-        observations = {
-            agent: self.observe(agent)
-            for agent in self.agents
-        }
+        observations = {agent: self.observe(agent) for agent in self.agents}
 
-        infos = {
-            agent: {}
-            for agent in self.agents
-        }
+        infos = {agent: {} for agent in self.agents}
 
         return observations, infos
 
@@ -174,103 +125,52 @@ class EcoEnv(ParallelEnv):
             x, y = agent.position
 
             pre_state[name] = {
-                "resource_before": float(
-                    self.model.resource[y, x]
-                ),
-                "capacity": float(
-                    self.model.capacity[y, x]
-                ),
+                "resource_before": float(self.model.resource[y, x]),
+                "capacity": float(self.model.capacity[y, x]),
             }
 
-        wealth_before = {
-            name: self.model.by_name[name].wealth
-            for name in current_agents
-        }
+        wealth_before = {name: self.model.by_name[name].wealth for name in current_agents}
 
         self.model.actions = actions
         self.model.step()
 
         rewards = {
-            name: (
-                self.model.by_name[name].wealth
-                - wealth_before[name]
-            )
-            for name in current_agents
+            name: (self.model.by_name[name].wealth - wealth_before[name]) for name in current_agents
         }
 
-        terminations = {
-            name: False
-            for name in current_agents
-        }
+        terminations = {name: False for name in current_agents}
 
-        finished = (
-            self.model.steps
-            >= self.max_steps
-        )
+        finished = self.model.steps >= self.max_steps
 
-        truncations = {
-            name: finished
-            for name in current_agents
-        }
+        truncations = {name: finished for name in current_agents}
 
         infos = {}
 
         for name in current_agents:
-            resource_before = pre_state[name][
-                "resource_before"
-            ]
-            capacity = pre_state[name][
-                "capacity"
-            ]
+            resource_before = pre_state[name]["resource_before"]
+            capacity = pre_state[name]["capacity"]
             agent = self.model.by_name[name]
 
             infos[name] = {
-                "action_name": (
-                    "low"
-                    if actions[name]
-                    == model.LOW_EXTRACT
-                    else "high"
-                ),
-                "harvested": float(
-                    rewards[name]
-                ),
+                "action_name": ("low" if actions[name] == model.LOW_EXTRACT else "high"),
+                "harvested": float(rewards[name]),
                 "resource_before": resource_before,
                 "capacity": capacity,
-                "resource_fraction_before": (
-                    resource_before
-                    / max(capacity, 1e-12)
-                ),
+                "resource_fraction_before": (resource_before / max(capacity, 1e-12)),
                 "energy": float(agent.energy),
-                "reserve_welfare": float(
-                    agent.reserve_welfare
-                ),
-                "need_satisfaction": float(
-                    agent.need_satisfaction
-                ),
-                "metabolic_shortfall": float(
-                    agent.metabolic_shortfall
-                ),
-                "cumulative_shortfall": float(
-                    agent.cumulative_shortfall
-                ),
+                "reserve_welfare": float(agent.reserve_welfare),
+                "need_satisfaction": float(agent.need_satisfaction),
+                "metabolic_shortfall": float(agent.metabolic_shortfall),
+                "cumulative_shortfall": float(agent.cumulative_shortfall),
             }
 
         if finished:
             self.agents = []
             observations = {}
         else:
-            observations = {
-                name: self.observe(name)
-                for name in current_agents
-            }
+            observations = {name: self.observe(name) for name in current_agents}
 
-        return (
-            observations,
-            rewards,
-            terminations,
-            truncations,
-            infos,
-        )
+        return (observations, rewards, terminations, truncations, infos)
 
     def observe(self, name: str):
         assert self.model is not None
@@ -278,62 +178,30 @@ class EcoEnv(ParallelEnv):
         agent = self.model.by_name[name]
         x, y = agent.position
 
-        resources = np.zeros(
-            (3, 3),
-            dtype=np.float32,
-        )
+        resources = np.zeros((3, 3), dtype=np.float32)
 
-        capacities = np.zeros(
-            (3, 3),
-            dtype=np.float32,
-        )
+        capacities = np.zeros((3, 3), dtype=np.float32)
 
         for row, dy in enumerate((-1, 0, 1)):
             for col, dx in enumerate((-1, 0, 1)):
                 xx = int(x + dx)
                 yy = int(y + dy)
 
-                if (
-                    0 <= xx < self.width
-                    and 0 <= yy < self.height
-                ):
-                    resources[row, col] = (
-                        self.model.resource[yy, xx]
-                    )
-                    capacities[row, col] = (
-                        self.model.capacity[yy, xx]
-                    )
+                if 0 <= xx < self.width and 0 <= yy < self.height:
+                    resources[row, col] = self.model.resource[yy, xx]
+                    capacities[row, col] = self.model.capacity[yy, xx]
 
-        local_resource = float(
-            self.model.resource[y, x]
-        )
-        local_capacity = float(
-            self.model.capacity[y, x]
-        )
+        local_resource = float(self.model.resource[y, x])
+        local_capacity = float(self.model.capacity[y, x])
 
-        resource_fraction = (
-            local_resource
-            / max(local_capacity, 1e-12)
-        )
+        resource_fraction = local_resource / max(local_capacity, 1e-12)
 
         own_state = np.array(
-            [
-                x / max(self.width - 1, 1),
-                y / max(self.height - 1, 1),
-                agent.wealth,
-                agent.energy,
-            ],
+            [x / max(self.width - 1, 1), y / max(self.height - 1, 1), agent.wealth, agent.energy],
             dtype=np.float32,
         )
 
-        local_state = np.array(
-            [
-                resource_fraction,
-                agent.wealth,
-                agent.energy,
-            ],
-            dtype=np.float32,
-        )
+        local_state = np.array([resource_fraction, agent.wealth, agent.energy], dtype=np.float32)
 
         return {
             "resources": resources,

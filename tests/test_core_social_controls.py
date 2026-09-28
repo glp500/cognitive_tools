@@ -48,28 +48,17 @@ def make_args(**overrides):
         "training_steps": 4,
         "evaluation_steps": 3,
         "matched_rewire_schedule": None,
-        "scenarios": [
-            "uniform_high",
-        ],
-        "populations": [
-            6,
-        ],
+        "scenarios": ["uniform_high"],
+        "populations": [6],
     }
     values.update(overrides)
     return SimpleNamespace(**values)
 
 
 def test_ba_attention_is_symmetric_and_has_no_self_links():
-    agents = [
-        f"agent_{index}"
-        for index in range(32)
-    ]
+    agents = [f"agent_{index}" for index in range(32)]
 
-    sources = init_barabasi_albert_attention(
-        agents,
-        m=2,
-        rng=np.random.default_rng(42),
-    )
+    sources = init_barabasi_albert_attention(agents, m=2, rng=np.random.default_rng(42))
 
     for observer, observer_sources in sources.items():
         assert observer not in observer_sources
@@ -80,16 +69,9 @@ def test_ba_attention_is_symmetric_and_has_no_self_links():
 
 
 def test_ba_attention_has_heterogeneous_visibility():
-    agents = [
-        f"agent_{index}"
-        for index in range(64)
-    ]
+    agents = [f"agent_{index}" for index in range(64)]
 
-    sources = init_barabasi_albert_attention(
-        agents,
-        m=2,
-        rng=np.random.default_rng(7),
-    )
+    sources = init_barabasi_albert_attention(agents, m=2, rng=np.random.default_rng(7))
 
     visibility = visibility_counts(sources)
 
@@ -98,61 +80,29 @@ def test_ba_attention_has_heterogeneous_visibility():
 
 
 def test_ba_m_two_has_mean_degree_close_to_four():
-    agents = [
-        f"agent_{index}"
-        for index in range(64)
-    ]
+    agents = [f"agent_{index}" for index in range(64)]
 
-    sources = init_barabasi_albert_attention(
-        agents,
-        m=2,
-        rng=np.random.default_rng(9),
-    )
+    sources = init_barabasi_albert_attention(agents, m=2, rng=np.random.default_rng(9))
 
-    mean_degree = float(
-        np.mean(
-            [
-                len(observer_sources)
-                for observer_sources in sources.values()
-            ]
-        )
-    )
+    mean_degree = float(np.mean([len(observer_sources) for observer_sources in sources.values()]))
 
     assert 3.5 < mean_degree < 4.0
 
 
 def test_ba_attention_is_deterministic_for_same_seed():
-    agents = [
-        f"agent_{index}"
-        for index in range(32)
-    ]
+    agents = [f"agent_{index}" for index in range(32)]
 
-    first = init_barabasi_albert_attention(
-        agents,
-        m=2,
-        rng=np.random.default_rng(100),
-    )
+    first = init_barabasi_albert_attention(agents, m=2, rng=np.random.default_rng(100))
 
-    second = init_barabasi_albert_attention(
-        agents,
-        m=2,
-        rng=np.random.default_rng(100),
-    )
+    second = init_barabasi_albert_attention(agents, m=2, rng=np.random.default_rng(100))
 
     assert first == second
 
 
 def test_random_matched_rewiring_realizes_exact_target_count():
-    agents = [
-        f"agent_{index}"
-        for index in range(12)
-    ]
+    agents = [f"agent_{index}" for index in range(12)]
 
-    sources = init_random_attention(
-        agents,
-        k=4,
-        rng=np.random.default_rng(1),
-    )
+    sources = init_random_attention(agents, k=4, rng=np.random.default_rng(1))
 
     edge_count_before = len(network_edges(sources))
 
@@ -167,30 +117,15 @@ def test_random_matched_rewiring_realizes_exact_target_count():
 
     assert len(events) == 5
     assert len(network_edges(sources)) == edge_count_before
-    assert len(
-        {
-            event["observer"]
-            for event in events
-        }
-    ) == 5
+    assert len({event["observer"] for event in events}) == 5
 
 
 def test_random_matched_zero_target_changes_nothing():
-    agents = [
-        f"agent_{index}"
-        for index in range(8)
-    ]
+    agents = [f"agent_{index}" for index in range(8)]
 
-    sources = init_random_attention(
-        agents,
-        k=2,
-        rng=np.random.default_rng(3),
-    )
+    sources = init_random_attention(agents, k=2, rng=np.random.default_rng(3))
 
-    before = {
-        observer: list(observer_sources)
-        for observer, observer_sources in sources.items()
-    }
+    before = {observer: list(observer_sources) for observer, observer_sources in sources.items()}
 
     events = rewire_epoch(
         sources,
@@ -206,86 +141,47 @@ def test_random_matched_zero_target_changes_nothing():
 
 
 def test_random_matched_requires_target_count():
-    agents = [
-        f"agent_{index}"
-        for index in range(8)
-    ]
+    agents = [f"agent_{index}" for index in range(8)]
 
-    sources = init_random_attention(
-        agents,
-        k=2,
-        rng=np.random.default_rng(5),
-    )
+    sources = init_random_attention(agents, k=2, rng=np.random.default_rng(5))
 
     with pytest.raises(ValueError):
         rewire_epoch(
-            sources,
-            mode="random_matched",
-            theta=0.25,
-            mu=0.10,
-            rng=np.random.default_rng(6),
+            sources, mode="random_matched", theta=0.25, mu=0.10, rng=np.random.default_rng(6)
         )
 
 
 def test_make_social_sources_supports_ba():
-    args = make_args(
-        social_network="ba",
-        ba_m=2,
-        rewiring="none",
-    )
+    args = make_args(social_network="ba", ba_m=2, rewiring="none")
 
     env, _, _ = experiment.make_environment(
-        "uniform_high",
-        population=8,
-        replicate=0,
-        max_steps=2,
-        args=args,
+        "uniform_high", population=8, replicate=0, max_steps=2, args=args
     )
 
-    sources = experiment.make_social_sources(
-        env,
-        replicate=0,
-        args=args,
-    )
+    sources = experiment.make_social_sources(env, replicate=0, args=args)
 
     assert sources is not None
     assert len(set(visibility_counts(sources).values())) > 1
 
 
 def test_validate_configuration_rejects_ba_rewiring():
-    args = make_args(
-        social_network="ba",
-        ba_m=2,
-        rewiring="prediction_error",
-    )
+    args = make_args(social_network="ba", ba_m=2, rewiring="prediction_error")
 
-    with pytest.raises(
-        ValueError,
-        match="BA",
-    ):
+    with pytest.raises(ValueError, match="BA"):
         experiment.validate_configuration(args)
 
 
 def test_validate_configuration_requires_schedule_for_matched_random():
-    args = make_args(
-        rewiring="random_matched",
-        matched_rewire_schedule=None,
-    )
+    args = make_args(rewiring="random_matched", matched_rewire_schedule=None)
 
-    with pytest.raises(
-        ValueError,
-        match="matched",
-    ):
+    with pytest.raises(ValueError, match="matched"):
         experiment.validate_configuration(args)
 
 
 def test_load_matched_schedule_and_lookup(tmp_path):
     schedule_path = tmp_path / "rewiring_schedule.csv"
 
-    with schedule_path.open(
-        "w",
-        newline="",
-    ) as file:
+    with schedule_path.open("w", newline="") as file:
         writer = csv.DictWriter(
             file,
             fieldnames=[
@@ -324,17 +220,11 @@ def test_load_matched_schedule_and_lookup(tmp_path):
         )
 
     args = make_args(
-        rewiring="random_matched",
-        matched_rewire_schedule=str(schedule_path),
-        rewire_theta=0.25,
+        rewiring="random_matched", matched_rewire_schedule=str(schedule_path), rewire_theta=0.25
     )
 
     target = experiment.matched_rewire_target(
-        args,
-        scenario_name="uniform_high",
-        population=6,
-        replicate=0,
-        time=2,
+        args, scenario_name="uniform_high", population=6, replicate=0, time=2
     )
 
     assert target == 3
@@ -343,10 +233,7 @@ def test_load_matched_schedule_and_lookup(tmp_path):
 def test_matched_schedule_theta_must_match(tmp_path):
     schedule_path = tmp_path / "rewiring_schedule.csv"
 
-    with schedule_path.open(
-        "w",
-        newline="",
-    ) as file:
+    with schedule_path.open("w", newline="") as file:
         writer = csv.DictWriter(
             file,
             fieldnames=[
@@ -385,31 +272,19 @@ def test_matched_schedule_theta_must_match(tmp_path):
         )
 
     args = make_args(
-        rewiring="random_matched",
-        matched_rewire_schedule=str(schedule_path),
-        rewire_theta=0.25,
+        rewiring="random_matched", matched_rewire_schedule=str(schedule_path), rewire_theta=0.25
     )
 
-    with pytest.raises(
-        ValueError,
-        match="theta",
-    ):
+    with pytest.raises(ValueError, match="theta"):
         experiment.matched_rewire_target(
-            args,
-            scenario_name="uniform_high",
-            population=6,
-            replicate=0,
-            time=2,
+            args, scenario_name="uniform_high", population=6, replicate=0, time=2
         )
 
 
 def test_matched_training_uses_schedule_event_count(tmp_path):
     schedule_path = tmp_path / "rewiring_schedule.csv"
 
-    with schedule_path.open(
-        "w",
-        newline="",
-    ) as file:
+    with schedule_path.open("w", newline="") as file:
         writer = csv.DictWriter(
             file,
             fieldnames=[
@@ -457,12 +332,7 @@ def test_matched_training_uses_schedule_event_count(tmp_path):
         record_network_every=2,
     )
 
-    output = experiment.train_q_learning(
-        "uniform_high",
-        population=6,
-        replicate=0,
-        args=args,
-    )
+    output = experiment.train_q_learning("uniform_high", population=6, replicate=0, args=args)
 
     rewire_counts = output[8]
     schedule_rows = output[10]
