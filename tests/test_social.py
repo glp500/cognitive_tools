@@ -3,11 +3,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Cognitive_tools.model import (
+from cognitive_tools.model import (
     HIGH_EXTRACT,
     LOW_EXTRACT,
 )
-from Cognitive_tools.social import (
+from cognitive_tools.social import (
     init_random_attention,
     joint_state,
     observed_low_fraction,
@@ -460,7 +460,7 @@ def test_visibility_counts_sum_to_n_times_k():
 
 
 def test_baseline_state_encoding_is_unchanged():
-    from baseline_validation_experiment import (
+    from cognitive_tools.experiment import (
         encode_states,
     )
 
@@ -490,7 +490,7 @@ def test_baseline_state_encoding_is_unchanged():
 
 
 def test_fixed_social_state_starts_neutral():
-    from baseline_validation_experiment import (
+    from cognitive_tools.experiment import (
         encode_states,
     )
 
@@ -543,7 +543,7 @@ def test_fixed_social_state_starts_neutral():
 
 
 def test_fixed_social_state_uses_previous_actions():
-    from baseline_validation_experiment import (
+    from cognitive_tools.experiment import (
         encode_states,
     )
 

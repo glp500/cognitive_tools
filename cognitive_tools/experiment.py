@@ -18,10 +18,10 @@ from pathlib import Path
 
 import numpy as np
 
-from Cognitive_tools import EcoEnv
-from Cognitive_tools.model import HIGH_EXTRACT, LOW_EXTRACT
-from Cognitive_tools.qlearning import QLearningPolicy, STATE_NAMES, resource_state
-from Cognitive_tools.social import (
+from cognitive_tools import EcoEnv
+from cognitive_tools.model import HIGH_EXTRACT, LOW_EXTRACT
+from cognitive_tools.qlearning import QLearningPolicy, STATE_NAMES, resource_state
+from cognitive_tools.social import (
     REWIRING_MODES,
     SOCIAL_NETWORK_MODES,
     SOCIAL_STATE_NAMES,
@@ -41,11 +41,11 @@ from Cognitive_tools.social import (
     update_forecasts,
     visibility_counts,
 )
-from Cognitive_tools.scenarios import SCENARIOS, build_environment_maps
+from cognitive_tools.scenarios import SCENARIOS, build_environment_maps
 
 
 RESULTS_ROOT = Path("results") / "q_learning_baseline" / "experiments"
-REPOSITORY_ROOT = Path(__file__).resolve().parent
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 RUNTIME_PACKAGES = (
     "numpy",
@@ -53,7 +53,6 @@ RUNTIME_PACKAGES = (
     "pettingzoo",
     "gymnasium",
     "matplotlib",
-    "networkx",
     "pytest",
 )
 
@@ -272,8 +271,6 @@ def treatment_name(args) -> str:
         return "S1"
     if args.rewiring == "random_matched":
         return "R0"
-    if args.rewiring == "random":
-        return "R0_unmatched"
     if args.rewiring == "prediction_error":
         if np.isclose(args.rewire_theta, 0.0):
             return "R1"
@@ -369,7 +366,7 @@ def validate_configuration(args) -> None:
                 "Adaptive network evaluation is currently supported only "
                 "for random_k social networks."
             )
-        if args.rewiring not in {"prediction_error", "random"}:
+        if args.rewiring != "prediction_error":
             if args.rewiring == "random_matched":
                 raise ValueError(
                     "Adaptive network evaluation is not yet available for "
@@ -378,7 +375,7 @@ def validate_configuration(args) -> None:
                 )
             raise ValueError(
                 "Adaptive network evaluation requires a training rewiring "
-                "rule: prediction_error or legacy random."
+                "rule: prediction_error."
             )
 
     if args.rewiring == "random_matched":
@@ -1535,10 +1532,10 @@ def evaluate_policy(
             raise ValueError(
                 "Adaptive network evaluation currently requires random_k."
             )
-        if args.rewiring not in {"prediction_error", "random"}:
+        if args.rewiring != "prediction_error":
             raise ValueError(
                 "Adaptive network evaluation currently supports only "
-                "prediction_error or legacy random rewiring."
+                "prediction_error rewiring."
             )
 
         if forecasts is None:
@@ -2234,7 +2231,8 @@ def run_condition(
 
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
+    """Construct the canonical experiment CLI."""
     parser = argparse.ArgumentParser(
         description=(
             "Ecological Q-learning validation with optional social "
@@ -2313,8 +2311,7 @@ def main() -> None:
         choices=REWIRING_MODES,
         default="none",
         help=(
-            "'none' gives a fixed network; 'random' retains the legacy "
-            "unmatched turnover control; 'random_matched' gives the paired "
+            "'none' gives a fixed network; 'random_matched' gives the paired "
             "event-count-matched R0 control; 'prediction_error' gives "
             "adaptive rewiring."
         ),
@@ -2381,7 +2378,11 @@ def main() -> None:
         ),
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
     validate_configuration(args)
 
     run_dir = RESULTS_ROOT / args.run_name
@@ -2435,7 +2436,7 @@ def main() -> None:
         ),
         "fresh_reset": (
             "fresh ecology; terminal training graph carried forward; graph "
-            "frozen; legacy mode name retained for figure compatibility"
+            "frozen; mode name is part of the analysis schema"
         ),
         "fresh_reset_network": (
             "fresh ecology; exact initial training graph restored; graph frozen"

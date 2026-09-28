@@ -280,11 +280,6 @@ def assign_run_labels(runs: list[RunData]) -> None:
                 f"R (theta={format_parameter(run.theta)}, "
                 f"mu={format_parameter(run.mu)})"
             )
-        elif run.treatment == "R0_unmatched":
-            run.label = (
-                f"R0 unmatched (theta={format_parameter(run.theta)}, "
-                f"mu={format_parameter(run.mu)})"
-            )
         else:
             run.label = run.treatment
 
@@ -300,8 +295,6 @@ def treatment_sort_key(run: RunData):
         return 3, run.theta, 0.0, run.label
     if run.treatment in {"R1", "R2", "R3", "R_adaptive"}:
         return 3, run.theta, 1.0 + run.mu, run.label
-    if run.treatment == "R0_unmatched":
-        return 4, run.theta, run.mu, run.label
     return 9, run.theta, run.mu, run.label
 
 

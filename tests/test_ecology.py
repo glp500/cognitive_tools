@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from Cognitive_tools.ecology import (
+from cognitive_tools.ecology import (
     coerce_capacity_map,
     coerce_parameter_map,
     depletion_from_equilibrium,
@@ -10,10 +10,10 @@ from Cognitive_tools.ecology import (
     neighbour_mean,
     resource_step,
 )
-from Cognitive_tools.model import EcoModel
+from cognitive_tools.model import EcoModel
 
 
-def legacy_neighbour_mean(
+def reference_neighbour_mean(
     field: np.ndarray,
 ) -> np.ndarray:
     """
@@ -57,7 +57,7 @@ def legacy_neighbour_mean(
     ) / 4.0
 
 
-def legacy_resource_step(
+def reference_resource_step(
     resource: np.ndarray,
     capacity: np.ndarray,
     regeneration_rate: np.ndarray,
@@ -83,7 +83,7 @@ def legacy_resource_step(
     )
 
     neighbour = (
-        legacy_neighbour_mean(
+        reference_neighbour_mean(
             resource
         )
     )
@@ -198,7 +198,7 @@ def test_depletion_parameterization():
     )
 
 
-def test_neighbour_mean_matches_legacy_implementation():
+def test_neighbour_mean_matches_reference_implementation():
     field = np.array(
         [
             [
@@ -224,7 +224,7 @@ def test_neighbour_mean_matches_legacy_implementation():
         neighbour_mean(
             field
         ),
-        legacy_neighbour_mean(
+        reference_neighbour_mean(
             field
         ),
     )
@@ -275,7 +275,7 @@ def test_resource_step_matches_pre_refactor_equation():
     coupling = 0.10
 
     expected = (
-        legacy_resource_step(
+        reference_resource_step(
             resource=resource,
             capacity=capacity,
             regeneration_rate=regeneration,

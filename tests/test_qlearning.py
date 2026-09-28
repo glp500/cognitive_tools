@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Cognitive_tools.qlearning import (
+from cognitive_tools.qlearning import (
     QLearningPolicy,
     resource_state,
     resource_state_from_fraction,

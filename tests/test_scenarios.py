@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 import pytest
-from Cognitive_tools.scenarios import SCENARIOS, build_environment_maps
+from cognitive_tools.scenarios import SCENARIOS, build_environment_maps
 
 REFERENCE = json.loads(Path(__file__).with_name('scenario_reference.json').read_text())
 

@@ -53,7 +53,6 @@ SOCIAL_NETWORK_MODES = (
 
 REWIRING_MODES = (
     "none",
-    "random",
     "random_matched",
     "prediction_error",
 )
@@ -674,10 +673,6 @@ def rewire_epoch(
     none
         No agent rewires.
 
-    random
-        Every observer is eligible and independently rewires with probability
-        ``mu``. Retained for exploratory/backward-compatible runs.
-
     random_matched
         Exactly ``target_count`` legally rewritable observers are sampled
         uniformly without replacement. This is the confirmatory R0 control.
@@ -779,14 +774,8 @@ def rewire_epoch(
         return events
 
     for observer in sorted(snapshot):
-        if mode == "random":
-            eligible = True
-            error = float("nan")
-        else:
-            error = float(
-                prediction_error_values[observer]
-            )
-            eligible = error > threshold
+        error = float(prediction_error_values[observer])
+        eligible = error > threshold
 
         if not eligible:
             continue

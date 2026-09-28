@@ -10,7 +10,7 @@ Stationary-agent common-pool-resource model.
 - energy/welfare bookkeeping.
 
 The actual renewable-resource equation is implemented once, in
-`Cognitive_tools.ecology.resource_step`.
+`cognitive_tools.ecology.resource_step`.
 
 Scientific provenance
 ---------------------
@@ -47,15 +47,6 @@ from .ecology import (
 
 LOW_EXTRACT = 0
 HIGH_EXTRACT = 1
-
-# Temporary backward-compatible aliases.
-#
-# These remain during the ecological refactor so that this commit changes
-# no behavioral semantics. A later terminology-cleanup commit should remove
-# them from the mechanical model and use LOW_EXTRACT/HIGH_EXTRACT directly.
-COOPERATE = LOW_EXTRACT
-DEFECT = HIGH_EXTRACT
-
 
 class EcoAgent(mesa.Agent):
     """

@@ -6,8 +6,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-import baseline_validation_experiment as experiment
-from Cognitive_tools.social import (
+import cognitive_tools.experiment as experiment
+from cognitive_tools.social import (
     init_barabasi_albert_attention,
     init_random_attention,
     network_edges,

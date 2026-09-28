@@ -2,37 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from Cognitive_tools.model import (
+from cognitive_tools.model import (
     HIGH_EXTRACT,
     LOW_EXTRACT,
 )
-
-
-def test_qlearning_experiment_imports():
-    """
-    The legacy Q-learning experiment must remain importable while it is
-    still used by the canonical validation experiment.
-    """
-
-    import qlearning_experiment
-
-    assert (
-        qlearning_experiment
-        is not None
-    )
-
-
-def test_baseline_validation_experiment_imports():
-    """
-    The canonical baseline experiment must import successfully.
-    """
-
-    import baseline_validation_experiment
-
-    assert (
-        baseline_validation_experiment
-        is not None
-    )
 
 
 def test_baseline_always_low_action_rule():
@@ -40,7 +13,7 @@ def test_baseline_always_low_action_rule():
     The validation runner must use the physical low-extraction action.
     """
 
-    from baseline_validation_experiment import (
+    from cognitive_tools.experiment import (
         action_rule,
     )
 
@@ -83,7 +56,7 @@ def test_baseline_always_high_action_rule():
     The validation runner must use the physical high-extraction action.
     """
 
-    from baseline_validation_experiment import (
+    from cognitive_tools.experiment import (
         action_rule,
     )
 
@@ -119,3 +92,21 @@ def test_baseline_always_high_action_rule():
     assert actions == {
         "agent_0": HIGH_EXTRACT,
     }
+
+def test_package_imports():
+    import cognitive_tools
+    import cognitive_tools.experiment
+    import cognitive_tools.analysis
+
+    assert cognitive_tools.EcoEnv is not None
+    assert callable(cognitive_tools.experiment.main)
+    assert callable(cognitive_tools.analysis.main)
+
+
+def test_canonical_module_clis():
+    import subprocess
+    import sys
+
+    for module, option in [('cognitive_tools.experiment', '--rewiring'), ('cognitive_tools.analysis', '--run')]:
+        completed = subprocess.run([sys.executable, '-m', module, '--help'], check=True, capture_output=True, text=True)
+        assert option in completed.stdout

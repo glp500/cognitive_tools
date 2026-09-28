@@ -5,18 +5,18 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from Cognitive_tools.model import (
+from cognitive_tools.model import (
     HIGH_EXTRACT,
     LOW_EXTRACT,
 )
-from Cognitive_tools.social import (
+from cognitive_tools.social import (
     network_reciprocity,
     observer_social_diagnostics,
     social_metrics,
     visibility_degree_assortativity,
 )
 
-import baseline_validation_experiment as experiment
+import cognitive_tools.experiment as experiment
 
 
 def test_network_reciprocity_symmetric_network_is_one():

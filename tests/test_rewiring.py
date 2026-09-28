@@ -3,11 +3,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from Cognitive_tools.model import (
+from cognitive_tools.model import (
     HIGH_EXTRACT,
     LOW_EXTRACT,
 )
-from Cognitive_tools.social import (
+from cognitive_tools.social import (
     copy_sources,
     global_candidates,
     local_candidates,
@@ -354,7 +354,7 @@ def test_total_edge_count_is_preserved_after_rewiring():
         42
     )
 
-    from Cognitive_tools.social import (
+    from cognitive_tools.social import (
         init_random_attention,
     )
 
@@ -552,7 +552,8 @@ def test_mu_zero_changes_nothing():
 
     events = rewire_epoch(
         sources,
-        mode="random",
+        mode="prediction_error",
+        prediction_error_values={agent: 1.0 for agent in sources},
         theta=0.25,
         mu=0.0,
         rng=np.random.default_rng(
@@ -563,37 +564,6 @@ def test_mu_zero_changes_nothing():
     assert events == []
 
     assert sources == before
-
-
-def test_random_turnover_can_rewire_all_agents():
-    sources = {
-        "agent_0": [
-            "agent_1",
-        ],
-        "agent_1": [
-            "agent_2",
-        ],
-        "agent_2": [
-            "agent_3",
-        ],
-        "agent_3": [
-            "agent_0",
-        ],
-    }
-
-    events = rewire_epoch(
-        sources,
-        mode="random",
-        theta=1.0,
-        mu=1.0,
-        rng=np.random.default_rng(
-            10
-        ),
-    )
-
-    assert len(
-        events
-    ) == 4
 
 
 def test_prediction_error_requires_threshold_crossing():
@@ -826,7 +796,7 @@ def test_social_metrics_detect_known_perception_error():
 
 
 def test_post_rewire_network_changes_social_observation():
-    from Cognitive_tools.social import (
+    from cognitive_tools.social import (
         observed_low_fraction,
     )
 

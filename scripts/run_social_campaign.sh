@@ -119,13 +119,13 @@ COMMON=(
 echo
 echo "Preflight: compile"
 "${PYTHON_BIN}" -m py_compile \
-    Cognitive_tools/ecology.py \
-    Cognitive_tools/env.py \
-    Cognitive_tools/model.py \
-    Cognitive_tools/qlearning.py \
-    Cognitive_tools/social.py \
-    baseline_validation_experiment.py \
-    social_experiment_analysis.py
+    cognitive_tools/ecology.py \
+    cognitive_tools/env.py \
+    cognitive_tools/model.py \
+    cognitive_tools/qlearning.py \
+    cognitive_tools/social.py \
+    cognitive_tools/experiment.py \
+    cognitive_tools/analysis.py
 
 echo
 echo "Preflight: tests"
@@ -165,7 +165,7 @@ run_experiment() {
 
     echo
     echo "RUN: ${name}"
-    "${PYTHON_BIN}" baseline_validation_experiment.py \
+    "${PYTHON_BIN}" -m cognitive_tools.experiment \
         --run-name "${name}" \
         "${COMMON[@]}" \
         "$@"
@@ -253,7 +253,7 @@ done
 
 analysis_args=(
     "${PYTHON_BIN}"
-    social_experiment_analysis.py
+    cognitive_tools/analysis.py
     --analysis-name "${ANALYSIS_NAME}"
     --bootstrap-reps "${BOOTSTRAP_REPS}"
 )

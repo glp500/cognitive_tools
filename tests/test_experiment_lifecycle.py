@@ -5,15 +5,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from Cognitive_tools.model import (
+from cognitive_tools.model import (
     HIGH_EXTRACT,
     LOW_EXTRACT,
 )
-from Cognitive_tools.social import (
+from cognitive_tools.social import (
     copy_sources,
 )
 
-import baseline_validation_experiment as experiment
+import cognitive_tools.experiment as experiment
 
 
 def make_args(
@@ -86,7 +86,6 @@ def test_run_metadata_has_reproducibility_fields():
         "pettingzoo",
         "gymnasium",
         "matplotlib",
-        "networkx",
         "pytest",
     }
 

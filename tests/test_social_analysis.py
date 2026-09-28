@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-import social_experiment_analysis as analysis
+import cognitive_tools.analysis as analysis
 
 
 def write_csv(
