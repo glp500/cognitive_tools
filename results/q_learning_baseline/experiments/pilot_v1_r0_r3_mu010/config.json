@@ -1,0 +1,105 @@
+{
+  "run_name": "pilot_v1_r0_r3_mu010",
+  "scenarios": [
+    "uniform_high",
+    "patchy_high",
+    "split_high_low"
+  ],
+  "populations": [
+    32,
+    64
+  ],
+  "replicates": 10,
+  "training_steps": 5000,
+  "evaluation_steps": 1000,
+  "record_every": 50,
+  "width": 10,
+  "height": 10,
+  "seed": 42,
+  "coupling": 0.1,
+  "low_harvest": 0.002,
+  "high_harvest": 0.02,
+  "metabolism": 0.002,
+  "initial_energy": 1.0,
+  "energy_capacity": 1.0,
+  "initial_resource_fraction": 0.5,
+  "alpha": 0.1,
+  "gamma": 0.95,
+  "epsilon": 0.2,
+  "epsilon_min": 0.02,
+  "epsilon_decay": 0.9995,
+  "social_mode": "fixed",
+  "social_network": "random_k",
+  "social_k": 4,
+  "ba_m": 2,
+  "rewiring": "random_matched",
+  "matched_rewire_schedule": "results/q_learning_baseline/experiments/pilot_v1_r3_mu010/data/rewiring_schedule.csv",
+  "rewire_theta": 1.0,
+  "rewire_mu": 0.1,
+  "rewire_every": 50,
+  "rewire_threshold": 0.25,
+  "forecast_alpha": 0.5,
+  "record_network_every": 50,
+  "network_eval": "frozen",
+  "scenario_definitions": {
+    "uniform_high": {
+      "label": "Uniform high",
+      "group": "single",
+      "family": "uniform",
+      "mean_capacity": 0.75,
+      "recovery": 0.05,
+      "equilibrium": 0.7
+    },
+    "patchy_high": {
+      "label": "Patchy high",
+      "group": "single",
+      "family": "patchy",
+      "mean_capacity": 0.75,
+      "recovery": 0.05,
+      "equilibrium": 0.7
+    },
+    "split_high_low": {
+      "label": "High patchy + low fragmented split",
+      "group": "mixed",
+      "kind": "split"
+    }
+  },
+  "learner_n_states": 9,
+  "treatment": "R0",
+  "social_measurement_schema": "stage4_v1",
+  "social_network_semantics": "directed_fixed_k",
+  "network_evaluation": "frozen",
+  "fresh_network": "carried_terminal_network",
+  "fresh_network_evaluations": [
+    "carried_terminal_network",
+    "reset_initial_network"
+  ],
+  "adaptive_network_start": null,
+  "adaptive_forecast_start": null,
+  "evaluation_mode_semantics": {
+    "continuation": "trained ecology; terminal training graph; graph frozen",
+    "fresh_reset": "fresh ecology; terminal training graph carried forward; graph frozen; legacy mode name retained for figure compatibility",
+    "fresh_reset_network": "fresh ecology; exact initial training graph restored; graph frozen",
+    "fresh_adaptive_network": "fresh ecology; terminal training graph; Q frozen; network adapts"
+  },
+  "matched_rewire_schedule_sha256": "70a57c2a7ca8e31effe6f2050d4a1bbc48a30522d0753596b352582a09f6ad0f",
+  "run_metadata": {
+    "schema_version": 1,
+    "created_at_utc": "2026-09-28T07:26:56.753073+00:00",
+    "git_commit_sha": "b0340b10dd33499a714af5c22ab124b05f680a3a",
+    "git_branch": "main",
+    "git_worktree_dirty": false,
+    "python_version": "3.12.14",
+    "platform": "Linux-7.2.5-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "package_versions": {
+      "numpy": "2.5.3",
+      "mesa": "3.5.1",
+      "pettingzoo": "1.27.0",
+      "gymnasium": "1.3.0",
+      "matplotlib": "3.11.1",
+      "networkx": "3.6.1",
+      "pytest": "9.1.1"
+    },
+    "command": "baseline_validation_experiment.py --run-name pilot_v1_r0_r3_mu010 --scenarios uniform_high patchy_high split_high_low --populations 32 64 --replicates 10 --training-steps 5000 --evaluation-steps 1000 --record-every 50 --record-network-every 50 --seed 42 --coupling 0.10 --low-harvest 0.002 --high-harvest 0.020 --metabolism 0.002 --initial-energy 1.0 --energy-capacity 1.0 --initial-resource-fraction 0.50 --alpha 0.10 --gamma 0.95 --epsilon 0.20 --epsilon-min 0.02 --epsilon-decay 0.9995 --social-k 4 --ba-m 2 --rewire-every 50 --rewire-threshold 0.25 --forecast-alpha 0.50 --network-eval frozen --social-mode fixed --social-network random_k --rewiring random_matched --rewire-theta 1.00 --rewire-mu 0.10 --matched-rewire-schedule results/q_learning_baseline/experiments/pilot_v1_r3_mu010/data/rewiring_schedule.csv"
+  }
+}

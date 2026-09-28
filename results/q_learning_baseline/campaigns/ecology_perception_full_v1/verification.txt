@@ -1,0 +1,4 @@
+Revision: ea1e655395a15116241991faa2772216747d2143
+155 tests passed; Ruff lint/format and shell syntax passed.
+Nine-treatment smoke campaign and focused analysis completed without warnings.
+Focused analysis also completed on archived pilot; figure renders reviewed.

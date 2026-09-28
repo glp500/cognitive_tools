@@ -1,0 +1,9 @@
+{
+  "slides": 7,
+  "audit": [
+    "All 9 config hashes, 540 unique primary rows, and all 18,000 matched schedule checkpoints verified.",
+    "54 paired means and 95% percentile-bootstrap intervals independently reproduced from raw evaluation records.",
+    "All plotting panels retain ecology and population strata; no agent-level pseudoreplication or pooling of independent replicate counts."
+  ],
+  "zero_crossing": 15
+}

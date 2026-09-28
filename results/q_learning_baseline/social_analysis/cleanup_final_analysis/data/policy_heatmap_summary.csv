@@ -1,0 +1,73 @@
+analysis_label,treatment,rewire_theta,rewire_mu,scenario,population,ecological_state,social_state,n,policy_low_mean,policy_low_ci_low,policy_low_ci_high,occupancy_mean,occupancy_ci_low,occupancy_ci_high
+S1,S1,0.25,0.1,uniform_high,8,scarce,mostly_high,2,0.4375,0.375,0.5,0.05729166666666667,0.010416666666666666,0.10416666666666667
+S1,S1,0.25,0.1,uniform_high,8,scarce,mixed,2,0.5,0.375,0.625,0.036458333333333336,0.020833333333333332,0.052083333333333336
+S1,S1,0.25,0.1,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.046875,0.010416666666666666,0.08333333333333333
+S1,S1,0.25,0.1,uniform_high,8,moderate,mostly_high,2,0.375,0.25,0.5,0.24479166666666669,0.20833333333333334,0.28125
+S1,S1,0.25,0.1,uniform_high,8,moderate,mixed,2,0.4375,0.375,0.5,0.3125,0.25,0.375
+S1,S1,0.25,0.1,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.3020833333333333,0.22916666666666666,0.375
+S1,S1,0.25,0.1,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.5,0.0,0.0,0.0
+S1,S1,0.25,0.1,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+S1,S1,0.25,0.1,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+S2,S2,0.25,0.1,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.046875,0.0,0.09375
+S2,S2,0.25,0.1,uniform_high,8,scarce,mixed,2,0.4375,0.25,0.625,0.036458333333333336,0.0,0.07291666666666667
+S2,S2,0.25,0.1,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.052083333333333336,0.0,0.10416666666666667
+S2,S2,0.25,0.1,uniform_high,8,moderate,mostly_high,2,0.4375,0.375,0.5,0.09375,0.08333333333333333,0.10416666666666667
+S2,S2,0.25,0.1,uniform_high,8,moderate,mixed,2,0.4375,0.25,0.625,0.46875,0.4166666666666667,0.5208333333333334
+S2,S2,0.25,0.1,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.3020833333333333,0.22916666666666666,0.375
+S2,S2,0.25,0.1,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.4703124999999999,0.0,0.0,0.0
+S2,S2,0.25,0.1,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+S2,S2,0.25,0.1,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+R1,R1,0.0,1.0,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.010416666666666666,0.010416666666666666,0.010416666666666666
+R1,R1,0.0,1.0,uniform_high,8,scarce,mixed,2,0.4375,0.25,0.625,0.03645833333333333,0.03125,0.041666666666666664
+R1,R1,0.0,1.0,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.005208333333333333,0.0,0.010416666666666666
+R1,R1,0.0,1.0,uniform_high,8,moderate,mostly_high,2,0.3125,0.25,0.375,0.15625,0.13541666666666666,0.17708333333333334
+R1,R1,0.0,1.0,uniform_high,8,moderate,mixed,2,0.4375,0.375,0.5,0.40104166666666663,0.375,0.4270833333333333
+R1,R1,0.0,1.0,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.390625,0.3541666666666667,0.4270833333333333
+R1,R1,0.0,1.0,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.5,0.0,0.0,0.0
+R1,R1,0.0,1.0,uniform_high,8,abundant,mixed,2,0.375,0.25,0.4406249999999998,0.0,0.0,0.0
+R1,R1,0.0,1.0,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.03125,0.0,0.0625
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,scarce,mixed,2,0.4375,0.25,0.625,0.057291666666666664,0.03125,0.08333333333333333
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.03125,0.010416666666666666,0.052083333333333336
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,moderate,mostly_high,2,0.4375,0.25,0.625,0.21875,0.11458333333333333,0.3229166666666667
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,moderate,mixed,2,0.375,0.375,0.375,0.375,0.3020833333333333,0.4479166666666667
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.28645833333333337,0.21875,0.3541666666666667
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.5,0.0,0.0,0.0
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+R2,R2,0.25,1.0,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.010416666666666666,0.010416666666666666,0.010416666666666666
+R2,R2,0.25,1.0,uniform_high,8,scarce,mixed,2,0.4375,0.25,0.625,0.03645833333333333,0.03125,0.041666666666666664
+R2,R2,0.25,1.0,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.005208333333333333,0.0,0.010416666666666666
+R2,R2,0.25,1.0,uniform_high,8,moderate,mostly_high,2,0.3125,0.25,0.375,0.15625,0.13541666666666666,0.17708333333333334
+R2,R2,0.25,1.0,uniform_high,8,moderate,mixed,2,0.4375,0.375,0.5,0.40104166666666663,0.3873697916666667,0.4270833333333333
+R2,R2,0.25,1.0,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.390625,0.3541666666666667,0.4270833333333333
+R2,R2,0.25,1.0,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.5,0.0,0.0,0.0
+R2,R2,0.25,1.0,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+R2,R2,0.25,1.0,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.03125,0.0,0.0625
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,scarce,mixed,2,0.4375,0.33906250000000004,0.625,0.057291666666666664,0.03125,0.08333333333333333
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.03125,0.010416666666666666,0.052083333333333336
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,moderate,mostly_high,2,0.4375,0.25,0.625,0.21875,0.11458333333333333,0.3229166666666667
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,moderate,mixed,2,0.375,0.375,0.375,0.375,0.3020833333333333,0.4479166666666667
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.28645833333333337,0.21875,0.3541666666666667
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.4703124999999999,0.0,0.0,0.0
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+R3,R3,1.0,1.0,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.005208333333333333,0.0,0.010416666666666666
+R3,R3,1.0,1.0,uniform_high,8,scarce,mixed,2,0.4375,0.25,0.625,0.026041666666666664,0.010416666666666666,0.041666666666666664
+R3,R3,1.0,1.0,uniform_high,8,scarce,mostly_low,2,0.5625,0.5,0.625,0.020833333333333332,0.010416666666666666,0.03125
+R3,R3,1.0,1.0,uniform_high,8,moderate,mostly_high,2,0.3125,0.25,0.375,0.14583333333333331,0.13541666666666666,0.15625
+R3,R3,1.0,1.0,uniform_high,8,moderate,mixed,2,0.5,0.5,0.5,0.43229166666666663,0.375,0.4895833333333333
+R3,R3,1.0,1.0,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.36979166666666663,0.3125,0.4270833333333333
+R3,R3,1.0,1.0,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.5,0.0,0.0,0.0
+R3,R3,1.0,1.0,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+R3,R3,1.0,1.0,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,scarce,mostly_high,2,0.5,0.5,0.5,0.03125,0.0,0.0625
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,scarce,mixed,2,0.4375,0.25,0.625,0.057291666666666664,0.03125,0.08333333333333333
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,scarce,mostly_low,2,0.5,0.5,0.5,0.03125,0.010416666666666666,0.052083333333333336
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,moderate,mostly_high,2,0.4375,0.25,0.625,0.21875,0.11458333333333333,0.3229166666666667
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,moderate,mixed,2,0.375,0.375,0.375,0.375,0.3020833333333333,0.4479166666666667
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,moderate,mostly_low,2,0.5,0.5,0.5,0.28645833333333337,0.21875,0.3541666666666667
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,abundant,mostly_high,2,0.4375,0.375,0.5,0.0,0.0,0.0
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,abundant,mixed,2,0.375,0.25,0.5,0.0,0.0,0.0
+"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,abundant,mostly_low,2,0.4375,0.375,0.5,0.0,0.0,0.0

@@ -1,0 +1,65 @@
+run_id,analysis_label,treatment,rewire_theta,rewire_mu,scenario,population,replicate,metric,carried_terminal_value,reset_initial_value,carried_minus_reset
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,0,resource_fraction,0.4825846790885994,0.4825846790885994,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,0,wealth_gini,0.16935483870967727,0.16935483870967727,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,0,perception_error,0.13169642857142858,0.13169642857142858,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,1,resource_fraction,0.4916978246103376,0.4916978246103376,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,1,wealth_gini,0.3750000000000002,0.3750000000000002,0.0
+cleanup_verified_s1,S1,S1,0.25,0.1,uniform_high,8,1,perception_error,0.15625,0.15625,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,0,resource_fraction,0.4823168752964318,0.4823168752964318,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,0,wealth_gini,0.24152542372881358,0.24152542372881358,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,0,perception_error,0.13095238095238096,0.13095238095238096,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,1,resource_fraction,0.49487310126411604,0.49487310126411604,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,1,wealth_gini,0.4207317073170733,0.4207317073170733,0.0
+cleanup_verified_s2,S2,S2,0.25,0.1,uniform_high,8,1,perception_error,0.1751488095238095,0.1751488095238095,0.0
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,0,resource_fraction,0.48496136982787147,0.493901598161607,-0.008940228333735534
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,0,wealth_gini,0.13347457627118642,0.3044117647058826,-0.17093718843469619
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,0,perception_error,0.14583333333333334,0.14955357142857142,-0.003720238095238082
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,1,resource_fraction,0.48584300648228446,0.4856136756853829,0.00022933079690157232
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,1,wealth_gini,0.28555045871559637,0.23804347826086958,0.04750698045472679
+cleanup_verified_r1_mu10,R1,R1,0.0,1.0,uniform_high,8,1,perception_error,0.16592261904761907,0.12351190476190477,0.0424107142857143
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,0,resource_fraction,0.48379182764718204,0.4869845312292808,-0.003192703582098777
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,0,wealth_gini,0.19703389830508478,0.27594339622641484,-0.07890949792133006
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,0,perception_error,0.11830357142857144,0.14285714285714288,-0.02455357142857144
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,1,resource_fraction,0.4858102270749572,0.48926044030177285,-0.003450213226815657
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,1,wealth_gini,0.29243119266055073,0.33000000000000007,-0.03756880733944934
+cleanup_verified_r0_r1_mu10,"R0 (theta=0, matched mu=1)",R0,0.0,1.0,uniform_high,8,1,perception_error,0.1398809523809524,0.15401785714285715,-0.01413690476190474
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,0,resource_fraction,0.48496136982787147,0.493901598161607,-0.008940228333735534
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,0,wealth_gini,0.13347457627118642,0.3044117647058826,-0.17093718843469619
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,0,perception_error,0.14583333333333334,0.14955357142857142,-0.003720238095238082
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,1,resource_fraction,0.48584300648228446,0.4856136756853829,0.00022933079690157232
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,1,wealth_gini,0.28555045871559637,0.23804347826086958,0.04750698045472679
+cleanup_verified_r2_mu10,R2,R2,0.25,1.0,uniform_high,8,1,perception_error,0.16592261904761907,0.12351190476190477,0.0424107142857143
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,0,resource_fraction,0.48379182764718204,0.4869845312292808,-0.003192703582098777
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,0,wealth_gini,0.19703389830508478,0.27594339622641484,-0.07890949792133006
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,0,perception_error,0.11830357142857144,0.14285714285714288,-0.02455357142857144
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,1,resource_fraction,0.4858102270749572,0.48926044030177285,-0.003450213226815657
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,1,wealth_gini,0.29243119266055073,0.33000000000000007,-0.03756880733944934
+cleanup_verified_r0_r2_mu10,"R0 (theta=0.25, matched mu=1)",R0,0.25,1.0,uniform_high,8,1,perception_error,0.1398809523809524,0.15401785714285715,-0.01413690476190474
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,0,resource_fraction,0.48496136982787147,0.493901598161607,-0.008940228333735534
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,0,wealth_gini,0.13347457627118642,0.3044117647058826,-0.17093718843469619
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,0,perception_error,0.14583333333333334,0.14955357142857142,-0.003720238095238082
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,1,resource_fraction,0.4914576686435332,0.4885363440184025,0.0029213246251306724
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,1,wealth_gini,0.3191489361702129,0.29490291262135915,0.024246023548853746
+cleanup_verified_r3_mu10,R3,R3,1.0,1.0,uniform_high,8,1,perception_error,0.14583333333333331,0.1376488095238095,0.008184523809523808
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,0,resource_fraction,0.48379182764718204,0.4869845312292808,-0.003192703582098777
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,0,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,0,wealth_gini,0.19703389830508478,0.27594339622641484,-0.07890949792133006
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,0,perception_error,0.11830357142857144,0.14285714285714288,-0.02455357142857144
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,1,resource_fraction,0.4858102270749572,0.48926044030177285,-0.003450213226815657
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,1,reserve_welfare,0.9980000000000001,0.9980000000000001,0.0
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,1,wealth_gini,0.29243119266055073,0.33000000000000007,-0.03756880733944934
+cleanup_verified_r0_r3_mu10,"R0 (theta=1, matched mu=1)",R0,1.0,1.0,uniform_high,8,1,perception_error,0.1398809523809524,0.15401785714285715,-0.01413690476190474

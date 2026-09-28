@@ -1,0 +1,13 @@
+scenario,population,replicate,treatment,social_mode,social_network,rewiring,agent,x,y,region,social_steps,mean_observed_low_fraction,mean_population_low_fraction_excluding,mean_perception_error,mean_signed_perception_bias,majority_tie_rate,majority_valid_steps,majority_mismatch_rate,mean_visibility_degree,final_visibility_degree,final_attention_size,rewires_initiated,mean_prediction_error,final_wealth,final_energy,final_reserve_welfare,final_need_satisfaction,final_metabolic_shortfall,final_cumulative_shortfall,final_deprivation_steps
+uniform_high,6,0,B0,none,random_k,none,agent_0,3,1,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.22199999999999998,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,0,B0,none,random_k,none,agent_1,3,1,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.132,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,0,B0,none,random_k,none,agent_2,0,3,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.11400000000000002,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,0,B0,none,random_k,none,agent_3,1,1,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.11400000000000002,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,0,B0,none,random_k,none,agent_4,1,0,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.04200000000000001,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,0,B0,none,random_k,none,agent_5,0,3,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.024000000000000007,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,1,B0,none,random_k,none,agent_0,3,3,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.204,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,1,B0,none,random_k,none,agent_1,2,0,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.04200000000000001,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,1,B0,none,random_k,none,agent_2,0,0,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.204,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,1,B0,none,random_k,none,agent_3,1,1,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.15,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,1,B0,none,random_k,none,agent_4,1,0,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.22199999999999998,0.998,0.998,1.0,0.0,0.0,0
+uniform_high,6,1,B0,none,random_k,none,agent_5,1,1,uniform_high,0,nan,nan,nan,nan,nan,0,nan,nan,0,0,0,nan,0.024000000000000007,0.998,0.998,1.0,0.0,0.0,0

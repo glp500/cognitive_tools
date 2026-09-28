@@ -1,0 +1,79 @@
+{
+  "source_commit": "b0340b10dd33499a714af5c22ab124b05f680a3a",
+  "checks": [
+    "All 9 config hashes, 540 unique primary rows, and all 18,000 matched schedule checkpoints verified.",
+    "54 paired means and 95% percentile-bootstrap intervals independently reproduced from raw evaluation records.",
+    "All plotting panels retain ecology and population strata; no agent-level pseudoreplication or pooling of independent replicate counts."
+  ],
+  "inputs": [
+    {
+      "run": "pilot_v1_b0",
+      "config_sha256": "d0933f7d73ab91b49ac1c68165fa49c3e863e73d26d65fa8dc05e28cae3e7c52",
+      "evaluation_sha256": "5040d3e297cf378fa16e427633f3467f056615425af17cc5f2168647fbfc7ac3",
+      "training_sha256": "7420a657ad691f615c247ab9b7eb0aa0ec75d665e421ee031dcd0ce154c19d90",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_s1",
+      "config_sha256": "bd5848d25bf57485b9e3c8ed27904fd33227e8cf88870559b84793f349f3641e",
+      "evaluation_sha256": "20c6152abc2e10b686b8567673d0a4687d5be038b19ca3315919ba8910ef695a",
+      "training_sha256": "ce542bef2e32a72d3f2064e3331f43eb959026dbe1343ae4c47d9efc7ea9b2d3",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_s2",
+      "config_sha256": "88bce1ca33a2a4fc6a97eef7dabbb451c47a306f8170b13116561b588b1d6208",
+      "evaluation_sha256": "7694a1fafc716ff527458deea5213c8f5e8a0914cd2e890da6524d12d0c15834",
+      "training_sha256": "3cb202cc3a10f158c9a355094134b641e4551f7dd6427a0ee0b80b9485f0859c",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_r0_r1_mu010",
+      "config_sha256": "d60eb0f825c370f64646064230868e6ad3394e14ce727f0579ce3f8b5e5fdb20",
+      "evaluation_sha256": "db22a6efc599a890628667f183a475acff4b0dc9b6bba47107b35da76c5b1f89",
+      "training_sha256": "d5b403875825191a63fa16de98ce26ef6a20696e7a48084b069dbced38768f80",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_r1_mu010",
+      "config_sha256": "14bb8a367e2ee7ab1dafb3e6f5a19a64277d4855ccaada3956af6e1a5a6e204b",
+      "evaluation_sha256": "a20306b928dd9657d9b543380ff34f90d9c19b5d5b54017cd4907586696e4bf8",
+      "training_sha256": "65741ea80083ee43c4dea608cca41ed7d1e50905603c7126b970fdbc1c6fda86",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_r0_r2_mu010",
+      "config_sha256": "f9c5472f311426d0541ec3043771f9f706fee80e33ee8584ab46c61cff9ab6fe",
+      "evaluation_sha256": "3a6331733ed74963e63e9c1186c1745f18a2a0ba33787f1a560dc1a75d063926",
+      "training_sha256": "4a08fc5a9eaa32984b778fe207cf78a98455d6fcb69419dbd03eeab6e161b1b0",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_r2_mu010",
+      "config_sha256": "a47232f94b5bc6f370ec25a0b6092118a0ecbc6f4f3606d6872419d0181e3063",
+      "evaluation_sha256": "c44d611576fbd7e760b838a55a17bfd13028f7aad9e9efabcc008d4f634ad9f3",
+      "training_sha256": "557dd2dd46af37d1495bfe19bef2230e54c6a4f2e8fcd968a3712869f9720801",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_r0_r3_mu010",
+      "config_sha256": "42a0cdacaf514da747adb0db8d056ad253a2413ac8c25081e34a800a152b901f",
+      "evaluation_sha256": "7eab9f109db9491005b75a25c4e284e4402dcd5165a12fe296b99f032a043e8c",
+      "training_sha256": "f90fa2206e393747c152701a3f58ad059f4bdd90178004e684212f8a2fdd26c8",
+      "primary_rows": 60
+    },
+    {
+      "run": "pilot_v1_r3_mu010",
+      "config_sha256": "5b16a9927129448b2b85fd8b0b32a7934ce08560aff4dd9def9cbf0941281715",
+      "evaluation_sha256": "d762514a524f0b2bf4d7d71953e8c7dd3127f23144910cabd32c93c5dc2107ce",
+      "training_sha256": "826bb62daa980269c046d3616405e070f736523e8c9a5b95bbef1374ea00ab5d",
+      "primary_rows": 60
+    }
+  ],
+  "resource_intervals_crossing_zero": 15,
+  "resource_comparisons": 18,
+  "resource_mean_effect_range_pp": [
+    -2.10470080376182,
+    1.49660544185956
+  ]
+}

@@ -1,0 +1,13 @@
+scenario,population,replicate,time,rewiring,rewire_theta,rewire_every,base_seed,social_network,social_k,training_steps,target_rewires,successful_rewires
+uniform_high,6,0,2,prediction_error,0.25,2,42,random_k,2,12,,5
+uniform_high,6,0,4,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,0,6,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,0,8,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,0,10,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,0,12,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,1,2,prediction_error,0.25,2,42,random_k,2,12,,3
+uniform_high,6,1,4,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,1,6,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,1,8,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,1,10,prediction_error,0.25,2,42,random_k,2,12,,6
+uniform_high,6,1,12,prediction_error,0.25,2,42,random_k,2,12,,6
