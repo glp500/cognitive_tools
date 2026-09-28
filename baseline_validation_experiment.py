@@ -41,7 +41,7 @@ from Cognitive_tools.social import (
     update_forecasts,
     visibility_counts,
 )
-from qlearning_experiment import SCENARIOS, build_environment_maps
+from Cognitive_tools.scenarios import SCENARIOS, build_environment_maps
 
 
 RESULTS_ROOT = Path("results") / "q_learning_baseline" / "experiments"
