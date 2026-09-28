@@ -213,8 +213,17 @@ homophily, or payoff-based rewiring. See [provenance](provenance.md).
 `scripts/run_social_campaign.sh` is the sole orchestration path. It refuses a
 dirty worktree, records the commit, compiles and tests, runs adaptive conditions
 before matched controls, and verifies analysis warnings, pairings, and commits.
-`PYTHON_BIN` selects an interpreter; `RESUME=1` reuses completed directories,
-subject to the final manifest checks. Choose a unique tag for a new campaign.
+`PYTHON_BIN` selects an interpreter. `WORKERS=0` (default) uses all available
+logical CPUs; a positive value caps concurrent conditions. Processes run
+independent conditions, preserving their seeds and final CSV ordering. Adaptive
+treatments still finish before their matched controls start. Numerical-library
+thread counts are capped at one per process to avoid nested CPU oversubscription.
+
+Each condition is saved atomically under `conditions/` when finished.
+`RESUME=1` reuses those checkpoints and skips completed treatments only after
+checking configuration and code revision. A `complete.json` marker is written
+after all final tables. Keep the same campaign tag, worker setting, environment,
+and code revision when resuming. Choose a unique tag for a new campaign.
 
 | Mode | Scenarios | Populations | Replicates | mu | Training / evaluation |
 |---|---|---|---|---|---|

@@ -6,11 +6,14 @@ import hashlib
 import importlib.metadata
 import json
 import math
+import multiprocessing
+import os
 import platform
 import shlex
 import subprocess
 import sys
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 from functools import lru_cache
 from itertools import combinations
@@ -1782,6 +1785,17 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scenarios", nargs="+", default=list(SCENARIOS))
     parser.add_argument("--populations", type=int, nargs="+", default=[8, 16, 32])
     parser.add_argument("--replicates", type=int, default=20)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Concurrent conditions; 0 uses all available logical CPUs.",
+    )
+    parser.add_argument(
+        "--resume-conditions",
+        action="store_true",
+        help="Reuse completed condition checkpoints from this exact configuration.",
+    )
     parser.add_argument("--training-steps", type=int, default=5000)
     parser.add_argument("--evaluation-steps", type=int, default=1000)
     parser.add_argument("--record-every", type=int, default=50)
@@ -1913,9 +1927,74 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def condition_checkpoint(task):
+    """Each process owns one condition; publish its checkpoint atomically."""
+    scenario, population, replicate, args, path = task
+    output = run_condition(scenario, population, replicate, args)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(output))
+    temporary.replace(path)
+    return scenario, population, replicate
+
+
+def run_conditions(args, run_dir):
+    workers = args.workers
+    if workers == 0:
+        workers = (
+            len(os.sched_getaffinity(0))
+            if hasattr(os, "sched_getaffinity")
+            else os.cpu_count() or 1
+        )
+    checkpoint_dir = run_dir / "conditions"
+    checkpoint_dir.mkdir(exist_ok=True)
+    tasks = [
+        (
+            scenario,
+            population,
+            replicate,
+            args,
+            checkpoint_dir / f"{scenario}_N{population}_rep{replicate}.json",
+        )
+        for replicate in range(args.replicates)
+        for scenario in args.scenarios
+        for population in args.populations
+    ]
+    pending = [task for task in tasks if not task[-1].exists()]
+    completed = len(tasks) - len(pending)
+    print(
+        f"CPU workers: {min(workers, len(pending))}; recovered conditions: {completed}", flush=True
+    )
+    if workers == 1:
+        for task in pending:
+            scenario, population, replicate = condition_checkpoint(task)
+            completed += 1
+            print(
+                f"[{completed}/{len(tasks)}] {scenario} N={population} replicate={replicate}",
+                flush=True,
+            )
+    elif pending:
+        # Spawn avoids inheriting random state or library threads from the parent.
+        with ProcessPoolExecutor(
+            max_workers=min(workers, len(pending)), mp_context=multiprocessing.get_context("spawn")
+        ) as pool:
+            futures = [pool.submit(condition_checkpoint, task) for task in pending]
+            for future in as_completed(futures):
+                scenario, population, replicate = future.result()
+                completed += 1
+                print(
+                    f"[{completed}/{len(tasks)}] {scenario} N={population} replicate={replicate}",
+                    flush=True,
+                )
+    # Canonical order makes final CSVs independent of worker completion order.
+    for task in tasks:
+        yield json.loads(task[-1].read_text())
+
+
 def main() -> None:
     args = build_parser().parse_args()
     validate_configuration(args)
+    if args.workers < 0:
+        raise ValueError("--workers must be non-negative.")
 
     run_dir = RESULTS_ROOT / args.run_name
     data_dir = run_dir / "data"
@@ -1966,6 +2045,20 @@ def main() -> None:
     )
     config["run_metadata"] = build_run_metadata()
 
+    config_path = run_dir / "config.json"
+    if config_path.exists():
+        if not args.resume_conditions:
+            raise ValueError("Run already exists; use --resume-conditions or a new run name.")
+        previous = json.loads(config_path.read_text())
+        ignored = {"workers", "resume_conditions", "run_metadata"}
+        if {k: v for k, v in previous.items() if k not in ignored} != {
+            k: v for k, v in config.items() if k not in ignored
+        } or previous["run_metadata"]["git_commit_sha"] != config["run_metadata"]["git_commit_sha"]:
+            raise ValueError("Cannot resume: scientific configuration or code revision differs.")
+        if (run_dir / "complete.json").exists():
+            print(f"Already complete: {run_dir}")
+            return
+
     with (run_dir / "config.json").open("w") as file:
         json.dump(config, file, indent=2)
 
@@ -1980,7 +2073,6 @@ def main() -> None:
     network_edge_rows: list[dict] = []
 
     total = len(args.scenarios) * len(args.populations) * args.replicates
-    completed = 0
 
     print(f"Running {total} Q-learning training conditions...")
     print(f"Treatment: {config['treatment']}")
@@ -2014,22 +2106,16 @@ def main() -> None:
             "adaptive-network robustness condition."
         )
 
-    for replicate in range(args.replicates):
-        for scenario in args.scenarios:
-            for population in args.populations:
-                output = run_condition(scenario, population, replicate, args)
-                evaluation_rows.extend(output["evaluation_summary"])
-                training_rows.extend(output["training_timeseries"])
-                evaluation_timeseries_rows.extend(output["evaluation_timeseries"])
-                policy_rows.append(output["policy_summary"])
-                agent_policy_rows.extend(output["agent_policies"])
-                network_rows.extend(output["network_timeseries"])
-                rewiring_schedule_rows.extend(output["rewiring_schedule"])
-                agent_social_rows.extend(output["agent_social_summary"])
-                network_edge_rows.extend(output["network_edges_checkpoints"])
-
-                completed += 1
-                print(f"[{completed}/{total}] {scenario} N={population} replicate={replicate}")
+    for output in run_conditions(args, run_dir):
+        evaluation_rows.extend(output["evaluation_summary"])
+        training_rows.extend(output["training_timeseries"])
+        evaluation_timeseries_rows.extend(output["evaluation_timeseries"])
+        policy_rows.append(output["policy_summary"])
+        agent_policy_rows.extend(output["agent_policies"])
+        network_rows.extend(output["network_timeseries"])
+        rewiring_schedule_rows.extend(output["rewiring_schedule"])
+        agent_social_rows.extend(output["agent_social_summary"])
+        network_edge_rows.extend(output["network_edges_checkpoints"])
 
     write_csv(data_dir / "evaluation_summary.csv", evaluation_rows)
     write_csv(data_dir / "training_timeseries.csv", training_rows)
@@ -2040,6 +2126,7 @@ def main() -> None:
     write_csv(data_dir / "rewiring_schedule.csv", rewiring_schedule_rows)
     write_csv(data_dir / "agent_social_summary.csv", agent_social_rows)
     write_csv(data_dir / "network_edges_checkpoints.csv", network_edge_rows)
+    (run_dir / "complete.json").write_text(json.dumps({"conditions": total}))
 
     print("\nSimulation complete.")
     print(f"Results: {run_dir.resolve()}")

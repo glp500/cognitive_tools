@@ -123,6 +123,17 @@ bash scripts/run_social_campaign.sh pilot pilot_v1
 CONFIRM_FULL=YES bash scripts/run_social_campaign.sh full confirmatory_v1
 ```
 
+Campaigns use all available logical CPUs by default (`WORKERS=0`). Set
+`WORKERS=14`, for example, to cap concurrency. The standalone CLI defaults to
+one worker and accepts `--workers 0` or a positive count. Conditions keep their
+original seeds and are assembled in canonical order regardless of completion
+order. Each completed condition is saved atomically under its run's `conditions/`.
+
+To resume after interruption, repeat the campaign command with `RESUME=1` and
+the same tag, worker setting, environment, and clean code revision. Completed
+conditions are reused; an interrupted condition restarts. Use a new tag for
+the parallel campaign rather than reusing output from an older revision.
+
 The full campaign is fixed at 27 conditions × 100 replicates, N=64, mu=0.10,
 and base seed 20260928 (distinct from pilot seed 42).
 The protocol and campaign settings are documented in

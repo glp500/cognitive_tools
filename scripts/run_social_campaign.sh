@@ -10,7 +10,8 @@ set -euo pipefail
 #
 # Optional environment variables:
 #   PYTHON_BIN=python
-#   RESUME=1                 Skip already-complete run directories.
+#   WORKERS=0               Use all available logical CPUs; set a positive limit.
+#   RESUME=1                 Recover completed conditions/treatments.
 #   BOOTSTRAP_REPS=2000      Override analysis bootstrap resamples.
 #
 # Primary scientific evaluation is always --network-eval frozen.
@@ -24,6 +25,8 @@ REPO_ROOT="$(
 cd "${REPO_ROOT}"
 
 PYTHON_BIN="${PYTHON_BIN:-python}"
+export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+WORKERS="${WORKERS:-0}"
 MODE="${1:-}"
 TAG="${2:-}"
 
@@ -102,6 +105,7 @@ ANALYSIS_ROOT="results/q_learning_baseline/social_analysis"
 ANALYSIS_NAME="${TAG}_analysis"
 
 COMMON=(
+    --workers "${WORKERS}"
     --scenarios "${SCENARIOS[@]}"
     --populations "${POPULATIONS[@]}"
     --replicates "${REPLICATES}"
@@ -187,24 +191,17 @@ run_experiment() {
     path="$(run_name_path "${name}")"
 
     if [[ -e "${path}" ]]; then
-        if [[ "${RESUME:-0}" == "1" \
-              && -f "${path}/config.json" \
-              && -f "${path}/data/evaluation_summary.csv" ]]; then
-            echo
-            echo "RESUME: keeping completed run ${name}"
-            record_run "${name}"
-            return
+        if [[ "${RESUME:-0}" != "1" ]]; then
+            echo "Run directory already exists: ${path}; use RESUME=1 or a new tag."
+            exit 1
         fi
-
-        echo "Run directory already exists: ${path}"
-        echo "Remove/rename it, or use RESUME=1 for a verified completed run."
-        exit 1
     fi
 
     echo
     echo "RUN: ${name}"
     "${PYTHON_BIN}" -m cognitive_tools.experiment \
         --run-name "${name}" \
+        --resume-conditions \
         "${COMMON[@]}" \
         "$@"
 
