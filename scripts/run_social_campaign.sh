@@ -4,6 +4,7 @@ set -euo pipefail
 # Core social-learning campaign runner.
 #
 # Usage:
+#   bash scripts/run_social_campaign.sh smoke smoke_v1
 #   bash scripts/run_social_campaign.sh pilot pilot_v1
 #   CONFIRM_FULL=YES bash scripts/run_social_campaign.sh full confirmatory_v1
 #
@@ -27,8 +28,9 @@ PYTHON_BIN="${PYTHON_BIN:-python}"
 MODE="${1:-}"
 TAG="${2:-}"
 
-if [[ "${MODE}" != "pilot" && "${MODE}" != "full" ]]; then
+if [[ "${MODE}" != "smoke" && "${MODE}" != "pilot" && "${MODE}" != "full" ]]; then
     echo "Usage:"
+    echo "  bash scripts/run_social_campaign.sh smoke <tag>"
     echo "  bash scripts/run_social_campaign.sh pilot <tag>"
     echo "  CONFIRM_FULL=YES bash scripts/run_social_campaign.sh full <tag>"
     exit 2
@@ -69,7 +71,13 @@ THETAS=(
     1.00
 )
 
-if [[ "${MODE}" == "pilot" ]]; then
+if [[ "${MODE}" == "smoke" ]]; then
+    SCENARIOS=(uniform_high)
+    POPULATIONS=(8)
+    REPLICATES=2
+    MUS=(1.0)
+    DEFAULT_BOOTSTRAP_REPS=20
+elif [[ "${MODE}" == "pilot" ]]; then
     POPULATIONS=(32 64)
     REPLICATES=10
     MUS=(0.10)
@@ -116,16 +124,15 @@ COMMON=(
     --network-eval frozen
 )
 
+if [[ "${MODE}" == "smoke" ]]; then
+    COMMON+=(--width 4 --height 4 --training-steps 12 --evaluation-steps 6
+             --record-every 2 --record-network-every 2 --rewire-every 2
+             --rewire-threshold 0)
+fi
+
 echo
 echo "Preflight: compile"
-"${PYTHON_BIN}" -m py_compile \
-    cognitive_tools/ecology.py \
-    cognitive_tools/env.py \
-    cognitive_tools/model.py \
-    cognitive_tools/qlearning.py \
-    cognitive_tools/social.py \
-    cognitive_tools/experiment.py \
-    cognitive_tools/analysis.py
+"${PYTHON_BIN}" -m compileall -q cognitive_tools
 
 echo
 echo "Preflight: tests"
@@ -253,7 +260,7 @@ done
 
 analysis_args=(
     "${PYTHON_BIN}"
-    cognitive_tools/analysis.py
+    -m cognitive_tools.analysis
     --analysis-name "${ANALYSIS_NAME}"
     --bootstrap-reps "${BOOTSTRAP_REPS}"
 )
