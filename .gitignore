@@ -9,7 +9,7 @@ __pycache__/
 htmlcov/
 
 # Generated experiment and analysis outputs
-results/
+
 
 # Python packaging and tooling
 .venv/
