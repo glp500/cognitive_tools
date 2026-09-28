@@ -46,7 +46,7 @@ from cognitive_tools.social import (
 RESULTS_ROOT = Path("results") / "q_learning_baseline" / "experiments"
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
-RUNTIME_PACKAGES = ("numpy", "mesa", "pettingzoo", "gymnasium", "matplotlib", "pytest")
+RUNTIME_PACKAGES = ("numpy", "mesa", "pettingzoo", "gymnasium", "matplotlib", "networkx", "pytest")
 
 SOCIAL_MODES = ("none", "fixed")
 
@@ -2043,8 +2043,11 @@ def main() -> None:
 
     print("\nSimulation complete.")
     print(f"Results: {run_dir.resolve()}")
-    print("Generate the existing ecological/baseline figures with:")
-    print(f"python baseline_validation_figures.py --run-name {args.run_name}")
+    print("Analyze this run with:")
+    print(
+        "python -m cognitive_tools.analysis "
+        f"--run {shlex.quote(str(run_dir))} --analysis-name {shlex.quote(args.run_name)}"
+    )
 
 
 if __name__ == "__main__":

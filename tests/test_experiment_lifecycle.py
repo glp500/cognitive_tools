@@ -64,7 +64,15 @@ def test_run_metadata_has_reproducibility_fields():
     assert metadata["command"]
     assert isinstance(metadata["package_versions"], dict)
 
-    expected_packages = {"numpy", "mesa", "pettingzoo", "gymnasium", "matplotlib", "pytest"}
+    expected_packages = {
+        "numpy",
+        "mesa",
+        "pettingzoo",
+        "gymnasium",
+        "matplotlib",
+        "networkx",
+        "pytest",
+    }
 
     assert set(metadata["package_versions"]) == expected_packages
 

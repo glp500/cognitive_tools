@@ -24,6 +24,8 @@ does not claim to reproduce its deep RL mechanisms.
 Landscape primitives were consolidated from the project's former ecological
 scan during ecological unification. Mesa, PettingZoo, Gymnasium, NumPy, and
 Matplotlib are software dependencies, not scientific mechanism sources.
+NetworkX remains required because Mesa 3.5.1 imports its network space during
+startup even for grid-only models; a fresh environment verified this dependency.
 
 ## External code reuse
 
