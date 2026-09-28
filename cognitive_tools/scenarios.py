@@ -158,11 +158,7 @@ def build_environment_maps(
         capacity = low_patchy.copy()
 
         high_central = make_capacity_map(
-            family=("centralized"),
-            mean_capacity=(0.78),
-            width=width,
-            height=height,
-            seed=(seed + 31),
+            family="centralized", mean_capacity=0.78, width=width, height=height, seed=(seed + 31)
         )
 
         capacity[mask] = high_central[mask]
@@ -181,11 +177,7 @@ def build_environment_maps(
 
     elif kind == "split":
         fragmented_low = make_capacity_map(
-            family=("fragmented"),
-            mean_capacity=(0.30),
-            width=width,
-            height=height,
-            seed=(seed + 47),
+            family="fragmented", mean_capacity=0.30, width=width, height=height, seed=(seed + 47)
         )
 
         mask = np.zeros((height, width), dtype=bool)
@@ -221,11 +213,7 @@ def build_environment_maps(
         capacity = low_patchy.copy()
 
         high_islands = make_capacity_map(
-            family=("decentralized"),
-            mean_capacity=(0.78),
-            width=width,
-            height=height,
-            seed=(seed + 73),
+            family="decentralized", mean_capacity=0.78, width=width, height=height, seed=(seed + 73)
         )
 
         capacity[mask] = high_islands[mask]

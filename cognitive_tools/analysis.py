@@ -742,7 +742,7 @@ def build_terminal_training_rows(runs: list[RunData], resource_rows: list[dict])
 
 
 # -----------------------------------------------------------------------------
-# Paired R0 effects and Stage-3 network-memory decomposition
+# Paired R0 effects and network-memory decomposition
 # -----------------------------------------------------------------------------
 
 
@@ -1721,7 +1721,7 @@ def run_analysis(args) -> Path:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Cross-treatment analysis and figures for Stage 4+ cognitive_tools "
+            "Cross-treatment analysis and figures for cognitive_tools "
             "social-network experiment outputs."
         )
     )

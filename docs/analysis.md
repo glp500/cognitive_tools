@@ -42,11 +42,12 @@ using different mu. Replicate rows pair exactly by scenario, population, and
 replicate; effects are always adaptive minus matched R0.
 
 The analysis retains a fallback for current datasets whose source schedule hash
-cannot be resolved: it uses a unique adaptive run with the same theta and emits
-a warning. Ambiguous candidates are skipped with a warning. This input
+cannot be resolved: it uses a unique adaptive run with the same theta. Missing or ambiguous
+candidates are skipped with a warning. This input
 compatibility path is retained to avoid silently changing the analysis contract;
-the campaign rejects any manifest warnings, so research campaigns require
-resolved exact pairs. Archive the adaptive run and R0 together.
+the campaign rejects manifest warnings, but a unique theta fallback does not
+warn. Verify schedule-hash equality when auditing archived inputs. Archive the
+adaptive run and R0 together.
 
 ## Distributions and bootstrap
 

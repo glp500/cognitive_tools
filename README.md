@@ -56,8 +56,8 @@ cognitive_tools/
     analysis.py      Canonical analysis CLI, tables, and figures
 scripts/
     run_social_campaign.sh
- tests/
- docs/
+tests/
+docs/
 ```
 
 The experiment module separates configuration, environment construction,

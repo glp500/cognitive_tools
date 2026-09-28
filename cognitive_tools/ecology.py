@@ -61,16 +61,8 @@ from __future__ import annotations
 import numpy as np
 
 # ---------------------------------------------------------------------
-# Existing landscape definitions
+# Landscape families
 # ---------------------------------------------------------------------
-#
-# These are retained during the refactor so that moving ecological
-# functions does not silently change the current experimental baselines.
-# The number of ecological treatments can be simplified in a later,
-# explicitly scientific commit.
-
-ABUNDANCE_LEVELS = {"high": 0.75, "low": 0.35}
-
 
 PATTERN_FAMILIES = {
     "uniform": {"label": "Uniform", "heterogeneity_strength": 0.00},

@@ -39,10 +39,10 @@ has positive equilibrium `q K`. Defaults are a 10×10 grid, initial stock
 | `split_high_low` | Productive and low fragmented halves |
 | `decentralized_high_in_low` | Productive islands in a low background |
 
-High landscapes use mean capacity `0.75`, regeneration `0.05`, and equilibrium
-fraction `0.70`; low landscapes use `0.35`, `0.03`, and `0.60`. Spatial masks
-and exact construction parameters live in the scenario definitions written to
-each run's configuration. Landscape and position seeds match across scenarios
+Single-component high landscapes use mean capacity `0.75`, regeneration `0.05`, and equilibrium
+fraction `0.70`; the single low landscape uses `0.35`, `0.03`, and `0.60`. Mixed landscapes have their own regional parameter values and masks, defined
+in `scenarios.py`; configurations record scenario identifiers and specifications,
+and the recorded Git revision identifies their exact construction. Landscape and position seeds match across scenarios
 within each replicate.
 
 ## Learning, state, and reward

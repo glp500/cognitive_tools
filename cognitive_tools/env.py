@@ -31,7 +31,6 @@ class EcoEnv(ParallelEnv):
         coupling_rate: float = 0.10,
         cooperative_harvest_amount: float = 0.002,
         defective_harvest_amount: float = 0.020,
-        harvest_amount: float | None = None,
         metabolism_rate: float = 0.002,
         initial_energy: float = 1.0,
         energy_capacity: float = 1.0,
@@ -49,10 +48,7 @@ class EcoEnv(ParallelEnv):
 
         self.cooperative_harvest_amount = cooperative_harvest_amount
 
-        # Backward-compatible alias for older experiment scripts.
-        self.defective_harvest_amount = (
-            defective_harvest_amount if harvest_amount is None else harvest_amount
-        )
+        self.defective_harvest_amount = defective_harvest_amount
 
         self.metabolism_rate = metabolism_rate
         self.initial_energy = initial_energy
