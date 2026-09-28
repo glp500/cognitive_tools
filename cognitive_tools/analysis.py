@@ -1518,6 +1518,9 @@ def save_local_population_scatter(rows: list[dict], runs: list[RunData], figures
 def analysis_manifest(*, args, runs: list[RunData], warnings: list[str]) -> dict:
     return {
         "schema_version": 1,
+        "profile": getattr(args, "profile", "diagnostics"),
+        "primary_training_window": "max(0, T-1000) < recorded step <= T",
+        "inference": "replicate-level pointwise percentile intervals; no significance claims",
         "analysis_name": args.analysis_name,
         "command": " ".join(sys.argv),
         "python_version": platform.python_version(),
@@ -1556,6 +1559,24 @@ def run_analysis(args) -> Path:
     figures_dir = output_dir / "figures"
     tables_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
+
+    if getattr(args, "profile", "diagnostics") == "focused":
+        from .focused_analysis import run_focused_analysis
+
+        run_focused_analysis(
+            runs,
+            tables_dir,
+            figures_dir,
+            bootstrap_reps=args.bootstrap_reps,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        write_csv_rows(tables_dir / "run_catalog.csv", run_catalog_rows(runs))
+        manifest = analysis_manifest(args=args, runs=runs, warnings=warnings)
+        (output_dir / "analysis_manifest.json").write_text(json.dumps(manifest, indent=2))
+        print(f"Focused analysis complete: {output_dir}")
+        for warning in warnings:
+            print(f"Warning: {warning}")
+        return output_dir
 
     resource_rows, resource_summary = build_resource_distribution(
         runs,
@@ -1724,6 +1745,12 @@ def build_parser() -> argparse.ArgumentParser:
             "Cross-treatment analysis and figures for cognitive_tools "
             "social-network experiment outputs."
         )
+    )
+    parser.add_argument(
+        "--profile",
+        choices=("focused", "diagnostics"),
+        default="focused",
+        help="Four study figures by default; legacy diagnostics are opt-in.",
     )
     parser.add_argument(
         "--run",

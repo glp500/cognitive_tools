@@ -159,7 +159,9 @@ per-step/cumulative evaluation rewires.
 
 ## Outcomes and measurement
 
-Primary sustainability is `eval_mean_mean_resource_fraction`. Behavior includes
+Primary study outcomes are population-perception error, majority mismatch,
+visibility Gini, and low-extraction share in the final training window.
+Sustainability is a secondary outcome: `eval_mean_mean_resource_fraction`. Behavior includes
 low-extraction rate, collective order, action entropy, and total resource.
 Low extraction is a behavioral proxy, not a claim about intent.
 
@@ -218,13 +220,24 @@ subject to the final manifest checks. Choose a unique tag for a new campaign.
 |---|---|---|---|---|---|
 | smoke | uniform high | 8 | 2 | 1 | 12 / 6 |
 | pilot | uniform high, patchy high, split high/low | 32, 64 | 10 | 0.10 | 5000 / 1000 |
-| full | same as pilot | 64 | 100 by default | 0.05, 0.10, 0.20 | 5000 / 1000 |
+| full | same as pilot | 64 | 100 (fixed) | 0.10 | 5000 / 1000 |
 
 All modes include B0, S1, S2 and theta `0, 0.25, 1` with paired R0. Smoke uses
 4×4 grids, checkpoints every two steps and threshold zero to exercise rewiring;
-it is a mechanical check. Full requires `CONFIRM_FULL=YES` and accepts
-`FULL_REPLICATES`. Bootstrap defaults are 20/2000/5000 respectively, overridable
-with `BOOTSTRAP_REPS`. Freeze these choices before research execution.
+it is a mechanical check. Full requires `CONFIRM_FULL=YES`, fixes 100 replicates
+and 5,000 bootstrap resamples, and rejects replicate/resample overrides. Smoke
+and pilot allow `BOOTSTRAP_REPS` overrides (defaults 20 and 2,000).
+
+Full uses base seed **20260928**, versus **42** for pilot/smoke; the resulting
+landscape, position, learner, network, and rewiring streams are separate from
+the pilot. All treatments retain within-replicate matching. There are 27
+conditions and 2,700 training runs, with mu=0.10 and theta=0, 0.25, 1.
+
+The [confirmed proposal](ideas/ecology-perception-organization.md) fixes the
+questions and hypotheses. Ecological comparisons concern complete configurations,
+not an isolated heterogeneity effect. S2 also changes attention capacity.
+Prediction error (surprise about peers) is distinct from population misperception.
+Frozen evaluation outcomes do not establish mediation by training perceptions.
 
 The standalone historical baseline campaign is preserved in the pre-cleanup
 snapshot. B0 and its fixed-policy validation remain available through the

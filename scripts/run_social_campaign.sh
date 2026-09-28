@@ -11,7 +11,6 @@ set -euo pipefail
 # Optional environment variables:
 #   PYTHON_BIN=python
 #   RESUME=1                 Skip already-complete run directories.
-#   FULL_REPLICATES=100      Confirmatory replicate count (freeze before use).
 #   BOOTSTRAP_REPS=2000      Override analysis bootstrap resamples.
 #
 # Primary scientific evaluation is always --network-eval frozen.
@@ -65,6 +64,8 @@ SCENARIOS=(
     split_high_low
 )
 
+BASE_SEED=42
+
 THETAS=(
     0.00
     0.25
@@ -84,12 +85,17 @@ elif [[ "${MODE}" == "pilot" ]]; then
     DEFAULT_BOOTSTRAP_REPS=2000
 else
     POPULATIONS=(64)
-    REPLICATES="${FULL_REPLICATES:-100}"
-    MUS=(0.05 0.10 0.20)
+    REPLICATES=100
+    BASE_SEED=20260928
+    MUS=(0.10)
     DEFAULT_BOOTSTRAP_REPS=5000
 fi
 
 BOOTSTRAP_REPS="${BOOTSTRAP_REPS:-${DEFAULT_BOOTSTRAP_REPS}}"
+if [[ "${MODE}" == "full" && ( "${BOOTSTRAP_REPS}" != "5000" || -n "${FULL_REPLICATES:-}" ) ]]; then
+    echo "Frozen full campaign requires 100 replicates and 5000 bootstrap resamples."
+    exit 2
+fi
 
 EXPERIMENT_ROOT="results/q_learning_baseline/experiments"
 ANALYSIS_ROOT="results/q_learning_baseline/social_analysis"
@@ -103,7 +109,7 @@ COMMON=(
     --evaluation-steps 1000
     --record-every 50
     --record-network-every 50
-    --seed 42
+    --seed "${BASE_SEED}"
     --coupling 0.10
     --low-harvest 0.002
     --high-harvest 0.020
@@ -137,6 +143,31 @@ echo "Preflight: compile"
 echo
 echo "Preflight: tests"
 "${PYTHON_BIN}" -m pytest -q
+
+# Record the frozen invocation and complete environment before any simulation.
+CAMPAIGN_DIR="results/q_learning_baseline/campaigns/${TAG}"
+mkdir -p "${CAMPAIGN_DIR}"
+"${PYTHON_BIN}" - "${CAMPAIGN_DIR}/freeze.json" "${GIT_SHA}" "${MODE}" "${BOOTSTRAP_REPS}" "${COMMON[@]}" <<'PYFREEZE'
+import importlib.metadata
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+freeze = {
+    "git_commit_sha": sys.argv[2], "mode": sys.argv[3],
+    "bootstrap_reps": int(sys.argv[4]), "bootstrap_seed": 1729,
+    "common_experiment_arguments": sys.argv[5:],
+    "analysis_profile": "focused",
+    "primary_window": "max(0, T-1000) < recorded step <= T",
+    "intervals": "pointwise 95% percentile bootstrap; no significance claims",
+    "python": sys.version,
+    "packages": {d.metadata["Name"]: d.version for d in importlib.metadata.distributions()},
+}
+if path.exists() and json.loads(path.read_text()) != freeze:
+    raise SystemExit("Existing campaign freeze differs; use a new campaign tag.")
+path.write_text(json.dumps(freeze, indent=2) + "\n")
+PYFREEZE
 
 RUN_PATHS=()
 
@@ -261,6 +292,7 @@ done
 analysis_args=(
     "${PYTHON_BIN}"
     -m cognitive_tools.analysis
+    --profile focused
     --analysis-name "${ANALYSIS_NAME}"
     --bootstrap-reps "${BOOTSTRAP_REPS}"
 )

@@ -1,24 +1,21 @@
 # cognitive_tools
 
-`cognitive_tools` is a simulation framework for studying adaptive social learning
-in renewable common-pool resource systems. Agents learn extraction policies from
-ecological and social information. Some treatments allow agents to change who
-they observe when their local predictions are inaccurate. The experiments test
-whether this adaptive rewiring changes sustainability, welfare, and inequality
-beyond the effects of network structure or random turnover.
+`cognitive_tools` studies how ecological conditions and restricted social
+observation generate population misperception and collective organization in a
+renewable common-pool resource system.
 
 ## Aim and research questions
 
-Study how adaptive social information networks interact with individual
-reinforcement learning and ecological feedback in a renewable common-pool
-resource system.
+1. Under which ecological conditions do local observations misrepresent
+   population-level behavior?
+2. How do ecology and observation rules shape visibility concentration and
+   population extraction behavior?
 
-**Primary question:** How does prediction-error-driven rewiring of who agents
-observe affect resource sustainability, welfare, and inequality, relative to
-fixed networks and matched random turnover?
-
-**Secondary question:** How do these effects vary across ecological conditions
-and the local or global scope of rewiring?
+Resource sustainability, individual reserve welfare, and wealth inequality are
+secondary consequences. Adaptive rewiring is a controlled mechanism comparison,
+not a mechanism that must prove beneficial. The
+[confirmed scope](docs/ideas/ecology-perception-organization.md) defines the
+hypotheses, exclusions, and completion rule.
 
 Agents stay in place, extract a renewable resource, and learn independently.
 Social links carry observations of previous actions; they do not transfer
@@ -53,7 +50,8 @@ cognitive_tools/
     qlearning.py     Independent tabular learners
     social.py        Observation networks, forecasting, and rewiring
     experiment.py    Canonical experiment CLI, lifecycle, and provenance
-    analysis.py      Canonical analysis CLI, tables, and figures
+    analysis.py      Canonical analysis CLI and optional diagnostics
+    focused_analysis.py  Frozen study summaries, comparisons, and four figures
 scripts/
     run_social_campaign.sh
 tests/
@@ -125,7 +123,8 @@ bash scripts/run_social_campaign.sh pilot pilot_v1
 CONFIRM_FULL=YES bash scripts/run_social_campaign.sh full confirmatory_v1
 ```
 
-Freeze the parameter grid and replicate count before a confirmatory campaign.
+The full campaign is fixed at 27 conditions × 100 replicates, N=64, mu=0.10,
+and base seed 20260928 (distinct from pilot seed 42).
 The protocol and campaign settings are documented in
 [docs/experiment.md](docs/experiment.md#campaigns).
 
@@ -140,8 +139,9 @@ python -m cognitive_tools.analysis \
 ```
 
 Add another `--run` for each treatment. Include each adaptive source run with
-its matched R0. Analysis retains replicate distributions, bootstrap intervals,
-paired effects, network-memory contrasts, and parameter summaries. See the
+its matched R0. The default focused profile produces replicate summaries, planned paired
+contrasts, and four main figures. Use `--profile diagnostics` for the retained
+network-memory, policy, and parameter diagnostics. See the
 [input contract and interpretation constraints](docs/analysis.md).
 
 ## Tests and style

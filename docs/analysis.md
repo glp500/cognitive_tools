@@ -1,3 +1,54 @@
+# Focused study analysis
+
+The CLI defaults to `--profile focused`. It generates six CSV tables and four
+figures (PNG and PDF), using the existing measurements without changing the model.
+The older diagnostics below remain available with `--profile diagnostics`.
+
+## Frozen summaries and inference
+
+Primary summaries average recorded training checkpoints satisfying
+`max(0, T-1000) < time <= T`: for the full campaign these are steps 4050, 4100,
+…, 5000 (20 checkpoints). These are sampled-checkpoint averages, not averages
+over every simulated step. Smoke uses all its positive recorded steps.
+Each replicate contributes one value per metric, with finite checkpoint counts
+reported. Majority mismatch averages the existing non-tie rate over checkpoints
+where it is defined; an all-tie window remains undefined, never zero. Report
+majority tie rate alongside it. B0 has no social perception or visibility rows.
+
+Secondary resource and reserve welfare average the 1,000-step frozen evaluation;
+wealth Gini is its final value. Every summary reports valid and total replicate
+counts. Paired contrasts subtract within the same replicate before bootstrapping;
+inconsistent replicate sets are rejected.
+
+Intervals are pointwise 95% percentile-bootstrap intervals over independent
+replicates: full campaign 5,000 resamples, deterministic analysis seed 1729.
+No p-values, significance stars, or equivalence claims are produced. Intervals
+are not simultaneous or multiplicity-adjusted; isolated exclusion of zero is
+not a family-wide confirmatory finding.
+
+## Outputs
+
+- `primary_window_replicates.csv`, `primary_window_summary.csv`: five metrics,
+  including the companion tie rate and checkpoint availability.
+- `outcome_replicates.csv`, `outcome_summary.csv`: all reference and rewiring
+  conditions, three secondary outcomes.
+- `planned_contrasts.csv`, `planned_contrast_summary.csv`: ecology within social
+  treatment; S2 minus S1; scope within adaptive/random turnover; and adaptive
+  minus exactly paired R0. Explicit left/right columns define subtraction.
+- `run_catalog.csv` and `analysis_manifest.json`: input provenance and settings.
+
+The four figures show the mechanism, perception with ties, organization
+trajectories, and matched resource/welfare differences. Trajectories are
+unsmoothed replicate means, not uncertainty bands. Difference axes share ranges
+within each metric across ecologies. Outcome differences use fraction/Gini units,
+not percentage points. Reference outcomes remain in the tables. If no matched
+pairs are supplied, the outcome figure shows treatment means instead.
+
+Perception/organization associations with consequences are explanatory, not
+causal mediation. Network-memory evaluation remains supplementary.
+
+---
+
 # Analysis
 
 `python -m cognitive_tools.analysis` reads completed experiment directories and
