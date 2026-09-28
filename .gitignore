@@ -8,12 +8,15 @@ __pycache__/
 .coverage.*
 htmlcov/
 
-# Generated experiment and analysis outputs.
-#
-# Keep research outputs local or publish them as explicit release/research
-# artifacts. The source repository keeps only results/README.md.
-results/*
-!results/README.md
+# Generated experiment and analysis outputs
+results/
+
+# Python packaging and tooling
+.venv/
+*.egg-info/
+build/
+dist/
+.ruff_cache/
 
 # Editor / OS noise
 .DS_Store
