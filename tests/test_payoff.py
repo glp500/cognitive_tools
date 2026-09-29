@@ -105,10 +105,12 @@ def test_multiple_horizons_and_gamma_zero_use_correct_timing():
         assert row["late_harvest_rate"] == pytest.approx(0.002)
 
 
-def test_parallel_and_serial_runs_have_identical_outputs(tmp_path):
+@pytest.mark.parametrize("reward_mode", ["harvest", "capped_harvest"])
+def test_parallel_and_serial_runs_have_identical_outputs(tmp_path, reward_mode):
     from cognitive_tools.payoff import run_experiment
 
     config = replace(small(), scenarios=("uniform_high",))
+    config = replace(config, reward_mode=reward_mode)
     a = run_experiment(config, tmp_path / "serial", workers=1)
     b = run_experiment(config, tmp_path / "parallel", workers=2)
     assert a["output_sha256"] == b["output_sha256"]

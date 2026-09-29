@@ -354,9 +354,10 @@ def run_experiment(config, destination, *, workers=1, purpose="pilot"):
     shards.mkdir()
     source_root = Path(__file__).resolve().parent
     protocol = asdict(config)
+    definition = reward_definition(config.reward_mode, config.metabolism)
     manifest = dict(
         schema="population_payoff_v2",
-        reward_definition=reward_definition(config.reward_mode, config.metabolism),
+        reward_definition=definition,
         status="running",
         purpose=purpose,
         config=protocol,
@@ -367,7 +368,11 @@ def run_experiment(config, destination, *, workers=1, purpose="pilot"):
             str(p.relative_to(source_root.parent)): sha256(p)
             for p in sorted(source_root.glob("*.py"))
         },
-        protocol_sha256=hashlib.sha256(json.dumps(protocol, sort_keys=True).encode()).hexdigest(),
+        protocol_sha256=hashlib.sha256(
+            json.dumps(
+                {"config": protocol, "reward_definition": definition}, sort_keys=True
+            ).encode()
+        ).hexdigest(),
         decision_family="four endpoint contrasts across all configured scenarios, separately per horizon/return",
         seed_semantics="landscape=seed+replicate; position=seed+100000+replicate; focal and permutation use SeedSequence domains 71001 and 71002",
         tail_bounds={

@@ -82,16 +82,21 @@ def load_run(directory):
     ):
         if sha256(directory / name) != manifest["output_sha256"].get(name):
             raise ValueError(f"Output hash mismatch: {name}")
-    protocol_hash = hashlib.sha256(
-        json.dumps(manifest["config"], sort_keys=True).encode()
-    ).hexdigest()
+    version2 = manifest["schema"] == "population_payoff_v2"
+    if version2 and "reward_mode" not in manifest["config"]:
+        raise ValueError("v2 requires an explicit reward_mode")
+    payload = (
+        {"config": manifest["config"], "reward_definition": manifest.get("reward_definition")}
+        if version2
+        else manifest["config"]
+    )
+    protocol_hash = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
     if protocol_hash != manifest["protocol_sha256"]:
         raise ValueError("Protocol hash mismatch")
     config = PayoffConfig(
         **{k: tuple(v) if isinstance(v, list) else v for k, v in manifest["config"].items()}
     )
     config.validate()
-    version2 = manifest["schema"] == "population_payoff_v2"
     if version2:
         if manifest.get("reward_definition") != reward_definition(
             config.reward_mode, config.metabolism
@@ -505,8 +510,8 @@ def analyze(directory, output, *, resamples=5000, seed=1729, figures=True):
         ("endpoint_summary", diagnostics),
     ]:
         write_csv(output / f"{name}.csv", rows)
+    normalized = []
     if config.reward_mode == "capped_harvest":
-        normalized = []
         for row in contrasts:
             h = row["horizon"]
             weight = (
@@ -546,14 +551,19 @@ def analyze(directory, output, *, resamples=5000, seed=1729, figures=True):
     report.extend(
         [
             "\n## Decision contrasts\n",
-            "| Ecology | H | Return | Contrast | Mean | Simultaneous 95% interval | Status |",
-            "|---|---:|---|---|---:|---|---|",
+            "| Ecology | H | Return | Contrast | Mean | Mean (% maximum utility) | Simultaneous 95% interval | Status |",
+            "|---|---:|---|---|---:|---:|---|---|",
         ]
     )
-    report.extend(
-        f"| {r['scenario']} | {r['horizon']} | {r['return']} | {r['contrast']} | {r['mean']:.6g} | [{r['low']:.6g}, {r['high']:.6g}] | {r['status']} |"
-        for r in contrasts
-    )
+    for index, r in enumerate(contrasts):
+        percent = f"{normalized[index]['mean_percent_maximum']:.4g}" if normalized else "—"
+        report.append(
+            f"| {r['scenario']} | {r['horizon']} | {r['return']} | {r['contrast']} | {r['mean']:.6g} | {percent} | [{r['low']:.6g}, {r['high']:.6g}] | {r['status']} |"
+        )
+    if normalized:
+        report.append(
+            "\n[Effect sizes and intervals as percentages of maximum capped utility](normalized_contrasts.csv)."
+        )
     report.extend(
         [
             "\n## Interpretation and limitations\n",

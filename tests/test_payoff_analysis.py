@@ -186,3 +186,35 @@ def test_capped_audit_and_legacy_schema(tmp_path):
     ).hexdigest()
     path.write_text(json.dumps(m))
     assert load_run(legacy)[1].reward_mode == "harvest"
+
+
+def test_v2_hash_covers_reward_definition_and_requires_explicit_mode(tmp_path):
+    import hashlib
+    import json
+
+    from cognitive_tools.payoff_analysis import load_run
+
+    cfg = PayoffConfig(
+        scenarios=("uniform_high",),
+        population=2,
+        width=1,
+        height=1,
+        replicates=2,
+        focal_count=1,
+        compositions=(0, 1),
+        horizons=(1,),
+    )
+    run_experiment(cfg, tmp_path / "run")
+    path = tmp_path / "run" / "manifest.json"
+    m = json.loads(path.read_text())
+
+    def protocol_hash():
+        payload = {key: m[key] for key in ("config", "reward_definition")}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+    assert m["protocol_sha256"] == protocol_hash()
+    del m["config"]["reward_mode"]
+    m["protocol_sha256"] = protocol_hash()
+    path.write_text(json.dumps(m))
+    with pytest.raises(ValueError, match="explicit"):
+        load_run(path.parent)
