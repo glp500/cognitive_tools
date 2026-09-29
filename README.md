@@ -193,5 +193,7 @@ results archive; its location and checksum are in
 - [Analysis](docs/analysis.md): input contract, pairing, intervals, and outputs.
 - [Population payoff validation](docs/payoff-validation.md): separate Schelling experiment and usage.
 - [Payoff validation results](docs/reviews/payoff-validation-results-2026-09-29.md): pilot and held-out findings.
+- [Incentive redesign review](docs/reviews/incentive-redesign-review-2026-09-29.md): cost comparison, development evidence, and proposed revision.
+- [Social-dilemma revision specification](docs/specs/social-dilemma-revision.md): proposed capped-harvest variant and validation gate; not implemented.
 - [Provenance](docs/provenance.md): scientific sources and implementation lineage.
 - [Bibliography](docs/references.bib): source citation metadata.

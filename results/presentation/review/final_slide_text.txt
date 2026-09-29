@@ -1,118 +1,146 @@
-How do local observations become collective outcomes?
-
-Can changing whom agents observe produce population-level
-patterns that sustain a shared renewable resource?
-
-
-  Individual observations                            Population-level patterns   Collective outcomes
-  What do my selected                                Who becomes visible?        Resource sustainability
-  information sources do?                            Which actions become        Welfare and inequality
-                                                     common?
+SLIDE 1
+How does ecology shape perception and collective organization?
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+1 / 7
+RQ1: When do local observations misrepresent population behavior?
+RQ2: How do ecology and observation rules organize the population?
 
 
-HYPOTHESIS
-
-Prediction-error-driven rewiring produces patterns that improve
-sustainability beyond the same amount of random network turnover.
-
-
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                         1/7
-One feedback loop connects agents, networks, and ecology
-Agents stay in place. Information links can change; resources do not travel along them.
+Local perception
+What do selected peers do?
+How representative is that view?
 
 
-
-                                                      Learn extraction                              Resource renewal
-                                                      Local resource state +                        Low or high extraction;
-                                                      observed peer behavior                        renewal and spatial coupling
-
+Collective organization
+Who becomes visible?
+Which actions become common?
 
 
+Consequences
+Resource condition
+Welfare and inequality
+FROZEN HYPOTHESES
+H1: perception varies with ecology. H2: local search concentrates visibility.
+H3: adaptive selection changes perception relative to matched random turnover.
 
-                                                      Replace a source                              Predict and compare
-    Observe previous actions
-    of a few selected sources                         If surprise is high:                          Expected vs. observed
-                                                      local or global search                        peer behavior → local
-          Schematic: arrows carry                                                                   surprise
-       information to the focal agent.
+SLIDE 2
+Population information feeds decisions about local resources
+Agents stay in place; information links change. Population accuracy may not imply local usefulness.
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+2 / 7
 
 
-                                                     Reward = own realized harvest. Sustainability is measured, not rewarded.
 
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                                                 2/7
-The key test holds the amount of rewiring constant
-Adaptive rewiring versus matched random turnover, within the same ecological condition.
 
+
+Observe previous actions
+of a few selected sources
+Schematic: arrows carry
+information to the focal agent.
+
+
+Learn extraction
+Local resource state +
+observed peer behavior
+
+
+Resource renewal
+Low or high extraction;
+renewal and spatial coupling
+
+
+Predict and compare
+Expected vs. observed
+peer behavior → local surprise
+
+
+Replace a source
+If surprise is high:
+local or global search
+Reward = own harvest. Welfare is measured separately; it does not enter the reward.
+
+SLIDE 3
+The full run separates ecology, search scope and observer selection
+27 conditions × 100 replicates = 2,700 condition-replicates · 64 agents per population
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+3 / 7
 Three reference conditions
-                                                                        R1 / R2 / R3 ↔ matched R0
- B0         Ecological learning only
-                                                                        Local / mixed / global search
- S1         Fixed random observation network                            Same event counts at every checkpoint
-                                                                        Different rule for which observers rewire
- S2         Fixed network with uneven visibility
+B0
+Ecological learning only
+S1
+Fixed random observation network
+S2
+Uneven visibility + varying attention
+
+R1 / R2 / R3   ↔   matched R0
+Local / mixed / global search
+Same rewiring event counts and scope
+Different selection of observers
+Uniform high
+Patchy high
+Split high / low
+Illustrative capacity maps · common scale 0–1
+3 ecologies × 9 observation rules
+100 replicates per condition
+5,000 training + 1,000 evaluation steps
+Outcomes: fresh reset, frozen policies + graphs
+
+SLIDE 4
+Observation rules change perception; ecology differences are small
+Final 1,000 training steps · all eight social treatments · means and 95% bootstrap intervals
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+4 / 7
+Adaptive selection lowers non-tie mismatch by 1.35–2.16 pp versus matched turnover.
+Raw error includes sampling: four random peers already imply 17.5–17.8 pp MAE. S2 also varies attention capacity.
+
+SLIDE 5
+Local search concentrates visibility, even under random turnover
+Collective organization = visibility concentration and prevalence of low-extraction behavior
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+5 / 7
+Local versus global search: +0.116–0.123 visibility Gini under adaptive rewiring.
+Matched random turnover produces a similar gap. All nine adaptive–matched extraction CIs include zero.
+100 replicates; final 1,000 training steps; pointwise 95% bootstrap CIs. “Local” means social-graph proximity.
+
+SLIDE 6
+Ecology changes welfare and inequality; adaptive benefits are inconsistent
+Absolute outcomes · 1,000-step fresh-reset evaluation · frozen policies and terminal networks
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+6 / 7
+Split versus uniform: welfare −9.5 to −11.9 pp; wealth Gini +0.169 to +0.175.
+Adaptive–matched welfare: only 1 of 9 pointwise CIs excludes zero. Split changes several ecological parameters together.
+Reset matters: mean reserve welfare is 72% after reset versus 26% in continuation. This is not long-run sustainability.
+
+SLIDE 7
+The next question is when information becomes useful for decisions
+Completed study: ecology → population perception and organization → material consequences
+COGNITIVE TOOLS  /  SUPERVISOR DATA ROUND  /  FULL RUN · SEPTEMBER 2026
+7 / 7
 
 
+What the run establishes
+Observation rules shift
+perception and concentration.
 
-                                                                        3 ecologies × 2 populations (32, 64)
-                                                                        10 replicates per condition
-                                                                        5,000 training + 1,000 evaluation steps
-                                                                        Fresh ecology; learned policies and graphs
-Uniform high                Patchy high              Split high / low   frozen
-Capacity maps · replicate 0 · common scale 0–1
-
-
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                                   3/7
-Local search concentrates attention—even with random turnover
-Population-level patterns during training · N = 64 · all three ecologies
+Ecology shifts welfare
+and wealth inequality.
 
 
+What remains unresolved
+Better population estimates
+do not consistently improve
+
+local decisions or welfare.
+The causal link is untested.
 
 
-Organization appears in both adaptive and matched-random networks.
-Lines: means of 10 replicates, unsmoothed; descriptive trends, not uncertainty intervals. N=32 companion supplied.
+One bounded next study
+One Harvest environment;
+fixed learner and attention.
 
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                                   4/7
-Adaptive rewiring has no clear general sustainability advantage
-Difference from matched random turnover · every ecology, search scope, and population
-
-
-
-
-15 of 18 intervals cross zero; the direction also changes across conditions.
-Right of zero = more resource under adaptive rewiring. Rows show search scope and population.
-10 paired replicates; 95% bootstrap intervals (2,000 resamples), exploratory and not multiplicity-adjusted.
-
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                            5/7
-A resource gain is not a complete welfare story
-Closer look: split high / low ecology · all six adaptive-versus-R0 comparisons
-
-
-
-
-Mixed search, N=64: resource +1.02 pp; reserve welfare +1.62 pp.
-Its wealth-inequality interval crosses zero. More resource does not establish a fairer outcome.
-Positive = more resource / welfare, but more inequality. Same 10 pairs and 95% bootstrap method as slide 5.
-
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                            6/7
-The project can stay focused on one micro-to-macro test
-Individual observation → population patterns → sustainability, welfare, and inequality
-
-
-
-  What the pilot shows                               What remains unresolved          What the next test needs
-  Local search changes                               Does the error trigger create    Specify the expected
-  who becomes visible.                               a distinct collective pattern?   population pattern.
-
-  Random turnover can produce                        Does that pattern improve        Keep matched R0 and
-  a similar concentration.                           resource outcomes?               replicate-level uncertainty.
-
-
-
-
+Informative versus shuffled
+signals; matched productivity.
 Feedback I want from you
-Is the question narrow enough?
-Is “collective organization” defined clearly enough to test?
-Which link in the mechanism needs the strongest evidence?
-
-COGNITIVE TOOLS / SUPERVISOR DATA ROUND / PILOT v1                                                                   7/7
-
+Are RQ1 and RQ2 clear, and do these measures capture collective organization?
+Should the next hypothesis target decision usefulness rather than global accuracy?
+Would SocialJax Commons Harvest justify migration, or should we retain this model?

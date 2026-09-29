@@ -1,235 +1,158 @@
-# Population payoff validation implementation plan
+# Social-dilemma revision implementation plan
 
-Status: implemented and verified. Pilot and held-out endpoint validation completed.
-See docs/reviews/payoff-validation-results-2026-09-29.md for findings and the
-prospective endpoint-gate refinement of the provisional full main run.
-Date: 2026-09-29.
+Status: proposed, not implemented. Date: 2026-09-29.
 
-## Objective and claim boundary
+The requested review and specification are complete. The implementation below
+is future work. The completed earlier validation plan is preserved in
+[the archive](archive/payoff-validation-plan-2026-09-29.md).
 
-Measure whether specified policy pairs exhibit a population social dilemma in
-the existing renewable-resource environment. A result applies to the tested
-policies, ecology, initial-state distribution, population, horizon and discount;
-failure does not prove that no other policy pair can constitute a dilemma.
-Keep the completed campaign and its frozen analysis intact.
+[Evidence and alternatives](../docs/reviews/incentive-redesign-review-2026-09-29.md) ·
+[Specification](../docs/specs/social-dilemma-revision.md) · [Checklist](todo.md)
 
-References:
-- Leibo et al., definitions of sequential social dilemmas:
-  https://arxiv.org/html/1702.03037
-- SocialJax, population incentive conditions and Schelling diagrams:
-  https://arxiv.org/html/2503.14576v3 (sections 3.1 and 4.3).
+## Decision and cost
 
-## Protocol
+Retain the codebase and introduce an opt-in `capped_harvest` utility:
+`min(actual per-step harvest, metabolism_rate)`, with cap 0.002 for this study.
+The default remains gross harvest. Development results support a fear-driven
+population dilemma in all three ecologies under both gamma=0.95 and raw H=1000
+returns. They justify fresh validation; they do not establish a confirmed result.
 
-### Policies and environments
+Budget 4–8 focused engineering hours through the independent validation slice,
+then another 8–16 hours to integrate learning and compatibility if it passes.
+These estimates exclude a new full learning campaign and scientific revisions.
+The minimal confirmation gate is 3,000 episodes. The development probe took
+121.6 seconds for 600 episodes with 14 workers and lighter output; allow roughly
+10–20 minutes for the gate including full recording and analysis, then measure
+actual throughput. The optional seven-composition run is 15,000 episodes;
+do not purchase that compute before the gate warrants it.
 
-Initial policy pair: C = always-low; D = always-high. These are candidate labels,
-not an assertion that low extraction is already validated cooperation.
-Evaluate N=64 in uniform_high, patchy_high and split_high_low with the campaign
-ecology, actions, placement and reset rules. No training or adaptive rewiring.
-Fixed policies ignore social observations, so repeating all network treatments
-would add no information for this first pair.
+## Dependency order
 
-Subsequent candidate policies may use the existing three ecological bins.
-There are only 2^3 = 8 deterministic binary policies on this state space.
-Screen these on development seeds for sustainable collective returns and
-behavioral restraint; fix selected policy definitions before held-out validation.
-This explores available behavior without changing the action space or ecology.
-Socially conditional or learned policies are a later extension with specified
-frozen networks, previous-action initialization and frozen policy artifacts.
+```text
+Reward contract (1) -> Paired runner/accounting (2) -> Audit/analysis (3)
+                                                     |
+                                         Pilot and held-out gate (4)
+                                                     |
+                                       only after scientific support
+                                                     |
+Learning/evaluation utility (5) -> Compatibility and R0 pairing (6)
+                                                     |
+                                    New-study smoke/pilot recipe (7)
+```
 
-### Paired focal-agent design
+Stages 1–4 deliver the separate validation experiment. Stages 5–7 adopt it into
+the research workflow. No framework migration, learner rewrite, new action or
+ecological refactor is required.
 
-Let k be the number of cooperative OTHER agents, from 0 through 63.
-For each independent ecological replicate, sample a uniform subset of focal
-agents without replacement. Begin with eight focal agents per replicate.
-For each focal agent, draw a seeded permutation of the other 63 agents; the
-first k use C and the remainder D. This nested assignment gives a consistent
-composition sequence. Repeat assignments if pilot assignment variance is large.
+## 1. Reward mode with physical equivalence
 
-Run two independent environment instances from identical complete initial states:
-one with the focal agent using C and one with it using D. Hold the others'
-policy assignments fixed; their realized actions can respond to changed states
-when conditional policies are introduced. Never hold future ecology fixed.
-Use matched policy randomness if stochastic policies are added later.
+Files: `cognitive_tools/env.py`, new `tests/test_reward_modes.py`.
+Scope: small, two files. Dependencies: none.
 
-Record C(k) and D(k), the focal agent's expected return in these two branches.
-Stratified regional estimates are diagnostics; population averages retain the
-actual population weights. Do not compare C and D group means from unequal
-locations as a substitute for paired unilateral comparisons.
+- Add validated `reward_mode`, default `harvest`; capped mode uses positive finite metabolism.
+- Keep `infos.harvested` physical; expose utility and uncredited surplus separately.
+- Verify fixed actions give identical resources, wealth, energy, observations and randomness in both modes; hand-check cap/scarcity examples and full-energy/zero-harvest behavior.
 
-Compute full-population all-C and all-D endpoints separately, using every agent,
-and retain per-agent and region results. These endpoints estimate the collective
-return gap more precisely than a small focal subsample.
+Verification: `python -m pytest -q tests/test_reward_modes.py tests/test_ecology.py`.
+Checkpoint: the physical model and legacy reward are reproduced exactly.
 
-### Payoff and horizon
+## 2. Auditable independent utility rollouts
 
-Accumulate each per-step reward returned by EcoEnv.step, not time-averaged wealth.
-Store raw cumulative harvest and discounted harvest, plus resource/reserve
-diagnostics. Verify reward sums equal final minus initial wealth.
+Files: `cognitive_tools/payoff.py`, `tests/test_payoff.py`.
+Scope: small, two files. Dependency: 1.
 
-Primary incentive estimand: sum from t=0 to H-1 of 0.95^t * reward_t,
-with H=1000, matching the current learner discount. Also report the H=1000
-undiscounted return to reproduce the existing controls. Keep verdicts separate.
-The discount tail bound uses maximum per-step reward 0.020 in the current model:
-0.020 * gamma^H / (1-gamma). Record the configured bound in outputs.
+- Forward reward mode; accumulate actual utility, gross harvest and uncredited surplus separately for both returns and late-window rates.
+- Write explicit v2 reward semantics, hash and mode-specific tail bounds; retain paired reset/assignment behavior and overwrite refusal.
+- Test per-step capping versus invalid aggregate capping, wealth/gross equality, utility-plus-surplus accounting, discount timing and serial/parallel equality.
 
-Prospective horizon diagnostics: cumulative harvest at H=5000 and H=20000,
-and late-window harvest rates and resource trends. These are finite-horizon
-diagnostics, not proof of an infinite-horizon equilibrium. A longer rollout
-alone cannot fix short discounting. Additional discounts are separate estimands.
-Initial evaluation uses fresh resets. A later continuation analysis must use a
-named saved-state distribution and clone the same state for both branches.
+Verification: `python -m pytest -q tests/test_payoff.py tests/test_reward_modes.py`.
 
-### Population conditions and verdicts
+## 3. Reward-aware audit and Schelling outputs
 
-Report these explicit contrasts for each ecology and return definition:
+Files: `cognitive_tools/payoff_analysis.py`, `tests/test_payoff_analysis.py`.
+Scope: small, two files. Dependency: 2.
 
-- Collective advantage G = mean individual all-C return minus all-D return.
-- Exploitation loss E = C(63) - C(0).
-- Greed at the cooperative endpoint = D(63) - C(63).
-- Fear at the defective endpoint = D(0) - C(0).
-- The entire unilateral incentive curve Delta(k) = D(k) - C(k).
+- Read both original v1 harvest and v2 utility runs, checking stored hashes before defaults; audit separate accounts and reject malformed modes/data.
+- Label utility and harvest distinctly, reuse population contrasts/block inference, and handle numerical-zero ties at 1e-12.
+- Verify synthetic dilemmas, no-conflict cases, legacy results and tampered accounting; inspect figures.
 
-The proposed endpoint validation requires G>0, E>0 and at least one of greed>0
-or fear>0. This is a sufficient operational population check, not an exhaustive
-test of all mixed-policy incentive patterns. Inspect near-endpoint values and
-report interior-only conflict separately. Do not impose the two-player
-2R>T+S condition on population averages without deriving its interpretation.
+Verification: `python -m pytest -q tests/test_payoff_analysis.py tests/test_payoff.py`.
+Checkpoint: replay the development probe and compare its per-replicate results;
+run the existing full test suite before new scientific runs.
 
-Use three verdicts: supported, contradicted for the tested contrasts, and
-inconclusive. A confidence interval overlapping zero is inconclusive, not proof
-of absence. Strict theoretical inequalities use zero; any practical minimum
-effect is separately justified and fixed before confirmatory analysis.
+## 4. Separate prospective validation
 
-Average nested focal/assignment observations within independent replicate first.
-Bootstrap whole replicate blocks, preserving C/D and k pairing. Construct
-simultaneous confidence intervals over the prespecified decision contrasts and
-ecologies for each claim family; show pointwise descriptive curve intervals
-only when clearly labeled. Freeze the family before inspecting final results.
-For an OR condition, support requires at least one positive simultaneous lower
-bound; evidence against requires both branches to be ruled out. Report individual
-condition verdicts, never conceal mixed outcomes in a single overall label.
+Files: new `configs/payoff/capped_pilot.json`, `capped_gate.json`,
+`capped_curves.json`; `docs/payoff-validation.md`; new
+`docs/reviews/capped-harvest-validation-protocol.md`.
+Scope: medium, five files. Dependency: 3.
 
-## Implementation tasks
+- Use development indices 2100–2119 for four-focal/seven-composition pilot; freeze candidate and protocol before indices 3000–3099.
+- Run 100-replicate/four-focal held-out endpoints. Require G, E and at least one endpoint conflict branch in all ecologies, with separate supported verdicts for both returns.
+- Publish every condition and its interval. Preserve original results. Add full held-out interior curves only if needed after gate support; label exploratory curves explicitly.
 
-### 1. Paired endpoint runner (medium)
+Verification: execute the commands in the specification, inspect completeness,
+source/config hashes, figure labels and simultaneous intervals. Publish outcomes
+in the run's generated report; a later tracked result review can be a separate
+small documentation task.
 
-Files: cognitive_tools/payoff.py, tests/test_payoff.py, docs/payoff-validation.md.
-Reuse EcoEnv and scenarios.build_environment_maps; mirror recorded seed/settings
-semantics. Keep the large training runner untouched where possible. Define a
-small validated payoff configuration and a per-agent policy mapping.
+Checkpoint: **a functioning runner is not a scientific pass**. If this gate is
+inconclusive or contradicted, stop adoption and apply the diagnostic rules below.
 
-Acceptance:
-- CLI runs all-C, all-D, one focal D among C, and one focal C among D.
-- Both branches share positions/maps/stocks and cannot mutate each other.
-- Per-step returns, wealth deltas and endpoint controls agree.
+## 5. Learning and evaluation use the validated utility
 
-Verification: deterministic replay and hand-calculated short rollout tests;
-reproduce selected saved 1000-step control rows using their original seeds.
-Dependencies: none.
+Files: `cognitive_tools/experiment.py`, `tests/test_experiment_lifecycle.py`,
+`tests/test_reward_modes.py`, `docs/experiment.md`.
+Scope: medium, four files. Dependencies: 4, supported gate.
 
-### 2. Composition sweep and auditable data (medium)
+- Add CLI/config reward identity and validation before early returns; forward through training, fresh and carried environment construction.
+- Accumulate actual evaluation rewards rather than discard them; discount from the first evaluation step, excluding training wealth.
+- Verify real Q updates, fixed controls and both evaluation starts use the same reward; retain physical outcomes separately.
 
-Files: cognitive_tools/payoff.py, tests/test_payoff.py, docs/payoff-validation.md.
-Add focal selection, nested co-player permutations and composition sweeps.
-Write per-agent rows, paired focal rows, episode summaries and manifest.
-Manifest records revision, dirty status/source hashes, settings, seeds, policy
-definitions, horizons, discounts, sampled focal IDs and assignment identities.
-Use a separate results/payoff_validation/<run_name>/ directory; refuse overwrite.
+Verification: targeted lifecycle/reward tests, then a tiny new B0 run with the
+proposed `--reward-mode capped_harvest` flag. Do not reuse old learned Q tables.
 
-Acceptance:
-- k counts OTHER cooperators exactly; focal switching never changes their IDs.
-- All return definitions derive from the same rollout, with no retraining.
-- Missing pairs, duplicate keys and incomplete runs are detected.
+## 6. Prevent cross-reward pooling, resume and schedule reuse
 
-Verification: k=0/63 count tests, heterogeneous-location pairing test, replay and
-reward-conservation checks. Dependencies: task 1.
+Files: `cognitive_tools/analysis.py`, `cognitive_tools/experiment.py`,
+`tests/test_social_analysis.py`, `tests/test_parallel_experiment.py`,
+`tests/test_core_social_controls.py`.
+Scope: medium, five files. Dependency: 5.
 
-Checkpoint: runner semantics verified before any full sweep.
+- Canonicalize old missing reward identity to harvest only; compare new explicit reward semantics in treatment compatibility and resume.
+- Record/check identity in adaptive and matched-R0 schedules; reject an old-harvest schedule for capped learning.
+- Expose utility summaries under the new study while preserving original focused metrics and gross wealth Gini.
 
-### 3. Analysis and Schelling figures (medium)
+Verification: focused compatibility/schedule/resume tests plus full existing
+suite; run a tiny adaptive/R0 pair and demonstrate mismatch rejection.
+Checkpoint: lint/format, tests and complete new-study lifecycle pass.
 
-Files: cognitive_tools/payoff_analysis.py, tests/test_payoff_analysis.py,
-docs/payoff-validation.md.
-Produce paired_returns.csv, contrasts.csv, validation_report.md, and PNG/PDF/SVG
-figures: C(k)/D(k), Delta(k) with zero line, and all-C/all-D collective outcomes.
-Keep resource/reserve diagnostics on separate axes from harvest returns.
-Do not call a weighted focal curve the population welfare curve: full population
-returns must come from recorded episode outcomes with explicit composition.
+## 7. New-study recipe and limited learning pilot
 
-Acceptance:
-- Block resampling preserves paired dependence and weights replicates equally.
-- Figures show uncertainty, policy/return definitions and scenario labels.
-- Synthetic known-dilemma, no-collective-benefit, no-conflict and inconclusive
-  fixtures produce correct condition-specific verdicts.
+Files: new `scripts/run_capped_campaign.sh`, new `docs/capped-harvest-study.md`,
+`README.md` (link only).
+Scope: medium, three files. Dependency: 6.
 
-Verification: hand-calculated synthetic fixtures, malformed-data rejection, and
-visual inspection of exported figures. Dependencies: task 2.
+- Provide a bounded recipe with explicit capped reward, separate run names and newly generated R0 schedules; reuse existing CLI rather than fork the engine.
+- Start with B0, S1 and one adaptive/matched-R0 pair; decide the broader treatment grid from the research question rather than automatically repeating 27 conditions.
+- Document that policy-level dilemma validation, learning behavior and information benefits are separate results. Record pilot cost and feasibility before a full campaign decision.
 
-### 4. Pilot and fixed validation run (small configuration/documentation task)
+Verification: execute a smoke recipe, verify its manifest/pairing and utility
+outputs, then document the prospective learning pilot. A full campaign is a
+separate experiment decision, not part of this planning deliverable.
 
-Pilot: 10 independent seeds, 2 focal agents, k={0,1,16,32,48,62,63}, three
-ecologies, H=1000. Measure throughput and variance components.
-Provisional main run: 100 independent seeds, 8 focal agents,
-k={0,1,8,16,24,32,40,48,56,62,63}. Finalize precision target and computational
-budget from pilot variance/runtime; do not choose sample size by significance.
-Long-horizon diagnostics begin with endpoints, then expand if warranted.
-Use disjoint development/held-out seeds for any policy or parameter selection.
+## Failure diagnosis and revision rules
 
-Acceptance:
-- Protocol, decision family and sample size are frozen before held-out results.
-- Baseline and any revised environment get distinct immutable run identities.
-- Every claimed result identifies its policy, ecology, horizon and utility.
+| Observation | Next development action |
+|---|---|
+| G fails | Locate unmet all-C demand by occupancy and region; inspect whether preserved stock delivers current utility. Do not swap in reserve welfare as payoff. |
+| E fails | Inspect lone restrained agents' opportunities, starting states and paired assignments; retain the actual contrast. |
+| Both conflict branches fail | Check scarce allocation and alternative fixed policies. The tested pair may be common-interest; do not force a social-dilemma label. |
+| Wide intervals | Use development variance to propose a new fixed replication plan; do not repeatedly add seeds until significance appears. |
+| Only one ecology or return passes | Narrow the supported claim explicitly or redesign on development data. The requested all-three/both-return adoption gate has not passed. |
+| Utility interpretation is unacceptable | Stop the capped route; use the bounded gross-harvest policy/ecology fallback in the review. |
 
-Verification: manifest/data completeness audit, endpoint reproduction, focused
-tests plus existing environment tests, and report review. Dependencies: task 3.
-
-Checkpoint: inspect scientific findings before proposing a model revision.
-
-## Failure diagnosis and prospective revision
-
-1. G fails: determine whether constant low is an inefficient policy or whether
-   depletion losses occur beyond the payoff horizon. Screen the eight existing
-   ecological-bin policies on development seeds. Diagnose per-step harvest,
-   resource stocks and regrowth. Do not relabel reserve welfare as harvest utility.
-2. G passes but unilateral conflict is absent: these policies may form a common-
-   interest problem. Test alternative exploitative policies before changing
-   mechanics. If theory calls for a commons dilemma, consider greater sharing
-   of renewable patches or competition exposure; quantify private gains and
-   harms to others separately from self-depletion.
-3. Depletion occurs even under restraint: compare demand against local net
-   regeneration and occupancy. Revise extraction scale, recovery or the action
-   set only when justified. A zero-harvest action permits resting but is a new
-   model. Greater coupling is not guaranteed to strengthen a dilemma: it can
-   rescue depleted cells as well as spread depletion.
-4. Long-run benefit exists but discounted benefit fails: report horizon dependence.
-   A larger gamma changes agent preferences and requires a new learning campaign;
-   a longer simulation alone does not change those preferences.
-5. Only reserve welfare favors restraint: decide whether welfare is truly the
-   intended agent utility. A survival/need-sensitive reward is a substantive
-   alternative objective, to be justified and validated as a new experiment.
-6. Effects depend on ecological region: report asymmetric incentives; a positive
-   pooled gap does not mean every type benefits. Revise or narrow the claim.
-7. Wide intervals: improve independent replication or focal/assignment coverage
-   according to the dominant variance component before modifying mechanics.
-
-For any revision, change one mechanism at a time; use a bounded, theoretically
-motivated development parameter sweep, then freeze a candidate and evaluate on
-held-out seeds. Record failures. Never add a direct cooperation bonus solely to
-force positive results: it changes the incentives and can remove the conflict.
-
-A useful ecological diagnostic is local net growth g(R)=rR(q-R/K), maximized
-at R=qK/2 with g_max=rKq^2/4 for an isolated cell before clipping. For uniform-high
-parameters this is about 0.00459 per step per cell. Current low requests are
-0.002 per occupant and high requests 0.020. This suggests plausible restraint
-and over-extraction regimes but is not a proof: co-location, post-harvest update
-ordering and spatial coupling determine actual sustainable yields.
-
-## Scope and limitations
-
-This plan validates an environmental incentive structure; it does not establish
-learning convergence, equilibrium, all-policy robustness, or that social
-information improves decisions. Those remain separate research questions.
-No migration is needed to run this analysis. Preserve the paired-policy protocol
-if a subsequent study moves to SocialJax or Melting Pot.
+Any new candidate after seeing confirmation data needs a new protocol and unused
+confirmation seeds. Record failures. Larger extraction, stronger coupling, or
+a direct high-action cost is not guaranteed to preserve both collective benefit
+and unilateral conflict.

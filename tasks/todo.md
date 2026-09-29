@@ -1,23 +1,43 @@
-# Population payoff validation tasks
+# Social-dilemma revision tasks
 
-Implementation, pilot and held-out endpoint validation completed.
+Status: review and proposal complete; implementation not started.
 
-- [x] 1. Implement and test paired endpoint runner and payoff specification.
-- [x] 2. Add composition sweep, independent seed streams and auditable outputs.
-- [x] Verify pairing, reward conservation and six saved-control reproductions.
-- [x] 3. Implement block-bootstrap contrasts, verdicts and Schelling figures.
-- [x] Verify synthetic incentive fixtures and inspect exported figures.
-- [x] 4. Run pilot; document precision/runtime and freeze the held-out protocol.
-- [x] Run 100-seed held-out endpoint validation and report condition-specific findings.
-- [x] Diagnose the failed collective-advantage condition without changing incentives.
+[Plan](plan.md) · [Specification](../docs/specs/social-dilemma-revision.md) ·
+[Evidence](../docs/reviews/incentive-redesign-review-2026-09-29.md)
 
-The provisional 11-composition/eight-focal main sweep was replaced prospectively
-by the endpoint gate described in
-[the protocol](../docs/reviews/payoff-validation-protocol-2026-09-29.md).
-The full sweep configuration remains available; it was not executed.
-Model revision and policy screening are follow-up research, not incomplete
-implementation tasks.
+## Completed for this request
 
-[Results](../docs/reviews/payoff-validation-results-2026-09-29.md) ·
-[Usage](../docs/payoff-validation.md) ·
-[Notion plan](https://app.notion.com/p/3ea91786f46281db8d8ec3cac9e93b75)
+- [x] Review the ecology, actions, allocation, utility, learning, networks, evaluation, analysis and compatibility paths.
+- [x] Diagnose the failed collective-harvest condition from the original results.
+- [x] Screen existing policies, selected parameter changes, capped utility and an effort-cost alternative on development data.
+- [x] Run a 20-replicate/four-focal capped-utility feasibility check across all three ecologies.
+- [x] Write the reward contract, claim boundary, prospective validation protocol, cost comparison and ordered implementation tasks.
+- [x] Preserve the previous completed validation plan and task history in `tasks/archive/`.
+
+## Validation-only implementation: estimated 4–8 focused hours
+
+- [ ] 1. Add opt-in capped reward to EcoEnv and prove physical trajectory equivalence.
+- [ ] 2. Extend paired rollouts with separate gross-harvest and utility accounts, explicit reward identity and v2 records.
+- [ ] 3. Support original v1 and new v2 audits, correct plot labels and numerical-zero ties.
+- [ ] Checkpoint: replay development results; run focused and full tests and Ruff checks.
+- [ ] 4a. Run the development composition pilot on indices 2100–2119.
+- [ ] 4b. Freeze the candidate/protocol, 100 held-out replicates and four focal agents before using indices 3000–3099.
+- [ ] 4c. Run the separate held-out endpoint experiment and publish condition-specific findings, including failures.
+- [ ] Checkpoint: require the stated population criterion in all three ecologies for each of the two returns before adoption.
+- [ ] Optional: extend to the prespecified held-out interior compositions; do not call reused endpoints independent confirmation.
+
+## Learning integration, conditional on validation: another 8–16 hours
+
+- [ ] 5. Forward reward identity through every learning/evaluation environment and record actual evaluation utility.
+- [ ] 6. Reject mismatched reward modes in analysis, resume and adaptive/R0 schedules; preserve legacy harvest behavior.
+- [ ] Checkpoint: demonstrate B0, S1 and adaptive/matched-R0 smoke lifecycles, with lint/format and full tests passing.
+- [ ] 7. Write a separate capped-study recipe and bounded learning pilot protocol; retain the original frozen campaign.
+
+Scientific success is not an implementation checkbox: if the held-out gate
+fails, stop adoption and use the plan's diagnostic branch. No production reward
+or campaign change has been made in this planning pass.
+
+Previous completed work:
+[validation plan](archive/payoff-validation-plan-2026-09-29.md) ·
+[validation checklist](archive/payoff-validation-todo-2026-09-29.md) ·
+[original findings](../docs/reviews/payoff-validation-results-2026-09-29.md).
