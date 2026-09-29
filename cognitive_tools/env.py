@@ -7,6 +7,20 @@ from pettingzoo import ParallelEnv
 from . import model
 
 
+def reward_definition(mode="harvest", metabolism=0.002):
+    """Canonical reward identity shared by runs, audits and matched controls."""
+    if mode not in ("harvest", "capped_harvest"):
+        raise ValueError(f"Unknown reward mode: {mode}")
+    if mode == "capped_harvest" and (not np.isfinite(metabolism) or metabolism <= 0):
+        raise ValueError("Capped harvest requires finite positive metabolism")
+    return {
+        "mode": mode,
+        "version": 1,
+        "cap": float(metabolism) if mode == "capped_harvest" else None,
+        "units": "harvest units",
+    }
+
+
 class EcoEnv(ParallelEnv):
     """
     PettingZoo wrapper for the stationary common-pool resource model.
@@ -36,7 +50,10 @@ class EcoEnv(ParallelEnv):
         energy_capacity: float = 1.0,
         initial_resource_fraction: float = 0.50,
         capacity_map: np.ndarray | None = None,
+        reward_mode: str = "harvest",
     ):
+        self.reward_definition = reward_definition(reward_mode, metabolism_rate)
+        self.reward_mode = reward_mode
         self.width = width
         self.height = height
         self.n_agents = n_agents
@@ -130,8 +147,15 @@ class EcoEnv(ParallelEnv):
         self.model.actions = actions
         self.model.step()
 
-        rewards = {
+        harvested = {
             name: (self.model.by_name[name].wealth - wealth_before[name]) for name in current_agents
+        }
+
+        rewards = {
+            name: min(value, self.metabolism_rate)
+            if self.reward_mode == "capped_harvest"
+            else value
+            for name, value in harvested.items()
         }
 
         terminations = {name: False for name in current_agents}
@@ -149,7 +173,9 @@ class EcoEnv(ParallelEnv):
 
             infos[name] = {
                 "action_name": ("low" if actions[name] == model.LOW_EXTRACT else "high"),
-                "harvested": float(rewards[name]),
+                "harvested": float(harvested[name]),
+                "utility_reward": float(rewards[name]),
+                "uncredited_harvest": float(harvested[name] - rewards[name]),
                 "resource_before": resource_before,
                 "capacity": capacity,
                 "resource_fraction_before": (resource_before / max(capacity, 1e-12)),
