@@ -397,12 +397,13 @@ def summarize(config, pairs, episodes, *, resamples, seed):
     return curves, contrasts, verdicts, blocks, diagnostics
 
 
-def make_figures(config, curves, diagnostics, output):
+def make_figures(config, curves, diagnostics, output, *, purpose="diagnostic"):
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    purpose_label = "Exploratory pilot" if purpose == "pilot" else purpose.capitalize()
     payoff_label = "harvest" if config.reward_mode == "harvest" else "capped-harvest utility"
     for horizon in config.horizons:
         for metric in ("sum", "discounted"):
@@ -447,7 +448,7 @@ def make_figures(config, curves, diagnostics, output):
             intervals = "Pointwise 95% replicate-bootstrap intervals"
             if len(config.compositions) == 2:
                 intervals += "; endpoints only, interior unmeasured"
-            fig.suptitle(title + "\n" + intervals)
+            fig.suptitle(title + "\n" + purpose_label + "; " + intervals)
             fig.tight_layout(rect=(0, 0, 1, 0.91))
             for extension in ("png", "pdf", "svg"):
                 fig.savefig(output / f"schelling_{metric}_{horizon}.{extension}", dpi=160)
@@ -481,7 +482,9 @@ def make_figures(config, curves, diagnostics, output):
             )
             ax.set_title(title)
             ax.legend()
-        fig.suptitle(f"Homogeneous endpoints, H={horizon}; descriptive replicate means")
+        fig.suptitle(
+            f"{purpose_label}: homogeneous endpoints, H={horizon}; descriptive replicate means"
+        )
         fig.tight_layout()
         for extension in ("png", "pdf", "svg"):
             fig.savefig(output / f"endpoints_{horizon}.{extension}", dpi=160)
@@ -532,7 +535,7 @@ def analyze(directory, output, *, resamples=5000, seed=1729, figures=True):
             )
         write_csv(output / "normalized_contrasts.csv", normalized)
     if figures:
-        make_figures(config, curves, diagnostics, output)
+        make_figures(config, curves, diagnostics, output, purpose=manifest["purpose"])
     report = [
         "# Population payoff validation",
         f"Run purpose: **{manifest['purpose']}**. Policies: C={config.policy_c}, D={config.policy_d} (scarce/moderate/abundant).",
