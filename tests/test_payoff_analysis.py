@@ -160,6 +160,11 @@ def test_capped_audit_and_legacy_schema(tmp_path):
     run = tmp_path / "capped"
     run_experiment(cfg, run)
     load_run(run)
+    analyze(run, tmp_path / "capped_analysis", resamples=200, figures=False)
+    normalized = list(
+        csv.DictReader((tmp_path / "capped_analysis" / "normalized_contrasts.csv").open())
+    )
+    assert float(normalized[0]["maximum_utility"]) == pytest.approx(0.004)
     path = run / "agent_returns.csv"
     rows = list(csv.DictReader(path.open()))
     rows[0]["uncredited_harvest_sum"] = "100"

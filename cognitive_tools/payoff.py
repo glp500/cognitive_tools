@@ -1,4 +1,4 @@
-"""Independent, paired population-payoff experiment (no training or reward changes)."""
+"""Independent, paired population-payoff experiment with explicit reward semantics."""
 
 from __future__ import annotations
 

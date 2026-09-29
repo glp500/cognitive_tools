@@ -505,6 +505,27 @@ def analyze(directory, output, *, resamples=5000, seed=1729, figures=True):
         ("endpoint_summary", diagnostics),
     ]:
         write_csv(output / f"{name}.csv", rows)
+    if config.reward_mode == "capped_harvest":
+        normalized = []
+        for row in contrasts:
+            h = row["horizon"]
+            weight = (
+                h
+                if row["return"] == "sum" or config.gamma == 1
+                else (1 - config.gamma**h) / (1 - config.gamma)
+            )
+            maximum = config.metabolism * weight
+            normalized.append(
+                {
+                    **row,
+                    "maximum_utility": maximum,
+                    **{
+                        f"{field}_percent_maximum": 100 * row[field] / maximum
+                        for field in ("mean", "low", "high")
+                    },
+                }
+            )
+        write_csv(output / "normalized_contrasts.csv", normalized)
     if figures:
         make_figures(config, curves, diagnostics, output)
     report = [
