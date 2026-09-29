@@ -11,6 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
+from .env import reward_definition
 from .payoff import PayoffConfig, assignment, sha256, write_csv
 
 CONTRASTS = ("collective", "exploitation", "greed", "fear")
@@ -41,9 +42,9 @@ def simultaneous_intervals(values, *, resamples=5000, seed=1729):
 
 
 def condition_status(low, high):
-    if low > 0:
+    if low > 1e-12:
         return "supported"
-    if high <= 0:
+    if high <= 1e-12:
         return "contradicted"
     return "inconclusive"
 
@@ -68,8 +69,11 @@ def load_run(directory):
     """Verify hashes, exact coverage, assignment semantics and payoff accounting."""
     directory = Path(directory)
     manifest = json.loads((directory / "manifest.json").read_text())
-    if manifest.get("schema") != "population_payoff_v1" or manifest.get("status") != "complete":
-        raise ValueError("Require a complete population_payoff_v1 experiment")
+    if (
+        manifest.get("schema") not in ("population_payoff_v1", "population_payoff_v2")
+        or manifest.get("status") != "complete"
+    ):
+        raise ValueError("Require a complete population_payoff_v1/v2 experiment")
     for name in (
         "paired_returns.csv",
         "episode_summary.csv",
@@ -87,6 +91,14 @@ def load_run(directory):
         **{k: tuple(v) if isinstance(v, list) else v for k, v in manifest["config"].items()}
     )
     config.validate()
+    version2 = manifest["schema"] == "population_payoff_v2"
+    if version2:
+        if manifest.get("reward_definition") != reward_definition(
+            config.reward_mode, config.metabolism
+        ):
+            raise ValueError("Invalid reward definition")
+    elif config.reward_mode != "harvest":
+        raise ValueError("Legacy schema only supports harvest reward")
     if config.replicates < 2:
         raise ValueError("At least two independent replicates required for inference")
     pairs = read_csv(directory / "paired_returns.csv")
@@ -153,6 +165,7 @@ def load_run(directory):
     # Stream large per-agent tables; keep only aggregate accounting and focal lookups.
     seen = defaultdict(set)
     sums = defaultdict(lambda: np.zeros(2))
+    gross_sums = defaultdict(lambda: np.zeros(2))
     focal_returns = {}
     positions = {}
     with (directory / "agent_returns.csv").open(newline="") as handle:
@@ -178,7 +191,28 @@ def load_run(directory):
             if row["policy"] != label:
                 raise ValueError("Incorrect policy assignment")
             values = np.array([float(row["return_sum"]), float(row["return_discounted"])])
-            if not np.isfinite(values).all() or not np.isclose(
+            if version2:
+                gross = np.array([float(row[f"harvest_{m}"]) for m in ("sum", "discounted")])
+                surplus = np.array(
+                    [float(row[f"uncredited_harvest_{m}"]) for m in ("sum", "discounted")]
+                )
+                if (
+                    not np.isfinite([*values, *gross, *surplus]).all()
+                    or min(*values, *gross, *surplus) < -1e-12
+                    or not np.allclose(values + surplus, gross, rtol=1e-10, atol=1e-12)
+                    or not np.isclose(gross[0], float(row["wealth_delta"]), rtol=1e-10, atol=1e-12)
+                ):
+                    raise ValueError("Invalid utility/harvest accounting")
+                if config.reward_mode == "harvest":
+                    if not np.allclose(values, gross, rtol=1e-10, atol=1e-12):
+                        raise ValueError("Invalid harvest-mode accounting")
+                else:
+                    h = key[-1]
+                    weight = h if config.gamma == 1 else (1 - config.gamma**h) / (1 - config.gamma)
+                    if np.any(values > config.metabolism * np.array([h, weight]) + 1e-12):
+                        raise ValueError("Invalid capped reward accounting")
+                gross_sums[key] += gross
+            elif not np.isfinite(values).all() or not np.isclose(
                 values[0], float(row["wealth_delta"]), atol=1e-12
             ):
                 raise ValueError("Invalid agent reward accounting")
@@ -191,6 +225,13 @@ def load_run(directory):
         reported = [float(row["mean_return_sum"]), float(row["mean_return_discounted"])]
         if not np.allclose(sums[key] / config.population, reported, atol=1e-12):
             raise ValueError("Episode means do not match agent returns")
+        if version2 and not np.allclose(
+            gross_sums[key] / config.population,
+            [float(row["mean_harvest_sum"]), float(row["mean_harvest_discounted"])],
+            rtol=1e-10,
+            atol=1e-12,
+        ):
+            raise ValueError("Episode harvest means do not match agent accounting")
     for key, row in pair_map.items():
         for b in ("c", "d"):
             values = focal_returns[(*key[:2], row[f"{b}_episode"], key[-1], key[2])]
@@ -357,6 +398,7 @@ def make_figures(config, curves, diagnostics, output):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    payoff_label = "harvest" if config.reward_mode == "harvest" else "capped-harvest utility"
     for horizon in config.horizons:
         for metric in ("sum", "discounted"):
             fig, axes = plt.subplots(
@@ -386,7 +428,7 @@ def make_figures(config, curves, diagnostics, output):
                 draw(axes[0, column], "c", "Focal C", "#267c5b")
                 draw(axes[0, column], "d", "Focal D", "#c35d36")
                 axes[0, column].set_title(SCENARIO_LABELS.get(scenario, scenario))
-                axes[0, column].set_ylabel("Individual harvest return")
+                axes[0, column].set_ylabel(f"Individual {payoff_label} return")
                 axes[0, column].legend()
                 axes[1, column].axhline(0, color="gray", linewidth=1)
                 draw(axes[1, column], "delta", "D - C", "#405885")
@@ -394,7 +436,7 @@ def make_figures(config, curves, diagnostics, output):
                 axes[1, column].set_xlabel(
                     f"Cooperative co-players (out of {config.population - 1})"
                 )
-            title = f"{metric.capitalize()} harvest | H={horizon} | C={config.policy_c}, D={config.policy_d}"
+            title = f"{metric.capitalize()} {payoff_label} | H={horizon} | C={config.policy_c}, D={config.policy_d}"
             if metric == "discounted":
                 title += f" | gamma={config.gamma}"
             intervals = "Pointwise 95% replicate-bootstrap intervals"
@@ -409,7 +451,7 @@ def make_figures(config, curves, diagnostics, output):
         for ax, field, title in zip(
             axes,
             ("mean_return_sum", "mean_resource_fraction", "mean_reserve_welfare"),
-            ("Total harvest per agent", "Mean resource fraction", "Mean reserve welfare"),
+            (f"Total {payoff_label} per agent", "Mean resource fraction", "Mean reserve welfare"),
         ):
             for offset, branch, color in [(-0.18, "C", "#267c5b"), (0.18, "D", "#c35d36")]:
                 data = [
@@ -469,7 +511,8 @@ def analyze(directory, output, *, resamples=5000, seed=1729, figures=True):
         "# Population payoff validation",
         f"Run purpose: **{manifest['purpose']}**. Policies: C={config.policy_c}, D={config.policy_d} (scarce/moderate/abundant).",
         f"{config.replicates} independent replicates per ecology; {config.focal_count} focal agents and {config.assignments} assignments per replicate.",
-        "Primary learner-aligned return is discounted harvest. Undiscounted verdicts are separate. k counts OTHER cooperative agents.",
+        f"Reward: **{config.reward_mode}**, cap={config.metabolism if config.reward_mode == 'capped_harvest' else None}. Primary learner-aligned return discounts actual reward; undiscounted verdicts are separate. k counts OTHER cooperative agents.",
+        "Decision bounds within 1e-12 of zero are numerical ties, not positive evidence.",
         "The endpoint criterion is G>0 AND E>0 AND (greed>0 OR fear>0). Verdicts apply only to this policy pair, reset distribution and payoff definition.",
         "\n## Verdicts\n",
         "| Ecology | Horizon | Return | Verdict |",

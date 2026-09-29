@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .env import EcoEnv
+from .env import EcoEnv, reward_definition
 from .qlearning import resource_state
 from .scenarios import SCENARIOS, build_environment_maps
 
@@ -46,8 +46,10 @@ class PayoffConfig:
     initial_energy: float = 1.0
     energy_capacity: float = 1.0
     late_window: int = 200
+    reward_mode: str = "harvest"
 
     def validate(self):
+        reward_definition(self.reward_mode, self.metabolism)
         for name in ("width", "height", "replicates", "focal_count", "assignments", "late_window"):
             if not isinstance(getattr(self, name), int) or getattr(self, name) < 1:
                 raise ValueError(f"{name} must be a positive integer")
@@ -99,6 +101,7 @@ def make_env(config: PayoffConfig, scenario: str, replicate: int):
         scenario, width=config.width, height=config.height, seed=config.seed + replicate
     )
     env = EcoEnv(
+        reward_mode=config.reward_mode,
         width=config.width,
         height=config.height,
         n_agents=config.population,
@@ -151,20 +154,32 @@ def rollout(config, scenario, replicate, labels):
     initial = np.array([a.wealth for a in agents])
     totals = np.zeros(config.population)
     discounted = totals.copy()
+    gross_totals = totals.copy()
+    gross_discounted = totals.copy()
+    surplus_totals = totals.copy()
+    surplus_discounted = totals.copy()
     low_counts = totals.copy()
     recent = np.zeros((config.late_window, config.population))
+    recent_utility = recent.copy()
     resource_total = reserve_total = 0.0
     rows, summaries = [], []
     for step in range(1, max(config.horizons) + 1):
         actions = policy_actions(observations, labels, config.policy_c, config.policy_d)
-        observations, rewards, _, _, _ = env.step(actions)
+        observations, rewards, _, _, infos = env.step(actions)
         reward = np.array([rewards[name] for name in names])
         if not np.isfinite(reward).all():
             raise ValueError("Nonfinite reward")
+        gross = np.array([infos[name]["harvested"] for name in names])
+        surplus = np.array([infos[name]["uncredited_harvest"] for name in names])
+        gross_totals += gross
+        gross_discounted += config.gamma ** (step - 1) * gross
+        surplus_totals += surplus
+        surplus_discounted += config.gamma ** (step - 1) * surplus
         totals += reward
         discounted += config.gamma ** (step - 1) * reward
         low_counts += np.array([actions[name] == 0 for name in names])
-        recent[(step - 1) % config.late_window] = reward
+        recent[(step - 1) % config.late_window] = gross
+        recent_utility[(step - 1) % config.late_window] = reward
         resource = float(np.mean(env.model.resource / env.model.capacity))
         reserve = float(np.mean([a.reserve_welfare for a in agents]))
         resource_total += resource
@@ -172,9 +187,12 @@ def rollout(config, scenario, replicate, labels):
         if step not in config.horizons:
             continue
         wealth = np.array([a.wealth for a in agents]) - initial
-        if not np.allclose(totals, wealth, rtol=1e-10, atol=1e-12):
-            raise AssertionError("Reward sum does not equal wealth change")
+        if not np.allclose(gross_totals, wealth, rtol=1e-10, atol=1e-12):
+            raise AssertionError("Harvest sum does not equal wealth change")
+        if not np.allclose(totals + surplus_totals, gross_totals, rtol=1e-10, atol=1e-12):
+            raise AssertionError("Utility plus surplus does not equal harvest")
         late = recent.sum(axis=0) / min(step, config.late_window)
+        late_utility = recent_utility.sum(axis=0) / min(step, config.late_window)
         for i, agent in enumerate(agents):
             x, y = map(int, agent.position)
             rows.append(
@@ -187,7 +205,12 @@ def rollout(config, scenario, replicate, labels):
                     region=str(regions[y, x]),
                     return_sum=float(totals[i]),
                     return_discounted=float(discounted[i]),
+                    harvest_sum=float(gross_totals[i]),
+                    harvest_discounted=float(gross_discounted[i]),
+                    uncredited_harvest_sum=float(surplus_totals[i]),
+                    uncredited_harvest_discounted=float(surplus_discounted[i]),
                     wealth_delta=float(wealth[i]),
+                    late_utility_rate=float(late_utility[i]),
                     late_harvest_rate=float(late[i]),
                     low_fraction=float(low_counts[i] / step),
                 )
@@ -198,6 +221,9 @@ def rollout(config, scenario, replicate, labels):
                 cooperators=labels.count("C"),
                 mean_return_sum=float(totals.mean()),
                 mean_return_discounted=float(discounted.mean()),
+                mean_harvest_sum=float(gross_totals.mean()),
+                mean_harvest_discounted=float(gross_discounted.mean()),
+                late_utility_rate=float(late_utility.mean()),
                 late_harvest_rate=float(late.mean()),
                 final_resource_fraction=resource,
                 mean_resource_fraction=resource_total / step,
@@ -329,7 +355,8 @@ def run_experiment(config, destination, *, workers=1, purpose="pilot"):
     source_root = Path(__file__).resolve().parent
     protocol = asdict(config)
     manifest = dict(
-        schema="population_payoff_v1",
+        schema="population_payoff_v2",
+        reward_definition=reward_definition(config.reward_mode, config.metabolism),
         status="running",
         purpose=purpose,
         config=protocol,
@@ -344,7 +371,13 @@ def run_experiment(config, destination, *, workers=1, purpose="pilot"):
         decision_family="four endpoint contrasts across all configured scenarios, separately per horizon/return",
         seed_semantics="landscape=seed+replicate; position=seed+100000+replicate; focal and permutation use SeedSequence domains 71001 and 71002",
         tail_bounds={
-            str(h): config.high_harvest * config.gamma**h / (1 - config.gamma)
+            str(h): (
+                min(config.high_harvest, config.metabolism)
+                if config.reward_mode == "capped_harvest"
+                else config.high_harvest
+            )
+            * config.gamma**h
+            / (1 - config.gamma)
             if config.gamma < 1
             else None
             for h in config.horizons
@@ -419,6 +452,7 @@ def main():
     for name in ("compositions", "horizons"):
         parser.add_argument("--" + name, nargs="+", type=int)
     parser.add_argument("--scenarios", nargs="+", choices=tuple(SCENARIOS))
+    parser.add_argument("--reward-mode", choices=("harvest", "capped_harvest"))
     parser.add_argument("--gamma", type=float)
     parser.add_argument("--policy-c")
     parser.add_argument("--policy-d")

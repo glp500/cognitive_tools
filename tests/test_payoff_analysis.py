@@ -132,3 +132,52 @@ def test_replication_within_block_does_not_increase_precision():
     original = summarize(config, pairs, episodes, resamples=200, seed=1)
     duplicated = summarize(config, pairs * 10, episodes, resamples=200, seed=1)
     assert original == duplicated
+
+
+def test_numerical_tie_is_not_positive_conflict():
+    assert classify([(1, 2), (1, 2), (1e-16, 2e-16), (0, 0)]) == "contradicted"
+
+
+def test_capped_audit_and_legacy_schema(tmp_path):
+    import hashlib
+    import json
+    from dataclasses import replace
+
+    from cognitive_tools.payoff import sha256, write_csv
+    from cognitive_tools.payoff_analysis import load_run
+
+    cfg = PayoffConfig(
+        scenarios=("uniform_high",),
+        population=2,
+        width=2,
+        height=2,
+        replicates=2,
+        focal_count=1,
+        compositions=(0, 1),
+        horizons=(2,),
+        reward_mode="capped_harvest",
+    )
+    run = tmp_path / "capped"
+    run_experiment(cfg, run)
+    load_run(run)
+    path = run / "agent_returns.csv"
+    rows = list(csv.DictReader(path.open()))
+    rows[0]["uncredited_harvest_sum"] = "100"
+    write_csv(path, rows)
+    m = json.loads((run / "manifest.json").read_text())
+    m["output_sha256"]["agent_returns.csv"] = sha256(path)
+    (run / "manifest.json").write_text(json.dumps(m))
+    with pytest.raises(ValueError, match="accounting"):
+        load_run(run)
+    legacy = tmp_path / "legacy"
+    run_experiment(replace(cfg, reward_mode="harvest"), legacy)
+    path = legacy / "manifest.json"
+    m = json.loads(path.read_text())
+    m["schema"] = "population_payoff_v1"
+    del m["reward_definition"]
+    del m["config"]["reward_mode"]
+    m["protocol_sha256"] = hashlib.sha256(
+        json.dumps(m["config"], sort_keys=True).encode()
+    ).hexdigest()
+    path.write_text(json.dumps(m))
+    assert load_run(legacy)[1].reward_mode == "harvest"

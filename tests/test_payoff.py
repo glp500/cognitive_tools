@@ -136,3 +136,37 @@ def test_1000_step_endpoints_reproduce_saved_campaign():
             assert summaries[0]["mean_return_sum"] == pytest.approx(
                 expected[(scenario, strategy)], abs=1e-12
             )
+
+
+def test_capped_rollout_separates_utility_and_harvest():
+    config = small(reward_mode="capped_harvest")
+    rows, summaries = rollout(config, "uniform_high", 0, ("D",) * 4)
+    for row in rows:
+        assert row["return_sum"] == pytest.approx(0.006)
+        assert row["harvest_sum"] == pytest.approx(0.06)
+        assert row["return_discounted"] == pytest.approx(0.002 * (1 + 0.95 + 0.95**2))
+        for metric in ("sum", "discounted"):
+            assert row[f"return_{metric}"] + row[f"uncredited_harvest_{metric}"] == pytest.approx(
+                row[f"harvest_{metric}"]
+            )
+        assert row["wealth_delta"] == pytest.approx(row["harvest_sum"])
+        assert row["late_harvest_rate"] == pytest.approx(0.02)
+        assert row["late_utility_rate"] == pytest.approx(0.002)
+    assert summaries[0]["mean_harvest_sum"] == pytest.approx(0.06)
+
+
+def test_cap_is_applied_per_step_not_to_aggregate_harvest():
+    config = replace(
+        small(),
+        population=2,
+        width=1,
+        height=1,
+        horizons=(2,),
+        compositions=(0, 1),
+        initial_resource_fraction=0.02,
+        reward_mode="capped_harvest",
+    )
+    rows, _ = rollout(config, "uniform_high", 0, ("D", "D"))
+    for row in rows:
+        assert row["return_sum"] == pytest.approx(0.002)
+        assert min(row["harvest_sum"], 2 * config.metabolism) > row["return_sum"]

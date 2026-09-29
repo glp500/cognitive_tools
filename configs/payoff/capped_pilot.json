@@ -1,0 +1,32 @@
+{
+  "replicates": 20,
+  "focal_count": 4,
+  "assignments": 1,
+  "compositions": [
+    0,
+    1,
+    16,
+    32,
+    48,
+    62,
+    63
+  ],
+  "horizons": [
+    1000
+  ],
+  "gamma": 0.95,
+  "policy_c": "000",
+  "policy_d": "111",
+  "replicate_start": 2100,
+  "reward_mode": "capped_harvest",
+  "metabolism": 0.002,
+  "low_harvest": 0.002,
+  "high_harvest": 0.02,
+  "population": 64,
+  "seed": 20260928,
+  "scenarios": [
+    "uniform_high",
+    "patchy_high",
+    "split_high_low"
+  ]
+}

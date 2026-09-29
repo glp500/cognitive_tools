@@ -50,3 +50,14 @@ def test_full_reserves_do_not_reward_zero_harvest():
 def test_invalid_reward_contract(mode, need):
     with pytest.raises(ValueError):
         EcoEnv(reward_mode=mode, metabolism_rate=need)
+
+
+def test_scarce_allocation_is_capped_after_prorating():
+    env = EcoEnv(width=1, height=1, n_agents=2, reward_mode="capped_harvest")
+    env.reset(seed=1)
+    env.model.resource[:] = 0.003
+    _, rewards, _, _, infos = env.step({"agent_0": 0, "agent_1": 1})
+    assert infos["agent_0"]["harvested"] == pytest.approx(0.003 / 11)
+    assert infos["agent_1"]["harvested"] == pytest.approx(0.003 * 10 / 11)
+    assert rewards["agent_0"] == pytest.approx(0.003 / 11)
+    assert rewards["agent_1"] == pytest.approx(0.002)

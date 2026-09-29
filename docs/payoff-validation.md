@@ -161,3 +161,36 @@ outside this validation experiment.
 
 Sources: [Leibo et al.](https://arxiv.org/html/1702.03037),
 [SocialJax sections 3.1 and 4.3](https://arxiv.org/html/2503.14576v3).
+
+## Capped-harvest variant
+
+The opt-in `reward_mode: "capped_harvest"` uses
+`min(actual per-step harvest, metabolism)`. Default `harvest` preserves the
+original objective. This changes utility, not physical extraction or reserves.
+
+New runs use `population_payoff_v2`: `return_sum`/`return_discounted` record
+actual utility rewards, while `harvest_sum`/`harvest_discounted` record gross
+harvest. Utility plus `uncredited_harvest_*` equals gross harvest. Gross sum
+matches `wealth_delta`. `late_harvest_rate` stays physical;
+`late_utility_rate` reports utility. The analyzer still reads original v1 runs
+as harvest-only and verifies their original hashes before applying defaults.
+
+```bash
+python -m cognitive_tools.payoff --config configs/payoff/capped_pilot.json \
+    --output results/payoff_validation/capped_pilot_v1 --workers 14 --purpose pilot
+python -m cognitive_tools.payoff_analysis \
+    --run results/payoff_validation/capped_pilot_v1 \
+    --output results/payoff_validation/capped_pilot_v1/analysis --resamples 5000
+python -m cognitive_tools.payoff --config configs/payoff/capped_gate.json \
+    --output results/payoff_validation/capped_gate_v1 --workers 14 --purpose validation
+python -m cognitive_tools.payoff_analysis \
+    --run results/payoff_validation/capped_gate_v1 \
+    --output results/payoff_validation/capped_gate_v1/analysis --resamples 5000
+```
+
+The [prospective protocol](reviews/capped-harvest-validation-protocol.md) fixes
+seeds, sample size and acceptance. Pilot curves are exploratory. Held-out
+endpoints determine adoption, requiring support under both return definitions
+in all three ecologies. Numerical bounds within 1e-12 of zero do not establish
+positive incentives. Outputs refuse overwrite; use distinct analysis names
+when intentionally reanalyzing an existing run.
