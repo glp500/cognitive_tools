@@ -1,0 +1,11 @@
+{
+  "replicates": 100,
+  "focal_count": 1,
+  "assignments": 1,
+  "compositions": [0, 63],
+  "horizons": [1000],
+  "gamma": 0.95,
+  "policy_c": "000",
+  "policy_d": "111",
+  "replicate_start": 1000
+}

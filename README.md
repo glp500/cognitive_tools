@@ -191,5 +191,7 @@ results archive; its location and checksum are in
 
 - [Experiment](docs/experiment.md): design, mechanisms, outcomes, and campaigns.
 - [Analysis](docs/analysis.md): input contract, pairing, intervals, and outputs.
+- [Population payoff validation](docs/payoff-validation.md): separate Schelling experiment and usage.
+- [Payoff validation results](docs/reviews/payoff-validation-results-2026-09-29.md): pilot and held-out findings.
 - [Provenance](docs/provenance.md): scientific sources and implementation lineage.
 - [Bibliography](docs/references.bib): source citation metadata.
