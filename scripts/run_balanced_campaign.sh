@@ -81,7 +81,7 @@ COMMON=(--study-protocol visibility_bounded_search_v1 --reward-mode capped_harve
     --training-steps "$TRAIN" --evaluation-steps "$EVAL"
     --record-every "$EVERY" --record-network-every "$EVERY")
 if [[ "${RESUME:-0}" == 1 ]]; then COMMON+=(--resume-conditions); fi
-"$PYTHON_BIN" scripts/validate_balanced_landscapes.py --seed "$SEED" \
+"$PYTHON_BIN" -m scripts.validate_balanced_landscapes --seed "$SEED" \
     --replicates "$REPS" --output "$CAMPAIGN/landscape_validation.csv"
 RUNS=(--run "$ROOT/${TAG}_b0")
 "$PYTHON_BIN" -m cognitive_tools.experiment "${COMMON[@]}" \
@@ -101,6 +101,6 @@ done
     --analysis-name "${TAG}_analysis" --bootstrap-reps "$BOOT"
 if [[ "$MODE" != smoke ]]; then
     MPLCONFIGDIR="${MPLCONFIGDIR:-/tmp/cognitive-mpl}" "$PYTHON_BIN" \
-        scripts/plot_visibility_story.py \
+        -m scripts.plot_visibility_story \
         --analysis-dir "results/q_learning_baseline/social_analysis/${TAG}_analysis"
 fi

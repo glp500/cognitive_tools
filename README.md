@@ -72,7 +72,7 @@ After a completed Stage-5 analysis, render the separate five-figure narrative
 set from its saved tables and source runs:
 
 ```bash
-MPLCONFIGDIR=/tmp/cognitive-mpl python scripts/plot_visibility_story.py \
+MPLCONFIGDIR=/tmp/cognitive-mpl python -m scripts.plot_visibility_story \
     --analysis-dir results/q_learning_baseline/social_analysis/balanced_pilot_v1_analysis
 ```
 
