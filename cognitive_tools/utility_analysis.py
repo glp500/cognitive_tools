@@ -23,9 +23,15 @@ def build_utility_summaries(runs, *, bootstrap_reps, bootstrap_seed):
         groups = defaultdict(list)
         seen = set()
         primary = primary_evaluation_rows(run)
-        if identity["mode"] == "capped_harvest":
+        legacy = (
+            identity["mode"] == "harvest"
+            and "reward_mode" not in run.config
+            and "reward_definition" not in run.config
+            and not any(metric in row for row in primary for metric in METRICS)
+        )
+        if not legacy:
             if not primary:
-                raise ValueError(f"Missing capped primary evaluations in {run.run_id}")
+                raise ValueError(f"Missing primary evaluations in {run.run_id}")
             if all(key in run.config for key in ("scenarios", "populations", "replicates")):
                 expected = {
                     (scenario, population, replicate)
@@ -34,10 +40,7 @@ def build_utility_summaries(runs, *, bootstrap_reps, bootstrap_seed):
                     for replicate in range(run.config["replicates"])
                 }
                 if {row_key(row) for row in primary} != expected:
-                    raise ValueError(f"Incomplete capped primary evaluations in {run.run_id}")
-        legacy = identity["mode"] == "harvest" and not any(
-            metric in row for row in primary for metric in METRICS
-        )
+                    raise ValueError(f"Incomplete primary evaluations in {run.run_id}")
         for row in primary:
             key = row_key(row)
             if key in seen:

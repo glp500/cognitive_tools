@@ -66,9 +66,21 @@ def test_partial_harvest_and_empty_capped_tables_rejected():
         build_utility_summaries([data], bootstrap_reps=10, bootstrap_seed=42)
     data = run()
     data.tables["evaluation_summary"] = []
-    with pytest.raises(ValueError, match="Missing capped"):
+    with pytest.raises(ValueError, match="Missing primary"):
         build_utility_summaries([data], bootstrap_reps=10, bootstrap_seed=42)
     data = run()
     data.config.update(scenarios=["uniform_high"], populations=[8], replicates=3)
-    with pytest.raises(ValueError, match="Incomplete capped"):
+    with pytest.raises(ValueError, match="Incomplete primary"):
+        build_utility_summaries([data], bootstrap_reps=10, bootstrap_seed=42)
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_new_harvest_cannot_masquerade_as_legacy(empty):
+    data = run("harvest")
+    for row in data.tables["evaluation_summary"]:
+        for metric in METRICS:
+            del row[metric]
+    if empty:
+        data.tables["evaluation_summary"] = []
+    with pytest.raises(ValueError, match="Missing"):
         build_utility_summaries([data], bootstrap_reps=10, bootstrap_seed=42)

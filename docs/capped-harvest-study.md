@@ -26,7 +26,7 @@ PYTHON_BIN=python WORKERS=2 bash scripts/run_capped_campaign.sh pilot capped_lea
 The recipe uses seed 20261001, frozen evaluation networks, and newly trained
 Q-tables. Smoke uses N=8, two replicates, 12 training steps and six evaluation
 steps. Pilot uses N=64, all three ecologies, ten replicates, 5,000 training steps,
-1,000 evaluation steps, theta=0.25 and mu=0.10. It is exploratory, not a full
+1,000 evaluation steps, search-scope theta=0, prediction-error threshold=0.25 and mu=0.10. It is exploratory, not a full
 confirmatory campaign. The matched R0 takes event counts from this pilot's own
 adaptive schedule. `RESUME=1` reuses completed conditions only when scientific
 configuration and producer revision agree. Use a new tag for a new study.
