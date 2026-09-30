@@ -301,9 +301,7 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
     visibility, visibility_sum = _contrast(
         all_rows,
         lambda r: "random-equal" if r["profile"] == "random" else f"{r['profile']}-random",
-        lambda r: (
-            r["dynamics"] == "fixed" and r["profile"] in PROFILES and r["profile"] != "random"
-        ),
+        lambda r: r["dynamics"] == "fixed" and r["profile"] in PROFILES and r["profile"] != "equal",
         lambda r: {**r, "profile": "equal" if r["profile"] == "random" else "random"},
         ("scenario", "profile", "dynamics", "population"),
         ("social_perception_error",),

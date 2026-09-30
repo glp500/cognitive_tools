@@ -85,6 +85,27 @@ def test_visibility_analysis_rejects_unpaired_initial_graph(tmp_path):
         )
 
 
+def test_visibility_contrasts_follow_frozen_comparison_directions(tmp_path):
+    from cognitive_tools.visibility import PROFILES
+
+    runs = [_run(profile, "fixed") for profile in PROFILES]
+    tables = run_visibility_analysis(runs, tmp_path, tmp_path, bootstrap_reps=20, bootstrap_seed=1)
+    contrasts = tables["visibility_profile_contrasts"]
+    assert {row["comparison"] for row in contrasts} == {
+        "random-equal",
+        "normal_centered-random",
+        "low_propensity_majority-random",
+        "high_propensity_majority-random",
+    }
+    values = {
+        row["profile"]: float(row["value"])
+        for row in tables["primary_window_replicates"]
+        if row["metric"] == "social_perception_error"
+    }
+    random_equal = next(row for row in contrasts if row["comparison"] == "random-equal")
+    assert float(random_equal["value"]) == pytest.approx(values["random"] - values["equal"])
+
+
 def test_stage5_analysis_rejects_incompatible_profile_specs(tmp_path):
     from cognitive_tools.analysis import RunData, validate_compatibility
 
