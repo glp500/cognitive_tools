@@ -359,9 +359,11 @@ def _perception(output: Path, root: Path, note: str) -> None:
         ("high_propensity_majority-random", "High majority − random"),
     )
     extent = 1.12 * max(abs(float(row[key])) for row in h1 + h2 for key in ("low", "high"))
-    fig, axes = plt.subplots(
-        1, 2, figsize=(12, 5.8), layout="constrained", gridspec_kw={"width_ratios": [1.2, 1]}
-    )
+    fig = plt.figure(figsize=(14.2, 6.6), layout="constrained")
+    grid = fig.add_gridspec(2, 2, height_ratios=[7, 1], width_ratios=[1.2, 1])
+    axes = (fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1]))
+    legend_ax = fig.add_subplot(grid[1, :])
+    legend_ax.axis("off")
     ax = axes[0]
     labels = [
         f"{LABELS[profile]} · {LABELS[dynamics]}"
@@ -380,7 +382,7 @@ def _perception(output: Path, root: Path, note: str) -> None:
                 "balanced_segregated-balanced_dispersed",
                 ECOLOGY_COLORS["balanced_segregated"],
                 "s",
-                "Segregated − dispersed",
+                "Segregated − dispersed (primary)",
             ),
             ("balanced_segregated-balanced_uniform", INK, "^", "Segregated − uniform"),
         )
@@ -419,17 +421,6 @@ def _perception(output: Path, root: Path, note: str) -> None:
         fontweight="bold",
     )
     _clean_axis(ax, zero=True)
-    ax.legend(
-        handles=[
-            Line2D([0], [0], color=color, marker=marker, linestyle="", label=label)
-            for _, color, marker, label in h1_styles
-        ],
-        frameon=False,
-        loc="upper left",
-        bbox_to_anchor=(0, -0.16),
-        ncol=len(h1_styles),
-        fontsize=10,
-    )
     ax = axes[1]
     offsets = (-0.18, 0.0, 0.18)
     for y, (comparison, _) in enumerate(comparisons):
@@ -447,23 +438,28 @@ def _perception(output: Path, root: Path, note: str) -> None:
     ax.set_xlabel("Difference in mean absolute perception error")
     ax.set_title("H2 · Initial attention profile\non fixed networks", loc="left", fontweight="bold")
     _clean_axis(ax, zero=True)
-    ax.legend(
-        handles=[
-            Line2D(
-                [0],
-                [0],
-                marker=ECOLOGY_MARKERS[e],
-                color=ECOLOGY_COLORS[e],
-                linestyle="",
-                label=LABELS[e],
-            )
-            for e in ECOLOGIES
-        ],
-        frameon=False,
-        loc="upper left",
-        bbox_to_anchor=(0, -0.16),
-        ncol=3,
-        fontsize=10,
+    contrast_handles = [
+        Line2D([0], [0], color=color, marker=marker, linestyle="", label=label)
+        for _, color, marker, label in h1_styles
+    ]
+    ecology_handles = [
+        Line2D(
+            [0],
+            [0],
+            marker=ECOLOGY_MARKERS[e],
+            color=ECOLOGY_COLORS[e],
+            linestyle="",
+            label=LABELS[e],
+        )
+        for e in ECOLOGIES
+    ]
+    handles = (
+        [item for pair in zip(contrast_handles, ecology_handles) for item in pair]
+        if balanced
+        else contrast_handles + ecology_handles
+    )
+    legend_ax.legend(
+        handles=handles, frameon=False, loc="center", ncol=3 if balanced else 2, fontsize=9.5
     )
     fig.suptitle(
         "3  ·  Different local views of the same population",
@@ -618,10 +614,16 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
     axes[1].set_title(
         "Local fill" if balanced else "Remaining fraction", loc="left", fontweight="bold"
     )
+    welfare_values = [point["welfare"] for point in points]
+    welfare_pad = max(max(welfare_values) - min(welfare_values), 0.10) * 0.2
+    welfare_limits = (
+        max(0, min(welfare_values) - welfare_pad),
+        min(1.02, max(welfare_values) + welfare_pad),
+    )
     for ax in axes[:2]:
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(color="#e4e9ea", lw=0.6, zorder=0)
-        ax.set_ylim(0.57, 1.01)
+        ax.set_ylim(*welfare_limits)
     axes[1].set_yticklabels([])
     ax = axes[2]
     for item in regions:
@@ -643,7 +645,11 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
         )
     ax.set_xticks((0, 1), ("High region", "Low region"))
     ax.set_xlim(-0.22, 1.22)
-    ax.set_ylim(0, 1)
+    regional_values = [value for item in regions for value in (item["high"], item["low"])]
+    regional_pad = max(max(regional_values) - min(regional_values), 0.10) * 0.2
+    ax.set_ylim(
+        max(0, min(regional_values) - regional_pad), min(1.02, max(regional_values) + regional_pad)
+    )
     ax.set_title(
         "Segregated-world regional gap\ntraining end"
         if balanced
@@ -907,6 +913,7 @@ def main() -> None:
     report = {
         "schema_version": 1,
         "analysis": identity,
+        "story_source_sha256": _sha256(Path(__file__)),
         "environment_design": config.get("environment_design", "legacy"),
         "ecologies": ECOLOGIES,
         "analysis_source_sha256": analysis.get("analysis_source_sha256"),

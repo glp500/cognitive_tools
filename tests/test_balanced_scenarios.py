@@ -42,3 +42,32 @@ def test_landscape_validation_records_unharvested_supply():
             by_name["balanced_dispersed"]["mixed_neighbor_edges"]
             > by_name["balanced_segregated"]["mixed_neighbor_edges"]
         )
+
+
+def test_balanced_study_identity_rejects_partial_or_odd_landscapes():
+    from cognitive_tools.experiment import build_parser, validate_configuration
+    from cognitive_tools.visibility import load_visibility_spec
+
+    _, spec_sha = load_visibility_spec()
+    args = build_parser().parse_args(
+        [
+            "--study-protocol",
+            "visibility_bounded_search_v1",
+            "--environment-design",
+            "balanced_capacity_v1",
+            "--reward-mode",
+            "capped_harvest",
+            "--scenarios",
+            *BALANCED_SCENARIOS,
+        ]
+    )
+    args.visibility_profile_spec_sha256 = spec_sha
+    validate_configuration(args)
+    args.scenarios = list(BALANCED_SCENARIOS[:2])
+    with pytest.raises(ValueError, match="all three balanced scenarios"):
+        validate_configuration(args)
+    args.scenarios = list(BALANCED_SCENARIOS)
+    args.width = 9
+    args.height = 9
+    with pytest.raises(ValueError, match="even number"):
+        validate_configuration(args)

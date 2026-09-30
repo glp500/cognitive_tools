@@ -138,6 +138,16 @@ def test_balanced_analysis_uses_matched_ecologies_and_weighted_stock(tmp_path):
         "balanced_segregated-balanced_uniform",
     }
     assert "local_resource_fraction" in {row["metric"] for row in tables["outcome_summary"]}
+    outcomes = {
+        (row["scenario"], row["dynamics"], row["metric"]): float(row["value"])
+        for row in tables["outcome_replicates"]
+    }
+    for scenario in BALANCED_SCENARIOS:
+        for dynamics in ("fixed", "adaptive_bounded"):
+            assert outcomes[(scenario, dynamics, "resource_fraction")] == pytest.approx(
+                outcomes[(scenario, dynamics, "resource_stock")]
+                / outcomes[(scenario, dynamics, "total_capacity")]
+            )
     assert len(list((tmp_path / "figures").glob("0*.png"))) == 5
 
 
