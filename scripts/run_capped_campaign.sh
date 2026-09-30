@@ -29,5 +29,5 @@ ROOT=results/q_learning_baseline/experiments
 "$PYTHON_BIN" -m cognitive_tools.experiment "${COMMON[@]}" --run-name "${TAG}_r1" --social-mode fixed --rewiring prediction_error
 "$PYTHON_BIN" -m cognitive_tools.experiment "${COMMON[@]}" --run-name "${TAG}_r0" --social-mode fixed --rewiring random_matched \
     --matched-rewire-schedule "$ROOT/${TAG}_r1/data/rewiring_schedule.csv"
-"$PYTHON_BIN" -m cognitive_tools.analysis --run "$ROOT/${TAG}_b0" "$ROOT/${TAG}_s1" "$ROOT/${TAG}_r1" "$ROOT/${TAG}_r0" \
+"$PYTHON_BIN" -m cognitive_tools.analysis --run "$ROOT/${TAG}_b0" --run "$ROOT/${TAG}_s1" --run "$ROOT/${TAG}_r1" --run "$ROOT/${TAG}_r0" \
     --analysis-name "${TAG}_analysis" --profile focused --bootstrap-reps "$BOOT"
