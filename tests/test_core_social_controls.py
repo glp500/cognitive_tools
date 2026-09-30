@@ -341,3 +341,21 @@ def test_matched_training_uses_schedule_event_count(tmp_path):
     assert len(schedule_rows) == 1
     assert schedule_rows[0]["target_rewires"] == 2
     assert schedule_rows[0]["successful_rewires"] == 2
+
+
+def test_schedule_cannot_cross_reward_objectives(tmp_path):
+    args = make_args(rewiring="prediction_error", reward_mode="capped_harvest")
+    schedule = experiment.run_condition("uniform_high", 6, 0, args)["rewiring_schedule"]
+    path = tmp_path / "capped_schedule.csv"
+    experiment.write_csv(path, schedule)
+    args.matched_rewire_schedule = str(path)
+    args.rewiring = "random_matched"
+    target = experiment.matched_rewire_target(
+        args, scenario_name="uniform_high", population=6, replicate=0, time=2
+    )
+    assert target >= 0
+    args.reward_mode = "harvest"
+    with pytest.raises(ValueError, match="reward"):
+        experiment.matched_rewire_target(
+            args, scenario_name="uniform_high", population=6, replicate=0, time=2
+        )

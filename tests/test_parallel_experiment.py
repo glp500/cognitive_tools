@@ -60,3 +60,26 @@ def test_workers_preserve_all_outputs_and_resume(tmp_path, monkeypatch, mode):
         json.dumps(list(experiment.run_conditions(args, directories[1])), sort_keys=True)
         == outputs[0]
     )
+
+
+def test_condition_resume_rejects_changed_reward(tmp_path):
+    args = experiment.build_parser().parse_args(
+        [
+            "--scenarios",
+            "uniform_high",
+            "--populations",
+            "8",
+            "--replicates",
+            "1",
+            "--training-steps",
+            "2",
+            "--evaluation-steps",
+            "2",
+            "--workers",
+            "1",
+        ]
+    )
+    list(experiment.run_conditions(args, tmp_path))
+    args.reward_mode = "capped_harvest"
+    with pytest.raises(ValueError, match="configuration"):
+        list(experiment.run_conditions(args, tmp_path))

@@ -194,6 +194,8 @@ results archive; its location and checksum are in
 - [Population payoff validation](docs/payoff-validation.md): separate Schelling experiment and usage.
 - [Payoff validation results](docs/reviews/payoff-validation-results-2026-09-29.md): pilot and held-out findings.
 - [Incentive redesign review](docs/reviews/incentive-redesign-review-2026-09-29.md): cost comparison, development evidence, and proposed revision.
-- [Social-dilemma revision specification](docs/specs/social-dilemma-revision.md): proposed capped-harvest variant and validation gate; not implemented.
+- [Social-dilemma revision specification](docs/specs/social-dilemma-revision.md): implemented opt-in capped-harvest variant; held-out gate passed.
+- [Capped-harvest study](docs/capped-harvest-study.md): separate learning recipe and utility accounting.
+- [Capped validation results](docs/reviews/capped-harvest-validation-results-2026-09-30.md): held-out evidence and claim limits.
 - [Provenance](docs/provenance.md): scientific sources and implementation lineage.
 - [Bibliography](docs/references.bib): source citation metadata.

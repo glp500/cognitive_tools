@@ -21,6 +21,16 @@ def reward_definition(mode="harvest", metabolism=0.002):
     }
 
 
+def reward_identity(config):
+    """Resolve legacy harvest defaults and reject inconsistent recorded semantics."""
+    expected = reward_definition(
+        config.get("reward_mode", "harvest"), config.get("metabolism", 0.002)
+    )
+    if config.get("reward_definition", expected) != expected:
+        raise ValueError("Recorded reward definition disagrees with configuration")
+    return expected
+
+
 class EcoEnv(ParallelEnv):
     """
     PettingZoo wrapper for the stationary common-pool resource model.

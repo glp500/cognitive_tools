@@ -1,6 +1,8 @@
 # Specification: a capped-harvest social-dilemma variant
 
-Status: proposed, 29 September 2026. Production implementation has not started.
+Status: implemented; held-out gate passed, 30 September 2026.
+Results: [validation review](../reviews/capped-harvest-validation-results-2026-09-30.md).
+Usage: [separate study](../capped-harvest-study.md).
 Decision evidence: [codebase and incentive review](../reviews/incentive-redesign-review-2026-09-29.md).
 Execution order: [plan](../../tasks/plan.md) and [tasks](../../tasks/todo.md).
 

@@ -22,6 +22,7 @@ from pathlib import Path
 import numpy as np
 
 from cognitive_tools import EcoEnv
+from cognitive_tools.env import reward_definition, reward_identity
 from cognitive_tools.model import HIGH_EXTRACT, LOW_EXTRACT
 from cognitive_tools.qlearning import STATE_NAMES, QLearningPolicy, resource_state
 from cognitive_tools.scenarios import SCENARIOS, build_environment_maps
@@ -168,6 +169,9 @@ def load_matched_rewire_schedule(
                 "social_k": int(row["social_k"]),
                 "training_steps": int(row["training_steps"]),
                 "successful_rewires": successful_rewires,
+                "reward_definition": json.loads(row["reward_definition"])
+                if row.get("reward_definition")
+                else reward_definition(),
             }
 
     return schedule
@@ -192,6 +196,8 @@ def matched_rewire_target(
         )
 
     row = schedule[key]
+    if row["reward_definition"] != reward_identity(vars(args)):
+        raise ValueError("Matched R0 reward definition does not match the adaptive schedule.")
 
     if row["rewiring"] != "prediction_error":
         raise ValueError("Matched R0 schedule must come from a prediction_error run.")
@@ -243,6 +249,7 @@ def treatment_name(args) -> str:
 
 def validate_configuration(args) -> None:
     """Validate ecological, social-network, rewiring, and evaluation settings."""
+    reward_definition(getattr(args, "reward_mode", "harvest"), args.metabolism)
     network_eval = getattr(args, "network_eval", "frozen")
 
     if network_eval not in NETWORK_EVAL_MODES:
@@ -415,6 +422,7 @@ def make_environment(scenario_name: str, population: int, replicate: int, max_st
     )
 
     env = EcoEnv(
+        reward_mode=getattr(args, "reward_mode", "harvest"),
         width=args.width,
         height=args.height,
         n_agents=population,
@@ -959,6 +967,9 @@ def train_q_learning(scenario_name: str, population: int, replicate: int, args):
                             "rewire_theta": args.rewire_theta,
                             "rewire_every": args.rewire_every,
                             "base_seed": args.seed,
+                            "reward_definition": json.dumps(
+                                reward_identity(vars(args)), sort_keys=True
+                            ),
                             "social_network": args.social_network,
                             "social_k": args.social_k,
                             "training_steps": args.training_steps,
@@ -1259,6 +1270,11 @@ def evaluate_policy(
     snapshots: list[dict] = []
     timeseries: list[dict] = []
     cumulative_evaluation_rewires = 0
+    names = env.possible_agents
+    utility_sum = np.zeros(len(names))
+    utility_discounted = np.zeros(len(names))
+    harvest_sum = np.zeros(len(names))
+    harvest_discounted = np.zeros(len(names))
 
     for time in range(1, args.evaluation_steps + 1):
         states, actions = action_rule(
@@ -1272,7 +1288,13 @@ def evaluate_policy(
         )
         update_state_counts(state_counts, states, actions, social_mode=args.social_mode)
 
-        next_observations, _, _, truncations, _ = env.step(actions)
+        next_observations, rewards, _, truncations, infos = env.step(actions)
+        utility = np.array([rewards[name] for name in names])
+        harvest = np.array([infos[name]["harvested"] for name in names])
+        utility_sum += utility
+        utility_discounted += args.gamma ** (time - 1) * utility
+        harvest_sum += harvest
+        harvest_discounted += args.gamma ** (time - 1) * harvest
 
         evaluation_rewires_step = 0
 
@@ -1347,6 +1369,11 @@ def evaluate_policy(
         "network_adaptive": adaptive_network,
         "evaluation_total_rewires": cumulative_evaluation_rewires,
         "steps_evaluated": len(snapshots),
+        "reward_mode": env.reward_mode,
+        "evaluation_mean_utility_sum": float(utility_sum.mean()),
+        "evaluation_mean_utility_discounted": float(utility_discounted.mean()),
+        "evaluation_mean_harvest_sum": float(harvest_sum.mean()),
+        "evaluation_mean_harvest_discounted": float(harvest_discounted.mean()),
     }
 
     metric_names = list(snapshots[0].keys()) if snapshots else []
@@ -1806,6 +1833,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--low-harvest", type=float, default=0.002)
     parser.add_argument("--high-harvest", type=float, default=0.020)
     parser.add_argument("--metabolism", type=float, default=0.002)
+    parser.add_argument("--reward-mode", choices=("harvest", "capped_harvest"), default="harvest")
     parser.add_argument("--initial-energy", type=float, default=1.0)
     parser.add_argument("--energy-capacity", type=float, default=1.0)
     parser.add_argument("--initial-resource-fraction", type=float, default=0.50)
@@ -1947,6 +1975,23 @@ def run_conditions(args, run_dir):
         )
     checkpoint_dir = run_dir / "conditions"
     checkpoint_dir.mkdir(exist_ok=True)
+    signature = {k: v for k, v in vars(args).items() if k not in ("workers", "resume_conditions")}
+    signature["reward_mode"] = getattr(args, "reward_mode", "harvest")
+    signature["reward_definition"] = reward_identity(signature)
+    signature_path = run_dir / "conditions_signature.json"
+    if signature_path.exists():
+        if json.loads(signature_path.read_text()) != signature:
+            raise ValueError(
+                "Cannot resume conditions with different scientific/reward configuration"
+            )
+    else:
+        if any(checkpoint_dir.glob("*.json")):
+            raise ValueError(
+                "Cannot resume unverifiable legacy condition checkpoints; use a new run"
+            )
+        temporary = signature_path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(signature, sort_keys=True))
+        temporary.replace(signature_path)
     tasks = [
         (
             scenario,
@@ -2003,6 +2048,7 @@ def main() -> None:
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     config = vars(args).copy()
+    config["reward_definition"] = reward_definition(args.reward_mode, args.metabolism)
     config["scenario_definitions"] = {name: SCENARIOS[name] for name in args.scenarios}
     config["learner_n_states"] = learner_state_count(args.social_mode)
     config["treatment"] = treatment_name(args)
@@ -2050,6 +2096,8 @@ def main() -> None:
         if not args.resume_conditions:
             raise ValueError("Run already exists; use --resume-conditions or a new run name.")
         previous = json.loads(config_path.read_text())
+        previous["reward_definition"] = reward_identity(previous)
+        previous.setdefault("reward_mode", "harvest")
         ignored = {"workers", "resume_conditions", "run_metadata"}
         if {k: v for k, v in previous.items() if k not in ignored} != {
             k: v for k, v in config.items() if k not in ignored

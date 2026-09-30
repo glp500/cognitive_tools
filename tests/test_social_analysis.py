@@ -508,3 +508,17 @@ def test_validate_compatibility_rejects_mixed_git_commits(tmp_path):
 
     with pytest.raises(ValueError, match="different Git commits"):
         analysis.validate_compatibility(runs)
+
+
+def test_reward_compatibility_resolves_legacy_and_rejects_capped(tmp_path):
+    from cognitive_tools.env import reward_definition
+
+    a = analysis.load_run(make_run(tmp_path, "a", treatment="B0", rewiring="none"))
+    b = analysis.load_run(make_run(tmp_path, "b", treatment="S1", rewiring="none"))
+    b.config.update(reward_mode="harvest", reward_definition=reward_definition())
+    analysis.validate_compatibility([a, b])
+    b.config.update(
+        reward_mode="capped_harvest", reward_definition=reward_definition("capped_harvest")
+    )
+    with pytest.raises(ValueError, match="reward"):
+        analysis.validate_compatibility([a, b])

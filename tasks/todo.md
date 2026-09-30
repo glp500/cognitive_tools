@@ -1,6 +1,7 @@
 # Social-dilemma revision tasks
 
-Status: review and proposal complete; implementation not started.
+Status: validation and learning integration complete; campaign smoke pending.
+Latest verification: 207 tests passed; 600 development episodes replayed; original v1 run audited.
 
 [Plan](plan.md) · [Specification](../docs/specs/social-dilemma-revision.md) ·
 [Evidence](../docs/reviews/incentive-redesign-review-2026-09-29.md)
@@ -16,26 +17,25 @@ Status: review and proposal complete; implementation not started.
 
 ## Validation-only implementation: estimated 4–8 focused hours
 
-- [ ] 1. Add opt-in capped reward to EcoEnv and prove physical trajectory equivalence.
-- [ ] 2. Extend paired rollouts with separate gross-harvest and utility accounts, explicit reward identity and v2 records.
-- [ ] 3. Support original v1 and new v2 audits, correct plot labels and numerical-zero ties.
-- [ ] Checkpoint: replay development results; run focused and full tests and Ruff checks.
-- [ ] 4a. Run the development composition pilot on indices 2100–2119.
-- [ ] 4b. Freeze the candidate/protocol, 100 held-out replicates and four focal agents before using indices 3000–3099.
-- [ ] 4c. Run the separate held-out endpoint experiment and publish condition-specific findings, including failures.
-- [ ] Checkpoint: require the stated population criterion in all three ecologies for each of the two returns before adoption.
+- [x] 1. Add opt-in capped reward to EcoEnv and prove physical trajectory equivalence.
+- [x] 2. Extend paired rollouts with separate gross-harvest and utility accounts, explicit reward identity and v2 records.
+- [x] 3. Support original v1 and new v2 audits, correct plot labels and numerical-zero ties.
+- [x] Checkpoint: replay development results; run focused and full tests and Ruff checks.
+- [x] 4a. Run the development composition pilot on indices 2100–2119.
+- [x] 4b. Freeze the candidate/protocol, 100 held-out replicates and four focal agents before using indices 3000–3099.
+- [x] 4c. Run the separate held-out endpoint experiment and publish condition-specific findings, including failures.
+- [x] Checkpoint: require the stated population criterion in all three ecologies for each of the two returns before adoption.
 - [ ] Optional: extend to the prespecified held-out interior compositions; do not call reused endpoints independent confirmation.
 
 ## Learning integration, conditional on validation: another 8–16 hours
 
-- [ ] 5. Forward reward identity through every learning/evaluation environment and record actual evaluation utility.
-- [ ] 6. Reject mismatched reward modes in analysis, resume and adaptive/R0 schedules; preserve legacy harvest behavior.
+- [x] 5. Forward reward identity through every learning/evaluation environment and record actual evaluation utility.
+- [x] 6. Reject mismatched reward modes in analysis, resume and adaptive/R0 schedules; preserve legacy harvest behavior.
 - [ ] Checkpoint: demonstrate B0, S1 and adaptive/matched-R0 smoke lifecycles, with lint/format and full tests passing.
-- [ ] 7. Write a separate capped-study recipe and bounded learning pilot protocol; retain the original frozen campaign.
+- [x] 7. Write a separate capped-study recipe and bounded learning pilot protocol; retain the original frozen campaign.
 
 Scientific success is not an implementation checkbox: if the held-out gate
-fails, stop adoption and use the plan's diagnostic branch. No production reward
-or campaign change has been made in this planning pass.
+fails, stop adoption and use the plan's diagnostic branch. The opt-in reward and validator are implemented. The held-out gate passed and learning integration is implemented.
 
 Previous completed work:
 [validation plan](archive/payoff-validation-plan-2026-09-29.md) ·

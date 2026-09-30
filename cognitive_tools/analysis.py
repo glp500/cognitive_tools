@@ -18,6 +18,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .env import reward_identity
+
 ANALYSIS_ROOT = Path("results") / "q_learning_baseline" / "social_analysis"
 ECOLOGICAL_STATES = ("scarce", "moderate", "abundant")
 SOCIAL_STATES = ("mostly_high", "mixed", "mostly_low")
@@ -211,6 +213,9 @@ def load_run(path: Path) -> RunData:
     with config_path.open() as file:
         config = json.load(file)
 
+    reward_identity(config)
+    if config.get("reward_mode") == "capped_harvest" and "reward_definition" not in config:
+        raise ValueError("Capped runs require explicit reward_definition metadata")
     schema = config.get("social_measurement_schema")
     if schema != "stage4_v1":
         raise ValueError(
@@ -311,6 +316,9 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
 
     warnings: list[str] = []
     reference = runs[0]
+    expected_reward = reward_identity(reference.config)
+    if any(reward_identity(run.config) != expected_reward for run in runs[1:]):
+        raise ValueError("Cross-treatment analysis would mix incompatible reward definitions")
 
     commit_shas = {
         run.config.get("run_metadata", {}).get("git_commit_sha")
@@ -1519,6 +1527,7 @@ def analysis_manifest(*, args, runs: list[RunData], warnings: list[str]) -> dict
     return {
         "schema_version": 1,
         "profile": getattr(args, "profile", "diagnostics"),
+        "reward_definition": reward_identity(runs[0].config),
         "primary_training_window": "max(0, T-1000) < recorded step <= T",
         "inference": "replicate-level pointwise percentile intervals; no significance claims",
         "analysis_name": args.analysis_name,
@@ -1559,6 +1568,14 @@ def run_analysis(args) -> Path:
     figures_dir = output_dir / "figures"
     tables_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
+
+    from .utility_analysis import build_utility_summaries
+
+    utility_rows, utility_summary = build_utility_summaries(
+        runs, bootstrap_reps=args.bootstrap_reps, bootstrap_seed=args.bootstrap_seed
+    )
+    write_csv_rows(tables_dir / "utility_evaluation.csv", utility_rows)
+    write_csv_rows(tables_dir / "utility_evaluation_summary.csv", utility_summary)
 
     if getattr(args, "profile", "diagnostics") == "focused":
         from .focused_analysis import run_focused_analysis

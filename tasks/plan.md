@@ -1,9 +1,9 @@
 # Social-dilemma revision implementation plan
 
-Status: proposed, not implemented. Date: 2026-09-29.
+Status: stages 1–6 implemented; held-out gate passed; stage 7 smoke verification pending. Date: 2026-09-30.
 
-The requested review and specification are complete. The implementation below
-is future work. The completed earlier validation plan is preserved in
+The requested review and specification are complete. Validation implementation
+and the pilot are complete; the held-out gate passed all six ecology/return cells. The completed earlier validation plan is preserved in
 [the archive](archive/payoff-validation-plan-2026-09-29.md).
 
 [Evidence and alternatives](../docs/reviews/incentive-redesign-review-2026-09-29.md) ·
@@ -15,7 +15,8 @@ Retain the codebase and introduce an opt-in `capped_harvest` utility:
 `min(actual per-step harvest, metabolism_rate)`, with cap 0.002 for this study.
 The default remains gross harvest. Development results support a fear-driven
 population dilemma in all three ecologies under both gamma=0.95 and raw H=1000
-returns. They justify fresh validation; they do not establish a confirmed result.
+returns. The subsequent held-out gate supports this criterion; see the
+[results](../docs/reviews/capped-harvest-validation-results-2026-09-30.md).
 
 Budget 4–8 focused engineering hours through the independent validation slice,
 then another 8–16 hours to integrate learning and compatibility if it passes.

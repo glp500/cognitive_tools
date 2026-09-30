@@ -499,3 +499,47 @@ def test_b0_condition_is_deterministic_for_same_seed():
     second_serialized = json.dumps(second, sort_keys=True, allow_nan=True)
 
     assert first_serialized == second_serialized
+
+
+@pytest.mark.parametrize("warmup", [0, 2])
+def test_capped_evaluation_records_utility_from_evaluation_start(warmup):
+    args = make_args(social_mode="none", reward_mode="capped_harvest", gamma=0.5)
+    env, obs, _ = experiment.make_environment("uniform_high", 6, 0, warmup + 3, args)
+    for _ in range(warmup):
+        obs, _, _, _, _ = env.step({name: 1 for name in env.agents})
+    summary, _ = experiment.evaluate_policy(
+        env,
+        obs,
+        scenario_name="uniform_high",
+        population=6,
+        replicate=0,
+        strategy="always_high",
+        evaluation_mode="continuation" if warmup else "fresh_reset",
+        learners=None,
+        sources=None,
+        previous_actions=None,
+        args=args,
+    )
+    assert summary["evaluation_mean_utility_sum"] == pytest.approx(0.006)
+    assert summary["evaluation_mean_utility_discounted"] == pytest.approx(0.002 * 1.75)
+    assert summary["evaluation_mean_harvest_sum"] == pytest.approx(0.06)
+    assert summary["final_mean_wealth"] == pytest.approx((warmup + 3) * 0.02)
+
+
+def test_training_q_update_uses_capped_utility():
+    args = make_args(
+        social_mode="none", reward_mode="capped_harvest", training_steps=1, alpha=1, gamma=0
+    )
+    output = experiment.train_q_learning("uniform_high", 6, 0, args)
+    env, _, _, learners = output[:4]
+    for name, learner in learners.items():
+        # The first resource state is moderate; alpha=1 and gamma=0 isolate reward.
+        assert learner.q[1, output[7][name]] == pytest.approx(0.002)
+    assert env.reward_mode == "capped_harvest"
+
+
+def test_no_social_configuration_still_validates_reward():
+    with pytest.raises(ValueError, match="metabolism"):
+        experiment.validate_configuration(
+            make_args(social_mode="none", reward_mode="capped_harvest", metabolism=0)
+        )
