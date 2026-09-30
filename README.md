@@ -4,40 +4,48 @@
 observation generate population misperception and collective organization in a
 renewable common-pool resource system.
 
-## Aim and research questions
+## Current research design
 
-1. Under which ecological conditions do local observations misrepresent
-   population-level behavior?
-2. How do ecology and observation rules shape visibility concentration and
-   population extraction behavior?
+The current primary experiment is the [Stage-5 visibility and bounded-search
+study](docs/specs/visibility-bounded-search-study.md). It asks when ecology and
+restricted social observation distort population perception (RQ1), and how
+these conditions shape visibility concentration and extraction (RQ2). The
+hypotheses test ecological differences, initial visibility profiles, and fixed
+versus adaptive bounded observation. Resource persistence, reserve welfare and
+wealth inequality are secondary consequences. Agents learn with the validated
+[capped-harvest commons utility](docs/reviews/capped-harvest-validation-results-2026-09-30.md).
 
-Resource sustainability, individual reserve welfare, and wealth inequality are
-secondary consequences. Adaptive rewiring is a controlled mechanism comparison,
-not a mechanism that must prove beneficial. The
-[confirmed scope](docs/ideas/ecology-perception-organization.md) defines the
-hypotheses, exclusions, and completion rule.
+Each observer attends four sources. Five profiles manipulate initial visibility:
+equal, random, normal centered, low-propensity majority and high-propensity
+majority. Adaptive bounded search is the sole changing-network treatment. The
+33-condition matrix uses three ecologies × (five profiles × two dynamics + B0).
 
-Agents stay in place, extract a renewable resource, and learn independently.
-Social links carry observations of previous actions; they do not transfer
-resources, rewards, or Q values. Sustainability, welfare, and inequality are
-measured outcomes, not rewards optimized directly by the agents.
+The earlier B0/S1/S2/R0/R1/R2/R3 design remains available for reproducing the
+[Stage-4 study](docs/ideas/ecology-perception-organization.md). Its campaign
+script and focused analysis retain their historical meaning.
 
-## Treatments
+### Run the new experiment
 
-| ID | Information network | Rewiring |
-|---|---|---|
-| B0 | No social information | None |
-| S1 | Random directed network with fixed attention capacity | None |
-| S2 | Fixed symmetric preferential-attachment network | None |
-| R0 | Same initial network as its paired adaptive run | Random observers, matched event counts and search scope |
-| R1 | Random directed network | Prediction error; local search (`theta=0`) |
-| R2 | Random directed network | Prediction error; mixed search (`theta=0.25`) |
-| R3 | Random directed network | Prediction error; global search (`theta=1`) |
+From a clean committed checkout with the [installation](#installation) complete:
 
-R0 must follow its adaptive run because it reads that run's rewiring schedule.
-There is a separate matched R0 for each adaptive treatment and parameter setting.
-The [experiment specification](docs/experiment.md) defines the mechanisms,
-causal contrasts, measurement semantics, and evaluation conditions.
+```bash
+# Fast end-to-end test: all 11 treatments, one ecology, 2 replicates.
+PYTHON_BIN=python WORKERS=2 bash scripts/run_visibility_campaign.sh smoke visibility_smoke_v1
+
+# Smaller scientific campaign: all 33 conditions, 10 replicates each.
+PYTHON_BIN=python WORKERS=8 bash scripts/run_visibility_campaign.sh pilot visibility_pilot_v1
+
+# Frozen full campaign: 33 conditions × 100 replicates = 3,300 runs.
+CONFIRM_FULL=YES PYTHON_BIN=python WORKERS=14 bash scripts/run_visibility_campaign.sh full visibility_full_v1
+```
+
+Use `RESUME=1` with the same command and tag to recover completed conditions
+under the same code/specification. Results are written to
+`results/q_learning_baseline/experiments/<tag>_*` and the five main figures to
+`results/q_learning_baseline/social_analysis/<tag>_analysis/figures/`.
+The campaign script runs the matching analysis automatically. Review
+`docs/specs/visibility-bounded-search-study.md` for measurement and inference
+limits before interpreting pilot or full results.
 
 ## Code layout
 

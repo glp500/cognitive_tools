@@ -1,3 +1,7 @@
+> **Current primary study:** [Stage-5 visibility and bounded search](specs/visibility-bounded-search-study.md).
+> The mechanisms and treatment IDs below document the archived Stage-4 design.
+> Use `scripts/run_visibility_campaign.sh` for new experiments.
+
 # Experiment specification
 
 The research questions and treatment overview are in the [README](../README.md).

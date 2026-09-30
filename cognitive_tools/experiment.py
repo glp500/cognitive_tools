@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from itertools import combinations
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 
@@ -45,6 +46,14 @@ from cognitive_tools.social import (
     social_observations,
     update_forecasts,
     visibility_counts,
+)
+from cognitive_tools.visibility import (
+    PROFILES,
+    PROTOCOL,
+    canonical_hash,
+    graph_hash,
+    init_visibility_attention,
+    load_visibility_spec,
 )
 
 RESULTS_ROOT = Path("results") / "q_learning_baseline" / "experiments"
@@ -230,6 +239,8 @@ def treatment_name(args) -> str:
     """Return a compact treatment identifier for run metadata."""
     if args.social_mode == "none":
         return "B0"
+    if getattr(args, "study_protocol", "stage4") == PROTOCOL:
+        return f"{args.visibility_profile}_{args.network_dynamics}"
     if args.social_network == "ba":
         return "S2"
     if args.rewiring == "none":
@@ -250,6 +261,32 @@ def treatment_name(args) -> str:
 def validate_configuration(args) -> None:
     """Validate ecological, social-network, rewiring, and evaluation settings."""
     reward_definition(getattr(args, "reward_mode", "harvest"), args.metabolism)
+    if getattr(args, "study_protocol", "stage4") == PROTOCOL:
+        spec, spec_sha = load_visibility_spec(args.visibility_spec)
+        if args.reward_mode != "capped_harvest" or args.network_eval != "frozen":
+            raise ValueError("Stage-5 requires capped_harvest and frozen evaluation")
+        if args.social_mode == "none":
+            if args.visibility_profile is not None or args.network_dynamics != "none":
+                raise ValueError("Stage-5 B0 has no visibility profile or network dynamics")
+        else:
+            if args.visibility_profile not in PROFILES or args.network_dynamics not in (
+                "fixed",
+                "adaptive_bounded",
+            ):
+                raise ValueError("Stage-5 requires a profile and fixed/adaptive_bounded dynamics")
+            if args.social_network != "random_k" or args.social_k != args.attention_k:
+                raise ValueError("Stage-5 requires random_k with social_k == attention_k")
+            expected = "none" if args.network_dynamics == "fixed" else "prediction_error"
+            if args.rewiring != expected or args.rewire_theta != 0.25 or args.rewire_mu != 0.10:
+                raise ValueError("Stage-5 dynamics require fixed assumptions: theta=.25, mu=.10")
+            if args.rewire_threshold != 0.25 or args.rewire_every != 50:
+                raise ValueError("Stage-5 requires threshold=.25 and 50-step rewiring")
+            if args.matched_rewire_schedule:
+                raise ValueError("Stage-5 has no matched R0 schedule")
+        if args.visibility_profile_spec_sha256 != spec_sha:
+            raise ValueError("Visibility spec hash changed; freeze a new protocol version")
+    elif getattr(args, "study_protocol", "stage4") != "stage4":
+        raise ValueError("Unknown study protocol")
     network_eval = getattr(args, "network_eval", "frozen")
 
     if network_eval not in NETWORK_EVAL_MODES:
@@ -455,6 +492,22 @@ def make_social_sources(env: EcoEnv, replicate: int, args) -> dict[str, list[str
     if args.social_mode != "fixed":
         raise ValueError(f"Unknown social mode: {args.social_mode}")
 
+    if getattr(args, "study_protocol", "stage4") == PROTOCOL:
+        spec, spec_sha = load_visibility_spec(args.visibility_spec)
+        if spec_sha != args.visibility_profile_spec_sha256:
+            raise ValueError("Visibility profile specification changed during campaign")
+        rng = np.random.default_rng(
+            social_seed(replicate, len(env.possible_agents), args.seed)
+            + 1_000_000 * PROFILES.index(args.visibility_profile)
+        )
+        return init_visibility_attention(
+            env.possible_agents,
+            k=args.attention_k,
+            profile=args.visibility_profile,
+            rng=rng,
+            spec=spec,
+        ).sources
+
     rng = np.random.default_rng(social_seed(replicate, len(env.possible_agents), args.seed))
     agents = list(env.possible_agents)
 
@@ -568,6 +621,11 @@ def system_metrics(
         "visibility_gini": social["visibility_gini"],
         "max_visibility_share": social["max_visibility_share"],
         "zero_visibility_fraction": social["zero_visibility_fraction"],
+        "visibility_variance": social.get("visibility_variance", float("nan")),
+        "visibility_skewness": social.get("visibility_skewness", float("nan")),
+        "visibility_q25": social.get("visibility_q25", float("nan")),
+        "visibility_median": social.get("visibility_median", float("nan")),
+        "visibility_q75": social.get("visibility_q75", float("nan")),
         "reciprocity": social["reciprocity"],
         "degree_assortativity": social["degree_assortativity"],
         "visible_population_bias": social["visible_population_bias"],
@@ -609,10 +667,19 @@ def make_network_record(
             np.mean([event["requested_scope"] == "global" for event in events_since_record])
         )
         local_fallbacks = int(sum(bool(event["fallback"]) for event in events_since_record))
+        local_requested = [
+            event for event in events_since_record if event["requested_scope"] == "local"
+        ]
+        mean_local_candidates = (
+            float(np.mean([event["requested_candidate_count"] for event in local_requested]))
+            if local_requested
+            else float("nan")
+        )
     else:
         global_rewire_fraction = 0.0
         requested_global_fraction = 0.0
         local_fallbacks = 0
+        mean_local_candidates = float("nan")
 
     return {
         "scenario": scenario_name,
@@ -625,6 +692,11 @@ def make_network_record(
         "visibility_gini": metrics["visibility_gini"],
         "max_visibility_share": metrics["max_visibility_share"],
         "zero_visibility_fraction": metrics["zero_visibility_fraction"],
+        "visibility_variance": metrics["visibility_variance"],
+        "visibility_skewness": metrics["visibility_skewness"],
+        "visibility_q25": metrics["visibility_q25"],
+        "visibility_median": metrics["visibility_median"],
+        "visibility_q75": metrics["visibility_q75"],
         "reciprocity": metrics["reciprocity"],
         "degree_assortativity": metrics["degree_assortativity"],
         "population_low_fraction": metrics["population_low_fraction"],
@@ -641,6 +713,13 @@ def make_network_record(
         "cumulative_rewires": cumulative_rewires,
         "global_rewire_fraction": global_rewire_fraction,
         "requested_global_fraction": requested_global_fraction,
+        "requested_local_fraction": 1.0 - requested_global_fraction
+        if events_since_record
+        else float("nan"),
+        "local_fallback_fraction": local_fallbacks / len(events_since_record)
+        if events_since_record
+        else float("nan"),
+        "mean_local_candidate_count": mean_local_candidates,
         "local_fallbacks": local_fallbacks,
     }
 
@@ -853,6 +932,45 @@ def train_q_learning(scenario_name: str, population: int, replicate: int, args):
     )
     sources = make_social_sources(env, replicate, args)
     initial_sources = None if sources is None else copy_sources(sources)
+    initial_visibility_rows = []
+    if getattr(args, "study_protocol", "stage4") == PROTOCOL and sources is not None:
+        spec, _ = load_visibility_spec(args.visibility_spec)
+        rng = np.random.default_rng(
+            social_seed(replicate, population, args.seed)
+            + 1_000_000 * PROFILES.index(args.visibility_profile)
+        )
+        initialization = init_visibility_attention(
+            env.possible_agents,
+            k=args.attention_k,
+            profile=args.visibility_profile,
+            rng=rng,
+            spec=spec,
+        )
+        if initialization.sources != initial_sources:
+            raise RuntimeError("Stage-5 initialization identity mismatch")
+        counts = visibility_counts(sources)
+        graph_sha = graph_hash(sources)
+        propensity_sha = canonical_hash(initialization.raw_propensity)
+        initial_visibility_rows = [
+            dict(
+                scenario=scenario_name,
+                population=population,
+                replicate=replicate,
+                agent=name,
+                visibility_profile=args.visibility_profile,
+                network_dynamics=args.network_dynamics,
+                raw_propensity=initialization.raw_propensity[name],
+                effective_weight=initialization.effective_weight[name],
+                initial_visibility_count=counts[name],
+                initial_visibility_fraction=counts[name] / (population - 1),
+                relative_visibility=counts[name] / args.attention_k,
+                attention_count=len(sources[name]),
+                initial_network_sha256=graph_sha,
+                initial_propensity_sha256=propensity_sha,
+            )
+            for name in env.possible_agents
+        ]
+
     learners = make_learners(env, replicate, args)
 
     state_visit_counts = np.zeros(learner_state_count(args.social_mode), dtype=int)
@@ -1075,6 +1193,7 @@ def train_q_learning(scenario_name: str, population: int, replicate: int, args):
     training_measurements = {
         "state_visit_counts": state_visit_counts,
         "agent_social_summary": agent_social_rows,
+        "initial_visibility": initial_visibility_rows,
     }
 
     return (
@@ -1790,6 +1909,7 @@ def run_condition(scenario_name: str, population: int, replicate: int, args):
         "rewiring_schedule": rewiring_schedule,
         "agent_social_summary": training_measurements["agent_social_summary"],
         "network_edges_checkpoints": network_snapshots,
+        "initial_visibility": training_measurements.get("initial_visibility", []),
     }
 
 
@@ -1809,6 +1929,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument("--run-name", default="baseline_validation_v1")
+    parser.add_argument("--study-protocol", choices=("stage4", PROTOCOL), default="stage4")
+    parser.add_argument("--visibility-profile", choices=PROFILES)
+    parser.add_argument(
+        "--visibility-spec", default="configs/visibility/visibility_profiles_v1.json"
+    )
+    parser.add_argument("--visibility-profile-spec-sha256")
+    parser.add_argument(
+        "--network-dynamics", choices=("none", "fixed", "adaptive_bounded"), default="none"
+    )
+    parser.add_argument("--attention-k", type=int, default=4)
     parser.add_argument("--scenarios", nargs="+", default=list(SCENARIOS))
     parser.add_argument("--populations", type=int, nargs="+", default=[8, 16, 32])
     parser.add_argument("--replicates", type=int, default=20)
@@ -1958,10 +2088,55 @@ def build_parser() -> argparse.ArgumentParser:
 def condition_checkpoint(task):
     """Each process owns one condition; publish its checkpoint atomically."""
     scenario, population, replicate, args, path = task
-    output = run_condition(scenario, population, replicate, args)
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(output))
-    temporary.replace(path)
+    stage5 = getattr(args, "study_protocol", "stage4") == PROTOCOL
+    correlation_id = f"{args.run_name}:{scenario}:N{population}:r{replicate}" if stage5 else None
+    started = perf_counter()
+    if stage5:
+        print(
+            json.dumps(
+                dict(
+                    event="condition_started",
+                    correlation_id=correlation_id,
+                    scenario=scenario,
+                    population=population,
+                    replicate=replicate,
+                )
+            ),
+            flush=True,
+        )
+    try:
+        output = run_condition(scenario, population, replicate, args)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(output))
+        temporary.replace(path)
+    except Exception as error:
+        if stage5:
+            print(
+                json.dumps(
+                    dict(
+                        event="condition_failed",
+                        correlation_id=correlation_id,
+                        error_type=type(error).__name__,
+                    )
+                ),
+                flush=True,
+            )
+        raise
+    if stage5:
+        print(
+            json.dumps(
+                dict(
+                    event="condition_completed",
+                    correlation_id=correlation_id,
+                    duration_seconds=round(perf_counter() - started, 3),
+                    initial_agents=len(output["initial_visibility"]),
+                    rewire_events=sum(
+                        int(row["successful_rewires"]) for row in output["rewiring_schedule"]
+                    ),
+                )
+            ),
+            flush=True,
+        )
     return scenario, population, replicate
 
 
@@ -2037,6 +2212,8 @@ def run_conditions(args, run_dir):
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.study_protocol == PROTOCOL and args.visibility_profile_spec_sha256 is None:
+        _, args.visibility_profile_spec_sha256 = load_visibility_spec(args.visibility_spec)
     validate_configuration(args)
     if args.workers < 0:
         raise ValueError("--workers must be non-negative.")
@@ -2052,7 +2229,17 @@ def main() -> None:
     config["scenario_definitions"] = {name: SCENARIOS[name] for name in args.scenarios}
     config["learner_n_states"] = learner_state_count(args.social_mode)
     config["treatment"] = treatment_name(args)
-    config["social_measurement_schema"] = "stage4_v1"
+    if args.study_protocol == PROTOCOL:
+        config.update(
+            visibility_profile_version="v1",
+            propensity_semantics="initial_source_selection_weight",
+            propensity_persistence="initial_only",
+            bounded_search_global_probability=0.25,
+            attention_k=args.attention_k,
+        )
+    config["social_measurement_schema"] = (
+        "stage5_visibility_v1" if args.study_protocol == PROTOCOL else "stage4_v1"
+    )
     config["social_network_semantics"] = (
         "none"
         if args.social_mode == "none"
@@ -2119,6 +2306,7 @@ def main() -> None:
     rewiring_schedule_rows: list[dict] = []
     agent_social_rows: list[dict] = []
     network_edge_rows: list[dict] = []
+    initial_visibility_rows: list[dict] = []
 
     total = len(args.scenarios) * len(args.populations) * args.replicates
 
@@ -2164,6 +2352,7 @@ def main() -> None:
         rewiring_schedule_rows.extend(output["rewiring_schedule"])
         agent_social_rows.extend(output["agent_social_summary"])
         network_edge_rows.extend(output["network_edges_checkpoints"])
+        initial_visibility_rows.extend(output["initial_visibility"])
 
     write_csv(data_dir / "evaluation_summary.csv", evaluation_rows)
     write_csv(data_dir / "training_timeseries.csv", training_rows)
@@ -2174,6 +2363,46 @@ def main() -> None:
     write_csv(data_dir / "rewiring_schedule.csv", rewiring_schedule_rows)
     write_csv(data_dir / "agent_social_summary.csv", agent_social_rows)
     write_csv(data_dir / "network_edges_checkpoints.csv", network_edge_rows)
+    if args.study_protocol == PROTOCOL and args.social_mode == "fixed":
+        write_csv(data_dir / "initial_visibility.csv", initial_visibility_rows)
+    if args.study_protocol == PROTOCOL:
+        expected_initial = (
+            args.replicates * len(args.scenarios) * sum(args.populations)
+            if args.social_mode == "fixed"
+            else 0
+        )
+        if len(initial_visibility_rows) != expected_initial:
+            raise RuntimeError("Stage-5 initial visibility coverage failed")
+        health = dict(
+            study_protocol=PROTOCOL,
+            run_name=args.run_name,
+            completed_conditions=total,
+            initial_agent_rows=len(initial_visibility_rows),
+            visibility_profile=args.visibility_profile,
+            network_dynamics=args.network_dynamics,
+            visibility_profile_spec_sha256=args.visibility_profile_spec_sha256,
+            total_successful_rewires=sum(
+                int(row["successful_rewires"]) for row in rewiring_schedule_rows
+            ),
+            undefined_majority_mismatch_windows=sum(
+                not np.isfinite(float(row["majority_mismatch_rate"]))
+                for row in training_rows
+                if row.get("majority_mismatch_rate") is not None
+            ),
+        )
+        (run_dir / "run_health.json").write_text(json.dumps(health, indent=2))
+        print(
+            json.dumps(
+                dict(
+                    event="run_completed",
+                    correlation_id=args.run_name,
+                    completed_conditions=total,
+                    initial_agent_rows=len(initial_visibility_rows),
+                    total_successful_rewires=health["total_successful_rewires"],
+                )
+            ),
+            flush=True,
+        )
     (run_dir / "complete.json").write_text(json.dumps({"conditions": total}))
 
     print("\nSimulation complete.")

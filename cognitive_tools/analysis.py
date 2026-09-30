@@ -217,9 +217,9 @@ def load_run(path: Path) -> RunData:
     if config.get("reward_mode") == "capped_harvest" and "reward_definition" not in config:
         raise ValueError("Capped runs require explicit reward_definition metadata")
     schema = config.get("social_measurement_schema")
-    if schema != "stage4_v1":
+    if schema not in ("stage4_v1", "stage5_visibility_v1"):
         raise ValueError(
-            f"Run {run_dir.name} does not use the Stage 4 social measurement "
+            f"Run {run_dir.name} is not Stage 4 or Stage 5; unsupported social measurement "
             f"schema. Found {schema!r}. Re-run it with the current experiment runner."
         )
 
@@ -237,11 +237,13 @@ def load_run(path: Path) -> RunData:
         "network_timeseries",
         "rewiring_schedule",
         "network_edges_checkpoints",
+        "initial_visibility",
     )
-    for name in required_tables:
-        tables[name] = read_csv_rows(data_dir / f"{name}.csv", required=True)
-    for name in optional_tables:
-        tables[name] = read_csv_rows(data_dir / f"{name}.csv", required=False)
+    if schema == "stage4_v1":
+        for name in required_tables:
+            tables[name] = read_csv_rows(data_dir / f"{name}.csv", required=True)
+        for name in optional_tables:
+            tables[name] = read_csv_rows(data_dir / f"{name}.csv", required=False)
 
     schedule_path = data_dir / "rewiring_schedule.csv"
     schedule_sha = sha256_file(schedule_path) if schedule_path.is_file() else None
@@ -266,6 +268,13 @@ def assign_run_labels(runs: list[RunData]) -> None:
             mus_by_treatment[(run.treatment, run.theta)].add(run.mu)
 
     for run in runs:
+        if run.config.get("study_protocol") == "visibility_bounded_search_v1":
+            profile = str(run.config.get("visibility_profile") or "Ecological baseline")
+            dynamics = str(run.config.get("network_dynamics"))
+            run.label = (
+                profile.replace("_", " ").title() + " · " + dynamics.replace("_", " ").title()
+            )
+            continue
         if run.treatment in {"B0", "S1", "S2"}:
             run.label = run.treatment
         elif run.treatment == "R0":
@@ -317,6 +326,13 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
     warnings: list[str] = []
     reference = runs[0]
     expected_reward = reward_identity(reference.config)
+    protocols = {run.config.get("study_protocol", "stage4") for run in runs}
+    if len(protocols) != 1:
+        raise ValueError("Cross-treatment analysis cannot mix Stage-4 and Stage-5 protocols")
+    if "visibility_bounded_search_v1" in protocols:
+        hashes = {run.config.get("visibility_profile_spec_sha256") for run in runs}
+        if None in hashes or len(hashes) != 1:
+            raise ValueError("Stage-5 visibility profile spec hashes differ or are missing")
     if any(reward_identity(run.config) != expected_reward for run in runs[1:]):
         raise ValueError("Cross-treatment analysis would mix incompatible reward definitions")
 
@@ -1569,6 +1585,22 @@ def run_analysis(args) -> Path:
     tables_dir.mkdir(parents=True, exist_ok=True)
     figures_dir.mkdir(parents=True, exist_ok=True)
 
+    if getattr(args, "profile", "focused") == "visibility":
+        from .visibility_analysis import run_visibility_analysis
+
+        run_visibility_analysis(
+            runs,
+            tables_dir,
+            figures_dir,
+            bootstrap_reps=args.bootstrap_reps,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+        write_csv_rows(tables_dir / "run_catalog.csv", run_catalog_rows(runs))
+        manifest = analysis_manifest(args=args, runs=runs, warnings=warnings)
+        (output_dir / "analysis_manifest.json").write_text(json.dumps(manifest, indent=2))
+        print(f"Visibility analysis complete: {output_dir}")
+        return output_dir
+
     from .utility_analysis import build_utility_summaries
 
     utility_rows, utility_summary = build_utility_summaries(
@@ -1765,7 +1797,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--profile",
-        choices=("focused", "diagnostics"),
+        choices=("focused", "diagnostics", "visibility"),
         default="focused",
         help="Four study figures by default; legacy diagnostics are opt-in.",
     )

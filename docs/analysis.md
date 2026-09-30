@@ -1,3 +1,8 @@
+> **Current primary analysis:** `python -m cognitive_tools.analysis --profile visibility`.
+> See the [Stage-5 specification](specs/visibility-bounded-search-study.md) for
+> replicate summaries, contrasts and figures. The focused/diagnostics profiles
+> below remain the archived Stage-4 analysis contract.
+
 # Focused study analysis
 
 The CLI defaults to `--profile focused`. It generates six CSV tables and four

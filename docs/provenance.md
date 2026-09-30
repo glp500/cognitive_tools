@@ -1,3 +1,8 @@
+> Current Stage-5 study provenance adds a versioned visibility spec SHA-256,
+> exact initial graph and propensity hashes, capped reward identity, campaign
+> freeze, and per-condition structured events. See the
+> [Stage-5 specification](specs/visibility-bounded-search-study.md).
+
 # Scientific and implementation provenance
 
 Mechanism definitions belong in [experiment.md](experiment.md); data contracts

@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "profiles": {
+    "equal": {"distribution": "constant", "value": 0.5, "network": "regular"},
+    "random": {"distribution": "constant", "value": 0.5, "network": "uniform"},
+    "normal_centered": {"distribution": "truncated_normal", "mean": 0.5, "sd": 0.15, "network": "weighted"},
+    "low_propensity_majority": {"distribution": "beta", "alpha": 2, "beta": 5, "network": "weighted"},
+    "high_propensity_majority": {"distribution": "beta", "alpha": 5, "beta": 2, "network": "weighted"}
+  }
+}

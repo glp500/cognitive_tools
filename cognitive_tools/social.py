@@ -342,6 +342,7 @@ def replace_source(
     else:
         pool = local_candidates(observer, search_network)
 
+    requested_candidate_count = len(pool)
     fallback = False
     used_scope = requested_scope
 
@@ -373,6 +374,7 @@ def replace_source(
         "requested_scope": requested_scope,
         "used_scope": used_scope,
         "fallback": fallback,
+        "requested_candidate_count": requested_candidate_count,
     }
 
 
@@ -756,6 +758,15 @@ def social_metrics(
         "visibility_gini": _gini_nonnegative(degrees),
         "max_visibility_share": (float(degrees.max() / total_edges) if total_edges > 0.0 else 0.0),
         "zero_visibility_fraction": float(np.mean(degrees == 0.0)),
+        "visibility_variance": float(np.var(degrees)),
+        "visibility_skewness": (
+            float(np.mean(((degrees - degrees.mean()) / degrees.std()) ** 3))
+            if degrees.std()
+            else 0.0
+        ),
+        "visibility_q25": float(np.quantile(degrees, 0.25)),
+        "visibility_median": float(np.median(degrees)),
+        "visibility_q75": float(np.quantile(degrees, 0.75)),
         "reciprocity": network_reciprocity(sources),
         "degree_assortativity": (visibility_degree_assortativity(sources)),
         "population_low_fraction": float("nan"),

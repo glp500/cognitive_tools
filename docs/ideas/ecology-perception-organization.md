@@ -1,3 +1,7 @@
+> Historical Stage-4 design. The [Stage-5 visibility study](../specs/visibility-bounded-search-study.md)
+> is the current primary research design. This file is retained to interpret
+> archived Stage-4 results.
+
 # Ecology, Social Perception, and Collective Organization in Artificial Societies
 
 Status: confirmed by the project owner on 2026-09-28. This document records the
