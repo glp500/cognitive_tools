@@ -1,7 +1,7 @@
 # Social-dilemma revision tasks
 
-Status: validation and learning integration complete; campaign smoke pending.
-Latest verification: 207 tests passed; 600 development episodes replayed; original v1 run audited.
+Status: all required implementation and validation tasks complete.
+Latest verification: 209 tests passed; four-treatment smoke and resume passed; 600 development episodes replayed; original v1 run audited.
 
 [Plan](plan.md) · [Specification](../docs/specs/social-dilemma-revision.md) ·
 [Evidence](../docs/reviews/incentive-redesign-review-2026-09-29.md)
@@ -25,13 +25,13 @@ Latest verification: 207 tests passed; 600 development episodes replayed; origin
 - [x] 4b. Freeze the candidate/protocol, 100 held-out replicates and four focal agents before using indices 3000–3099.
 - [x] 4c. Run the separate held-out endpoint experiment and publish condition-specific findings, including failures.
 - [x] Checkpoint: require the stated population criterion in all three ecologies for each of the two returns before adoption.
-- [ ] Optional: extend to the prespecified held-out interior compositions; do not call reused endpoints independent confirmation.
+- [ ] Optional (not executed): extend to the prespecified held-out interior compositions; do not call reused endpoints independent confirmation.
 
 ## Learning integration, conditional on validation: another 8–16 hours
 
 - [x] 5. Forward reward identity through every learning/evaluation environment and record actual evaluation utility.
 - [x] 6. Reject mismatched reward modes in analysis, resume and adaptive/R0 schedules; preserve legacy harvest behavior.
-- [ ] Checkpoint: demonstrate B0, S1 and adaptive/matched-R0 smoke lifecycles, with lint/format and full tests passing.
+- [x] Checkpoint: demonstrate B0, S1 and adaptive/matched-R0 smoke lifecycles, with lint/format and full tests passing.
 - [x] 7. Write a separate capped-study recipe and bounded learning pilot protocol; retain the original frozen campaign.
 
 Scientific success is not an implementation checkbox: if the held-out gate

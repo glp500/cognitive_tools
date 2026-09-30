@@ -72,3 +72,22 @@ If a new ecology, horizon, policy pair or parameter change fails the payoff gate
 follow the diagnostic branches in the [implementation plan](../tasks/plan.md).
 Treat a revised cap or ecology as a new candidate and validate on new held-out
 seeds after development. Preserve failed results and their interpretation.
+
+## Implementation verification — 30 September 2026
+
+The clean producer `51c6035` completed `capped_smoke_v3`: B0, S1, R1 (theta=0)
+and matched R0, followed by focused analysis. Evaluation utility stayed within
+both the gross-harvest and theoretical cap bounds. All 95 matched R0 rewiring
+events matched the adaptive source's event counts. The analysis produced 16
+utility/gross-harvest summaries, each using two independent replicates.
+Resuming recognized all four completed treatments without rerunning simulation.
+
+The full suite passed 209 tests; Ruff lint/format, shell syntax and Git whitespace
+checks passed. Independent review issues in provenance and missing-account
+handling were resolved with regression tests. Earlier smoke attempts are retained:
+v1 completed simulations but had an analysis CLI invocation error; v2 completed
+but used the parser's R2 search scope before the recipe explicitly fixed R1.
+The final successful reference is v3.
+
+The longer learning pilot and full campaign have **not** been executed. Smoke
+results verify operation, not scientific learning effects.

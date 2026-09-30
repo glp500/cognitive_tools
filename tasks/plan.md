@@ -1,6 +1,6 @@
 # Social-dilemma revision implementation plan
 
-Status: stages 1–6 implemented; held-out gate passed; stage 7 smoke verification pending. Date: 2026-09-30.
+Status: all seven stages implemented and verified; held-out gate and four-treatment smoke passed. Date: 2026-09-30.
 
 The requested review and specification are complete. Validation implementation
 and the pilot are complete; the held-out gate passed all six ecology/return cells. The completed earlier validation plan is preserved in
@@ -157,3 +157,16 @@ Any new candidate after seeing confirmation data needs a new protocol and unused
 confirmation seeds. Record failures. Larger extraction, stronger coupling, or
 a direct high-action cost is not guaranteed to preserve both collective benefit
 and unilateral conflict.
+
+
+## Completion evidence — 30 September 2026
+
+- Held-out gate: all three ecologies × both return definitions supported; see
+  [results](../docs/reviews/capped-harvest-validation-results-2026-09-30.md).
+- Learning integration: 209 tests passed, Ruff lint/format and shell syntax clean.
+- `capped_smoke_v3` (producer `51c6035`): B0/S1/R1/matched-R0 and analysis complete;
+  95 matched rewiring events verified, 16 replicate utility summaries generated,
+  evaluation reward bounds checked, completed-run resume exercised.
+- [Separate recipe and prospective pilot](../docs/capped-harvest-study.md) documented.
+  Longer learning pilot, full learning campaign and optional held-out interior
+  extension were not run. No learned-cooperation claim is made.
