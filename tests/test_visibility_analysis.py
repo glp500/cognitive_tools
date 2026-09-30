@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from cognitive_tools import experiment
+from cognitive_tools.scenarios import BALANCED_SCENARIOS
 from cognitive_tools.visibility_analysis import run_visibility_analysis
 
 
@@ -73,6 +74,71 @@ def test_visibility_analysis_builds_paired_tables_and_figures(tmp_path):
     }
     assert len(list(figures.glob("0*.png"))) == 5
     assert (data / "adaptive_fixed_replicates.csv").exists()
+
+
+def test_balanced_analysis_uses_matched_ecologies_and_weighted_stock(tmp_path):
+    runs = []
+    for dynamics in ("fixed", "adaptive_bounded"):
+        template = _run("equal", dynamics, "balanced_uniform")
+        template.config["environment_design"] = "balanced_capacity_v1"
+        template.config["scenarios"] = list(BALANCED_SCENARIOS)
+        args = experiment.build_parser().parse_args(
+            [
+                "--study-protocol",
+                "visibility_bounded_search_v1",
+                "--environment-design",
+                "balanced_capacity_v1",
+                "--reward-mode",
+                "capped_harvest",
+                "--social-mode",
+                "fixed",
+                "--social-k",
+                "4",
+                "--attention-k",
+                "4",
+                "--visibility-profile",
+                "equal",
+                "--network-dynamics",
+                dynamics,
+                "--rewiring",
+                "prediction_error" if dynamics == "adaptive_bounded" else "none",
+                "--scenarios",
+                *BALANCED_SCENARIOS,
+                "--populations",
+                "8",
+                "--replicates",
+                "1",
+                "--training-steps",
+                "4",
+                "--evaluation-steps",
+                "2",
+                "--record-every",
+                "2",
+                "--record-network-every",
+                "2",
+            ]
+        )
+        args.visibility_profile_spec_sha256 = template.config["visibility_profile_spec_sha256"]
+        merged = {
+            key: list(value) for key, value in template.tables.items() if isinstance(value, list)
+        }
+        for scenario in BALANCED_SCENARIOS[1:]:
+            result = experiment.run_condition(scenario, 8, 0, args)
+            for key, value in result.items():
+                if isinstance(value, list):
+                    merged.setdefault(key, []).extend(value)
+        template.tables = merged
+        runs.append(template)
+    tables = run_visibility_analysis(
+        runs, tmp_path / "data", tmp_path / "figures", bootstrap_reps=20, bootstrap_seed=1
+    )
+    assert {row["comparison"] for row in tables["ecology_contrast_summary"]} == {
+        "balanced_dispersed-balanced_uniform",
+        "balanced_segregated-balanced_dispersed",
+        "balanced_segregated-balanced_uniform",
+    }
+    assert "local_resource_fraction" in {row["metric"] for row in tables["outcome_summary"]}
+    assert len(list((tmp_path / "figures").glob("0*.png"))) == 5
 
 
 def test_visibility_analysis_rejects_unpaired_initial_graph(tmp_path):

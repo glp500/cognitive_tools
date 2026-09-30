@@ -7,6 +7,13 @@ import numpy as np
 from .ecology import make_capacity_map
 
 SCENARIOS = {
+    "balanced_uniform": {"label": "Balanced uniform", "group": "balanced", "kind": "uniform"},
+    "balanced_dispersed": {"label": "Balanced dispersed", "group": "balanced", "kind": "dispersed"},
+    "balanced_segregated": {
+        "label": "Balanced segregated",
+        "group": "balanced",
+        "kind": "segregated",
+    },
     "uniform_high": {
         "label": "Uniform high",
         "group": "single",
@@ -61,6 +68,8 @@ SCENARIOS = {
     },
 }
 
+BALANCED_SCENARIOS = ("balanced_uniform", "balanced_dispersed", "balanced_segregated")
+
 
 def gaussian_mask(
     width: int, height: int, *, centres: list[tuple[float, float]], sigma: float, threshold: float
@@ -93,6 +102,26 @@ def build_environment_maps(
     """
 
     spec = SCENARIOS[scenario_name]
+
+    if spec["group"] == "balanced":
+        if (width * height) % 2:
+            raise ValueError("Balanced landscapes require an even number of cells")
+        kind = spec["kind"]
+        capacity = np.full((height, width), 0.75, dtype=float)
+        regions = np.full((height, width), "uniform", dtype=object)
+        if kind != "uniform":
+            if kind == "dispersed":
+                order = np.random.default_rng(seed).permutation(width * height)
+            else:
+                y, x = np.indices((height, width))
+                order = np.lexsort((y.ravel(), x.ravel()))
+            capacity.flat[order[: width * height // 2]] = 0.55
+            capacity.flat[order[width * height // 2 :]] = 0.95
+            regions[capacity == 0.55] = "low_capacity"
+            regions[capacity == 0.95] = "high_capacity"
+        recovery = np.full((height, width), 0.05, dtype=float)
+        equilibrium = np.full((height, width), 0.70, dtype=float)
+        return capacity, recovery, equilibrium, regions
 
     if spec["group"] == "single":
         capacity = make_capacity_map(

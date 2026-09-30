@@ -1,7 +1,8 @@
 # Stage-5 visibility and bounded-search study
 
-Status: implemented protocol; 30 September 2026. This is the **current primary
-study design**. The earlier Stage-4 design and results remain archived for
+Status: implemented historical protocol; 30 September 2026. The
+[capacity-matched visibility study](capacity-matched-visibility-study.md) is the
+prospective primary environment design. The earlier Stage-4 design and results remain archived for
 reproduction and comparison. The [capped-harvest validation](../reviews/capped-harvest-validation-results-2026-09-30.md)
 qualifies the ecology as a population commons dilemma for the tested policies.
 

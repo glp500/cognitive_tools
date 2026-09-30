@@ -9,6 +9,7 @@ from collections import defaultdict
 import numpy as np
 
 from .analysis import bootstrap_mean_ci, read_csv_rows, stable_seed, write_csv_rows
+from .scenarios import BALANCED_SCENARIOS
 from .social import _gini_nonnegative
 from .visibility import PROFILES, PROTOCOL, graph_hash
 
@@ -104,6 +105,19 @@ def _contrast(rows, label, left, right, dimensions, metrics, *, reps, seed):
 def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bootstrap_seed):
     if not runs or any(run.config.get("study_protocol") != PROTOCOL for run in runs):
         raise ValueError("Visibility analysis accepts only Stage-5 runs")
+    balanced = runs[0].config.get("environment_design") == "balanced_capacity_v1"
+    ecologies = BALANCED_SCENARIOS if balanced else ECOLOGIES
+    secondary = SECONDARY
+    if balanced:
+        if any(tuple(run.config["scenarios"]) != BALANCED_SCENARIOS for run in runs):
+            raise ValueError("Balanced analysis requires all three matched landscapes")
+        secondary = (
+            ("resource_fraction", "eval_mean_capacity_weighted_resource_fraction"),
+            ("local_resource_fraction", "eval_mean_mean_resource_fraction"),
+            ("resource_stock", "eval_mean_total_resource"),
+            ("total_capacity", "eval_mean_total_capacity"),
+            *SECONDARY[1:],
+        )
     run_factors = {
         (run.config.get("visibility_profile"), run.config.get("network_dynamics")) for run in runs
     }
@@ -251,7 +265,7 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
                         valid_windows=len(finite),
                     )
                 )
-            for metric, field in SECONDARY:
+            for metric, field in secondary:
                 value = _number(fresh[key].get(field))
                 outcomes.append(dict(**base, metric=metric, value=value))
             if social:
@@ -288,16 +302,36 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
         seed=bootstrap_seed,
     )
     all_rows = primary + outcomes
-    ecology, ecology_sum = _contrast(
-        all_rows,
-        lambda r: f"{r['scenario']}-uniform_high",
-        lambda r: r["scenario"] in ("patchy_high", "split_high_low"),
-        lambda r: {**r, "scenario": "uniform_high"},
-        ("scenario", "profile", "dynamics", "population"),
-        PRIMARY,
-        reps=bootstrap_reps,
-        seed=bootstrap_seed,
-    )
+    if balanced:
+        ecology, ecology_sum = [], []
+        for left, right in (
+            ("balanced_dispersed", "balanced_uniform"),
+            ("balanced_segregated", "balanced_dispersed"),
+            ("balanced_segregated", "balanced_uniform"),
+        ):
+            rows, summary = _contrast(
+                all_rows,
+                lambda r, left=left, right=right: f"{left}-{right}",
+                lambda r, left=left: r["scenario"] == left,
+                lambda r, right=right: {**r, "scenario": right},
+                ("scenario", "profile", "dynamics", "population"),
+                PRIMARY,
+                reps=bootstrap_reps,
+                seed=bootstrap_seed,
+            )
+            ecology.extend(rows)
+            ecology_sum.extend(summary)
+    else:
+        ecology, ecology_sum = _contrast(
+            all_rows,
+            lambda r: f"{r['scenario']}-uniform_high",
+            lambda r: r["scenario"] in ("patchy_high", "split_high_low"),
+            lambda r: {**r, "scenario": "uniform_high"},
+            ("scenario", "profile", "dynamics", "population"),
+            PRIMARY,
+            reps=bootstrap_reps,
+            seed=bootstrap_seed,
+        )
     visibility, visibility_sum = _contrast(
         all_rows,
         lambda r: "random-equal" if r["profile"] == "random" else f"{r['profile']}-random",
@@ -382,7 +416,14 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
     )
     from .visibility_figures import save_visibility_figures
 
-    save_visibility_figures(figures_dir, tables)
+    save_visibility_figures(
+        figures_dir,
+        tables,
+        ecologies=ecologies,
+        width=int(runs[0].config.get("width", 10)),
+        height=int(runs[0].config.get("height", 10)),
+        seed=int(runs[0].config.get("seed", 20261002)) if balanced else 20261002,
+    )
     health["figure_count"] = len(list(figures_dir.glob("0[1-5]_*.png")))
     if health["figure_count"] != 5:
         raise RuntimeError("Stage-5 analysis did not produce all five main figures")

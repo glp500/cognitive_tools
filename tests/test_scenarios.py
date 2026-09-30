@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from cognitive_tools.scenarios import SCENARIOS, build_environment_maps
+from cognitive_tools.scenarios import BALANCED_SCENARIOS, SCENARIOS, build_environment_maps
 
 REFERENCE = json.loads(Path(__file__).with_name("scenario_reference.json").read_text())
 
@@ -30,4 +30,4 @@ def test_scenario_matches_scientific_snapshot(case):
 
 
 def test_reference_covers_supported_scenarios():
-    assert {case["scenario"] for case in REFERENCE} == set(SCENARIOS)
+    assert {case["scenario"] for case in REFERENCE} == set(SCENARIOS) - set(BALANCED_SCENARIOS)

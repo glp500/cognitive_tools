@@ -6,46 +6,87 @@ renewable common-pool resource system.
 
 ## Current research design
 
-The current primary experiment is the [Stage-5 visibility and bounded-search
-study](docs/specs/visibility-bounded-search-study.md). It asks when ecology and
-restricted social observation distort population perception (RQ1), and how
-these conditions shape visibility concentration and extraction (RQ2). The
-hypotheses test ecological differences, initial visibility profiles, and fixed
-versus adaptive bounded observation. Resource persistence, reserve welfare and
-wealth inequality are secondary consequences. Agents learn with the validated
-[capped-harvest commons utility](docs/reviews/capped-harvest-validation-results-2026-09-30.md).
+The prospective primary experiment is the [capacity-matched visibility
+study](docs/specs/capacity-matched-visibility-study.md). It compares uniform,
+dispersed and segregated resource landscapes with the same total carrying
+capacity. The dispersed and segregated maps contain identical local capacity
+values, so their direct comparison isolates spatial arrangement. Attention
+profiles and fixed/adaptive observation follow the historical
+[Stage-5 protocol](docs/specs/visibility-bounded-search-study.md). The previous
+[capped-harvest commons validation](docs/reviews/capped-harvest-validation-results-2026-09-30.md)
+applies only to its tested landscapes; the new maps require a fresh payoff gate.
 
 Each observer attends four sources. Five profiles manipulate initial visibility:
 equal, random, normal centered, low-propensity majority and high-propensity
 majority. Adaptive bounded search is the sole changing-network treatment. The
-33-condition matrix uses three ecologies × (five profiles × two dynamics + B0).
+33-condition matrix uses three new ecologies × (five profiles × two dynamics + B0).
 
 The earlier B0/S1/S2/R0/R1/R2/R3 design remains available for reproducing the
 [Stage-4 study](docs/ideas/ecology-perception-organization.md). Its campaign
 script and focused analysis retain their historical meaning.
 
-### Run the new experiment
+### Run the capacity-matched experiment
 
 From a clean committed checkout with the [installation](#installation) complete:
 
 ```bash
-# Fast end-to-end test: all 11 treatments, one ecology, 2 replicates.
-PYTHON_BIN=python WORKERS=2 bash scripts/run_visibility_campaign.sh smoke visibility_smoke_v1
+# Mechanical test: three ecologies × 11 treatments × 2 short replicates.
+PYTHON_BIN=python WORKERS=2 bash scripts/run_balanced_campaign.sh smoke balanced_smoke_v1
+
+# Small figure test: N=64, all 33 cells, 2 short replicates; renders story candidates.
+PYTHON_BIN=python WORKERS=8 bash scripts/run_balanced_campaign.sh figure_smoke balanced_figures_v1
 
 # Smaller scientific campaign: all 33 conditions, 10 replicates each.
-PYTHON_BIN=python WORKERS=8 bash scripts/run_visibility_campaign.sh pilot visibility_pilot_v1
+PYTHON_BIN=python WORKERS=8 bash scripts/run_balanced_campaign.sh pilot balanced_pilot_v1
+
+# Validate the new maps as a commons dilemma before a confirmatory full run.
+python -m cognitive_tools.payoff --output results/payoff_validation/balanced_gate_v1/run \
+    --purpose validation --workers 14 --population 64 --replicates 100 \
+    --replicate-start 4000 --seed 20261014 --focal-count 4 --assignments 1 \
+    --compositions 0 63 --horizons 1000 --gamma 0.95 \
+    --reward-mode capped_harvest \
+    --scenarios balanced_uniform balanced_dispersed balanced_segregated
+python -m cognitive_tools.payoff_analysis \
+    --run results/payoff_validation/balanced_gate_v1/run \
+    --output results/payoff_validation/balanced_gate_v1/analysis --resamples 5000
 
 # Frozen full campaign: 33 conditions × 100 replicates = 3,300 runs.
-CONFIRM_FULL=YES PYTHON_BIN=python WORKERS=14 bash scripts/run_visibility_campaign.sh full visibility_full_v1
+CONFIRM_FULL=YES BALANCED_PAYOFF_GATE=results/payoff_validation/balanced_gate_v1/analysis \
+    PYTHON_BIN=python WORKERS=14 bash scripts/run_balanced_campaign.sh full balanced_full_v1
 ```
 
 Use `RESUME=1` with the same command and tag to recover completed conditions
 under the same code/specification. Results are written to
 `results/q_learning_baseline/experiments/<tag>_*` and the five main figures to
 `results/q_learning_baseline/social_analysis/<tag>_analysis/figures/`.
-The campaign script runs the matching analysis automatically. Review
-`docs/specs/visibility-bounded-search-study.md` for measurement and inference
-limits before interpreting pilot or full results.
+The campaign script first writes `results/q_learning_baseline/campaigns/<tag>/landscape_validation.csv`,
+then runs the matching analysis. Its `figure_smoke`, `pilot` and `full` modes also
+render five story candidates under `<tag>_analysis/story_candidates/`. Use a new
+tag for each new campaign. Review the [new study specification](docs/specs/capacity-matched-visibility-study.md)
+before interpreting results. The older `run_visibility_campaign.sh` remains
+available for reproducing the earlier Stage-5 design.
+
+### Re-render the visual story
+
+After a completed Stage-5 analysis, render the separate five-figure narrative
+set from its saved tables and source runs:
+
+```bash
+MPLCONFIGDIR=/tmp/cognitive-mpl python scripts/plot_visibility_story.py \
+    --analysis-dir results/q_learning_baseline/social_analysis/balanced_pilot_v1_analysis
+```
+
+Use the full campaign's `<tag>_analysis` directory when it is available. The
+script writes PDF, SVG, and 300-dpi PNG candidates, individual caption notes,
+and `story_manifest.json` to `<analysis-dir>/story_candidates/`. It emits JSON
+events for input failures, each figure, and completion. A complete manifest is
+written only after all five figures succeed. The script checks source coverage,
+observer-link counts, paired contrast coverage, and consistency between raw
+fresh-evaluation means and the saved analysis; the manifest hashes its input
+files for provenance. It does not rerun simulations or
+replace the analysis figures. The original [visual-story specification](docs/ideas/stage-5-visual-story.md)
+provides the five reader questions; the [capacity-matched specification](docs/specs/capacity-matched-visibility-study.md)
+defines their new ecology comparisons and stock measures.
 
 ## Code layout
 

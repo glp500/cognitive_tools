@@ -20,6 +20,9 @@ LABELS = {
     "uniform_high": "Uniform high",
     "patchy_high": "Patchy high",
     "split_high_low": "Split high/low",
+    "balanced_uniform": "Uniform · K=75",
+    "balanced_dispersed": "Dispersed · K=75",
+    "balanced_segregated": "Segregated · K=75",
     "fixed": "Fixed",
     "adaptive_bounded": "Adaptive",
 }
@@ -53,12 +56,12 @@ def _point(ax, row, x, *, color):
     )
 
 
-def _design(directory):
+def _design(directory, ecologies, *, width=10, height=10, seed=20261002):
     from .scenarios import build_environment_maps
 
     fig, axes = plt.subplots(2, 3, figsize=(13, 7.3), constrained_layout=True)
-    for ax, ecology in zip(axes[0], ("uniform_high", "patchy_high", "split_high_low")):
-        capacity, *_ = build_environment_maps(ecology, width=10, height=10, seed=20261002)
+    for ax, ecology in zip(axes[0], ecologies):
+        capacity, *_ = build_environment_maps(ecology, width=width, height=height, seed=seed)
         ax.imshow(capacity, cmap="YlGn", vmin=0, vmax=1)
         ax.set_title(LABELS[ecology])
         ax.set_xticks([])
@@ -196,9 +199,8 @@ def _manipulation(directory, tables):
     )
 
 
-def _factor_grid(directory, table, metrics, filename, title, caption=""):
+def _factor_grid(directory, table, metrics, filename, title, caption="", *, ecologies):
 
-    ecologies = ("uniform_high", "patchy_high", "split_high_low")
     fig, axes = plt.subplots(
         len(metrics),
         3,
@@ -237,13 +239,12 @@ def _factor_grid(directory, table, metrics, filename, title, caption=""):
     _save(fig, directory, filename, caption)
 
 
-def _paired_consequences(directory, table):
+def _paired_consequences(directory, table, ecologies):
     metrics = (
         ("resource_fraction", "Resource / capacity"),
         ("reserve_welfare", "Reserve welfare"),
         ("final_wealth_gini", "Final wealth Gini"),
     )
-    ecologies = ("uniform_high", "patchy_high", "split_high_low")
     fig, axes = plt.subplots(
         3, 3, figsize=(15, 10), constrained_layout=True, squeeze=False, sharey="row"
     )
@@ -279,10 +280,9 @@ def _paired_consequences(directory, table):
     )
 
 
-def _trajectory(directory, table, metric, filename, ylabel):
+def _trajectory(directory, table, metric, filename, ylabel, ecologies):
     if not table:
         return
-    ecologies = ("uniform_high", "patchy_high", "split_high_low")
     fig, axes = plt.subplots(
         5, 3, figsize=(15, 12), constrained_layout=True, squeeze=False, sharey=True
     )
@@ -327,7 +327,7 @@ def _trajectory(directory, table, metric, filename, ylabel):
     )
 
 
-def _gini_decomposition(directory, table):
+def _gini_decomposition(directory, table, ecologies):
     _factor_grid(
         directory,
         table,
@@ -339,12 +339,21 @@ def _gini_decomposition(directory, table):
         "supplement_gini_decomposition",
         "Initial and learned visibility concentration",
         caption=f"Training step 0 and terminal step; replicate means with 95% intervals (n≤{_n(table)})",
+        ecologies=ecologies,
     )
 
 
-def save_visibility_figures(directory, tables):
+def save_visibility_figures(
+    directory,
+    tables,
+    *,
+    ecologies=("uniform_high", "patchy_high", "split_high_low"),
+    width=10,
+    height=10,
+    seed=20261002,
+):
     directory.mkdir(parents=True, exist_ok=True)
-    _design(directory)
+    _design(directory, ecologies, width=width, height=height, seed=seed)
     _manipulation(directory, tables)
     _factor_grid(
         directory,
@@ -357,6 +366,7 @@ def save_visibility_figures(directory, tables):
         "03_population_perception",
         "RQ1 · Local views and population behavior",
         caption=f"Final min(1000,T) training steps; replicate means with 95% intervals (n≤{_n(tables['primary_window_summary'])})",
+        ecologies=ecologies,
     )
     _factor_grid(
         directory,
@@ -368,11 +378,14 @@ def save_visibility_figures(directory, tables):
         "04_collective_organization",
         "RQ2 · Visibility and extraction",
         caption=f"Final min(1000,T) training steps; replicate means with 95% intervals (n≤{_n(tables['primary_window_summary'])})",
+        ecologies=ecologies,
     )
-    _paired_consequences(directory, tables["adaptive_fixed_summary"])
-    _gini_decomposition(directory, tables["outcome_summary"])
+    _paired_consequences(directory, tables["adaptive_fixed_summary"], ecologies)
+    _gini_decomposition(directory, tables["outcome_summary"], ecologies)
     for metric, filename, label in (
         ("visibility_gini", "S2_visibility_gini_trajectories", "Visibility Gini"),
         ("low_extraction_rate", "S2_low_extraction_trajectories", "Low-extraction share"),
     ):
-        _trajectory(directory, tables["training_trajectory_summary"], metric, filename, label)
+        _trajectory(
+            directory, tables["training_trajectory_summary"], metric, filename, label, ecologies
+        )

@@ -58,6 +58,7 @@ MEMORY_METRICS = (
 )
 
 STRICT_COMPATIBILITY_KEYS = (
+    "environment_design",
     "seed",
     "width",
     "height",
@@ -334,6 +335,9 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
         hashes = {run.config.get("visibility_profile_spec_sha256") for run in runs}
         if None in hashes or len(hashes) != 1:
             raise ValueError("Stage-5 visibility profile spec hashes differ or are missing")
+        scenario_sets = {tuple(run.config.get("scenarios", ())) for run in runs}
+        if len(scenario_sets) != 1:
+            raise ValueError("Stage-5 analysis requires identical scenario sets across treatments")
     if any(reward_identity(run.config) != expected_reward for run in runs[1:]):
         raise ValueError("Cross-treatment analysis would mix incompatible reward definitions")
 

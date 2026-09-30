@@ -26,7 +26,7 @@ from cognitive_tools import EcoEnv
 from cognitive_tools.env import reward_definition, reward_identity
 from cognitive_tools.model import HIGH_EXTRACT, LOW_EXTRACT
 from cognitive_tools.qlearning import STATE_NAMES, QLearningPolicy, resource_state
-from cognitive_tools.scenarios import SCENARIOS, build_environment_maps
+from cognitive_tools.scenarios import BALANCED_SCENARIOS, SCENARIOS, build_environment_maps
 from cognitive_tools.social import (
     REWIRING_MODES,
     SOCIAL_NETWORK_MODES,
@@ -295,6 +295,13 @@ def validate_configuration(args) -> None:
     for scenario in args.scenarios:
         if scenario not in SCENARIOS:
             raise ValueError(f"Unknown scenario: {scenario}")
+    if getattr(args, "environment_design", "legacy") == "balanced_capacity_v1":
+        if tuple(args.scenarios) != BALANCED_SCENARIOS:
+            raise ValueError("balanced_capacity_v1 requires all three balanced scenarios in order")
+        if args.width * args.height % 2:
+            raise ValueError("balanced_capacity_v1 requires an even number of grid cells")
+    elif getattr(args, "environment_design", "legacy") != "legacy":
+        raise ValueError("Unknown environment design")
 
     if not 0.0 <= args.rewire_theta <= 1.0:
         raise ValueError("--rewire-theta must be between 0 and 1.")
@@ -609,6 +616,10 @@ def system_metrics(
         "collective_order": abs(2.0 * low_rate - 1.0),
         "action_entropy": binary_entropy(low_rate),
         "mean_resource_fraction": float(np.mean(env.model.resource / env.model.capacity)),
+        "capacity_weighted_resource_fraction": float(
+            env.model.resource.sum() / env.model.capacity.sum()
+        ),
+        "total_capacity": float(env.model.capacity.sum()),
         "total_resource": float(env.model.resource.sum()),
         "mean_reserve_welfare": float(np.mean([agent.reserve_welfare for agent in agents])),
         "mean_need_satisfaction": float(np.mean([agent.need_satisfaction for agent in agents])),
@@ -1930,6 +1941,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--run-name", default="baseline_validation_v1")
     parser.add_argument("--study-protocol", choices=("stage4", PROTOCOL), default="stage4")
+    parser.add_argument(
+        "--environment-design", choices=("legacy", "balanced_capacity_v1"), default="legacy"
+    )
     parser.add_argument("--visibility-profile", choices=PROFILES)
     parser.add_argument(
         "--visibility-spec", default="configs/visibility/visibility_profiles_v1.json"
