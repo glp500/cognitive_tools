@@ -175,8 +175,8 @@ def _factor_grid(directory, table, metrics, filename, title, caption=""):
         plt.Line2D([0], [0], marker="o", linestyle="", color=color, label=LABELS[name])
         for name, color in COLORS.items()
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.02))
-    fig.suptitle(title, y=1.055)
+    fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.085))
+    fig.suptitle(title, y=1.15)
     _save(fig, directory, filename, caption)
 
 
@@ -260,8 +260,8 @@ def _trajectory(directory, table, metric, filename, ylabel):
     handles = [
         plt.Line2D([0], [0], color=color, label=LABELS[name]) for name, color in COLORS.items()
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.01))
-    fig.suptitle(f"Training trajectories · {ylabel}", y=1.035)
+    fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.08))
+    fig.suptitle(f"Training trajectories · {ylabel}", y=1.14)
     _save(
         fig,
         directory,

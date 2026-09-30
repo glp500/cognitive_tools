@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import platform
+import subprocess
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -1540,7 +1541,26 @@ def save_local_population_scatter(rows: list[dict], runs: list[RunData], figures
 
 
 def analysis_manifest(*, args, runs: list[RunData], warnings: list[str]) -> dict:
+    repo = Path(__file__).resolve().parent.parent
+    commit = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True, check=False
+    )
+    status = subprocess.run(
+        ["git", "-C", str(repo), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     return {
+        "analysis_git_commit_sha": commit.stdout.strip() if commit.returncode == 0 else None,
+        "analysis_git_worktree_dirty": bool(status.stdout.strip())
+        if status.returncode == 0
+        else None,
+        "analysis_source_sha256": {
+            name: sha256_file(repo / "cognitive_tools" / name)
+            for name in ("analysis.py", "visibility_analysis.py", "visibility_figures.py")
+            if (repo / "cognitive_tools" / name).is_file()
+        },
         "schema_version": 1,
         "profile": getattr(args, "profile", "diagnostics"),
         "reward_definition": reward_identity(runs[0].config),
