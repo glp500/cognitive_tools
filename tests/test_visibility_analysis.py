@@ -83,3 +83,39 @@ def test_visibility_analysis_rejects_unpaired_initial_graph(tmp_path):
         run_visibility_analysis(
             [fixed, adaptive], tmp_path, tmp_path, bootstrap_reps=2, bootstrap_seed=1
         )
+
+
+def test_stage5_analysis_rejects_incompatible_profile_specs(tmp_path):
+    from cognitive_tools.analysis import RunData, validate_compatibility
+
+    config = dict(
+        study_protocol="visibility_bounded_search_v1",
+        reward_mode="capped_harvest",
+        metabolism=0.002,
+        visibility_profile_spec_sha256="a",
+    )
+
+    def item(name, metadata):
+        return RunData(
+            path=tmp_path / name,
+            config=metadata,
+            run_id=name,
+            treatment=name,
+            theta=0.25,
+            mu=0.1,
+            config_sha256="",
+            schedule_sha256=None,
+            matched_schedule_sha256=None,
+        )
+
+    first = item("first", config)
+    second = item("second", dict(config, visibility_profile_spec_sha256="b"))
+    with pytest.raises(ValueError, match="spec hashes"):
+        validate_compatibility([first, second])
+
+
+def test_undefined_majority_mismatch_is_not_zero_in_summary():
+    from cognitive_tools.visibility_analysis import _summary
+
+    rows = [dict(profile="equal", metric="majority_mismatch_rate", value=float("nan"))]
+    assert _summary(rows, ("profile", "metric"), reps=20, seed=1) == []

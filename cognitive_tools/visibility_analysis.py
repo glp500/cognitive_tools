@@ -113,7 +113,8 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
     trajectory_groups = defaultdict(list)
     graph_identity = {}
     for run in runs:
-        if not run.tables:
+        loaded_here = not run.tables
+        if loaded_here:
             data_dir = run.path / "data"
             run.tables = {
                 name: read_csv_rows(data_dir / f"{name}.csv", required=True)

@@ -7,6 +7,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, FancyArrowPatch, Rectangle
 
 from .visibility import PROFILES
 
@@ -89,6 +90,62 @@ def _design(directory):
         va="top",
         fontsize=11,
     )
+    # Small schematics show that equal and random share propensities but not
+    # necessarily realized observer counts; they are not experimental estimates.
+    profiles = (
+        (0.5, 0.5, 0.5, 0.5, 0.5),
+        (0.5, 0.5, 0.5, 0.5, 0.5),
+        (0.2, 0.4, 0.5, 0.6, 0.8),
+        (0.1, 0.15, 0.2, 0.25, 0.75),
+        (0.25, 0.7, 0.8, 0.85, 0.9),
+    )
+    axes[1, 0].text(0.02, 0.40, "Schematic propensity patterns", fontsize=9)
+    for index, values in enumerate(profiles):
+        left = 0.02 + 0.19 * index
+        for offset, value in enumerate(values):
+            axes[1, 0].add_patch(
+                Rectangle(
+                    (left + 0.025 * offset, 0.12),
+                    0.018,
+                    0.20 * value,
+                    transform=axes[1, 0].transAxes,
+                    color="#297d63",
+                )
+            )
+        axes[1, 0].text(
+            left + 0.05,
+            0.065,
+            "ERNLH"[index],
+            ha="center",
+            fontsize=8,
+            transform=axes[1, 0].transAxes,
+        )
+    axes[1, 1].text(0.02, 0.39, "Example directed attention links", fontsize=9)
+    positions = ((0.16, 0.18), (0.35, 0.29), (0.52, 0.13), (0.72, 0.22))
+    for x, y in positions:
+        axes[1, 1].add_patch(
+            Circle(
+                (x, y),
+                0.033,
+                transform=axes[1, 1].transAxes,
+                facecolor="#2e8069",
+                edgecolor="white",
+                zorder=3,
+            )
+        )
+    for start, end in ((0, 3), (1, 3), (2, 3)):
+        axes[1, 1].add_patch(
+            FancyArrowPatch(
+                positions[start],
+                positions[end],
+                transform=axes[1, 1].transAxes,
+                arrowstyle="->",
+                mutation_scale=12,
+                color="#5d6770",
+                linewidth=1.3,
+                zorder=2,
+            )
+        )
     for ax in axes[1]:
         ax.axis("off")
     fig.suptitle("Ecology, social perception, and collective organization", fontsize=15)

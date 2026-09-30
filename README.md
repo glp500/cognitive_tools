@@ -86,7 +86,7 @@ dependencies are pinned to the versions used for the cleanup baseline; run
 metadata records the actual runtime versions. No Conda-specific setup is needed.
 For an exact archived environment, retain its complete package inventory too.
 
-## Minimal experiment
+## Archived Stage-4 minimal example
 
 This small B0 run checks the full lifecycle, including fixed-policy controls:
 
@@ -111,7 +111,7 @@ python -m cognitive_tools.analysis --help
 The installed `cognitive-experiment` and `cognitive-analysis` commands expose
 the same entry points.
 
-## One campaign workflow
+## Archived Stage-4 campaign workflow
 
 Start from a clean, committed worktree:
 
@@ -147,9 +147,9 @@ and base seed 20260928 (distinct from pilot seed 42).
 The protocol and campaign settings are documented in
 [docs/experiment.md](docs/experiment.md#campaigns).
 
-## Analysis
+## Archived Stage-4 analysis
 
-Analyze one or more compatible runs:
+Analyze one or more compatible Stage-4 runs:
 
 ```bash
 python -m cognitive_tools.analysis \
@@ -197,6 +197,8 @@ results archive; its location and checksum are in
 
 ## Scientific documentation
 
+- [Stage-5 visibility study specification](docs/specs/visibility-bounded-search-study.md): current questions, hypotheses, matrix, signals and figures.
+- [Stage-5 implementation verification](docs/reviews/visibility-study-implementation-2026-09-30.md): calibration, smoke results and limits.
 - [Experiment](docs/experiment.md): design, mechanisms, outcomes, and campaigns.
 - [Analysis](docs/analysis.md): input contract, pairing, intervals, and outputs.
 - [Population payoff validation](docs/payoff-validation.md): separate Schelling experiment and usage.

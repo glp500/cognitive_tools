@@ -32,3 +32,13 @@ provided as a command for later execution; it is not part of implementation
 verification.
 
 [Checklist](todo.md)
+
+## Verification result
+
+The reviewed implementation passed 225 tests, lint, formatting and shell syntax.
+Network-only calibration sampled 1,000 networks per profile. The final clean
+smoke (`visibility_smoke_v2`, producer `1e5631c`) completed all 11 treatments,
+22 conditions, five main figures and H2/H3 contrast outputs. Paired graph and
+propensity identities, utility caps, 10 unique initial graph pairings and resume
+were checked. The smoke has one ecology, so H1 contrasts are intentionally absent.
+The pilot and full campaign are prospective commands in the README.
