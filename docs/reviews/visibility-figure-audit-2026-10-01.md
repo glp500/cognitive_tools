@@ -1,6 +1,6 @@
 # Visibility figure audit — 1 October 2026
 
-Scope: the **eight analysis figures** and **five story candidates** rendered from the revised ten-replicate balanced pilot. The full campaign uses the same plot code after its analysis completes. These are visual and semantic changes; no simulations or inferential estimates were changed.
+Scope: the **eight analysis figures** and **five story candidates** first reviewed in the revised ten-replicate balanced pilot. The completed full campaign uses the same plot code. These are visual and semantic changes; no simulations or inferential estimates were changed.
 
 ## Shared visual contract
 

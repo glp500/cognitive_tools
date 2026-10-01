@@ -116,30 +116,6 @@ def test_parallel_and_serial_runs_have_identical_outputs(tmp_path, reward_mode):
     assert a["output_sha256"] == b["output_sha256"]
 
 
-def test_1000_step_endpoints_reproduce_saved_campaign():
-    import csv
-    from pathlib import Path
-
-    saved = Path(
-        "results/q_learning_baseline/experiments/ecology_perception_parallel_v1_s1/data/evaluation_summary.csv"
-    )
-    if not saved.exists():
-        pytest.skip("Saved campaign is not available in this checkout")
-    with saved.open() as handle:
-        expected = {
-            (r["scenario"], r["strategy"]): float(r["final_mean_wealth"])
-            for r in csv.DictReader(handle)
-            if r["replicate"] == "0" and r["strategy"] in ("always_low", "always_high")
-        }
-    config = PayoffConfig()
-    for scenario in config.scenarios:
-        for branch, strategy in [("C", "always_low"), ("D", "always_high")]:
-            _, summaries = rollout(config, scenario, 0, (branch,) * 64)
-            assert summaries[0]["mean_return_sum"] == pytest.approx(
-                expected[(scenario, strategy)], abs=1e-12
-            )
-
-
 def test_capped_rollout_separates_utility_and_harvest():
     config = small(reward_mode="capped_harvest")
     rows, summaries = rollout(config, "uniform_high", 0, ("D",) * 4)

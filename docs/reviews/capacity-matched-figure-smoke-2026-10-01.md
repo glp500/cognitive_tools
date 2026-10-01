@@ -1,9 +1,0 @@
-# Capacity-matched figure smoke — 1 October 2026
-
-The `balanced_figure_smoke_20261001b` mechanical campaign completed all three landscapes, 11 treatments and two short N=64 replicates per treatment (66 condition-replicates). The analysis found 11 of 11 treatments, no missing treatment, no undefined primary windows, verified paired initial graphs, and exported all five narrative figures. This is an integration check, not evidence for H1–H3 or a commons-dilemma verdict.
-
-The landscape audit verified total capacity 75 and initial stock 37.5 in each map (within floating-point tolerance), identical local-capacity multisets in the two unequal maps, and greater unlike-neighbor mixing in the dispersed map. At step 1000 without harvesting, the mean stock over these **two diagnostic seeds** was 52.50 in uniform, 50.63 in dispersed, and 52.29 in segregated. Thus equal capacity does not imply equal realized supply under neighbor exchange and cell-level clipping; this baseline must accompany interpretation of learning outcomes.
-
-The [story candidates](../../results/q_learning_baseline/social_analysis/balanced_figure_smoke_20261001b_analysis/story_candidates/) include PDF, SVG and PNG exports, captions and a source-hash manifest. Figure 3 was revised after the first render to give the H1 primary contrast a readable legend; the final render completed without layout warnings. Figure 4's welfare scale now follows observed values rather than leaving most of the panel empty. Its smoke data remain near welfare 1 because the run is deliberately short.
-
-The separate small population-payoff CLI and analysis smoke also completed with the new scenario IDs. It used N=8, two replicates and H=10 solely to verify the pipeline. The required N=64, H=1000, 100-replicate held-out payoff gate has **not** run, so the new landscapes are not yet validated as a commons-game social dilemma. The scientific pilot and full learning campaign have also not run.

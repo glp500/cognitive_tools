@@ -29,7 +29,7 @@ and:
     Earth Systems and Environment, 9, 1529-1542.
     https://doi.org/10.1007/s41748-024-00489-8
 
-This source file is not copied from either work. See docs/provenance.md.
+This source file is not copied from either work.
 """
 
 from __future__ import annotations

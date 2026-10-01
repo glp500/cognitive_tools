@@ -1,10 +1,10 @@
 # Capacity-matched visibility study
 
-Status: the ten-replicate balanced pilot is exploratory; the [held-out balanced-landscape payoff gate](../reviews/balanced-capacity-payoff-gate-2026-10-01.md) supports all six scenario/return cells. All 3,300 independent full-learning simulations and the recovered combined analysis are complete. The [full-run recovery audit](../reviews/balanced-full-run-recovery-2026-10-01.md) records the health checks, H1/H2/H3 estimates, and Git-provenance limitation. The earlier [Stage-5 study](visibility-bounded-search-study.md) and its results remain historical.
+Status: the ten-replicate balanced pilot is exploratory; the [held-out balanced-landscape payoff gate](../reviews/balanced-capacity-payoff-gate-2026-10-01.md) supports all six scenario/return cells. All 3,300 independent full-learning simulations and the recovered combined analysis are complete. The [full-run recovery audit](../reviews/balanced-full-run-recovery-2026-10-01.md) records the health checks, H1/H2/H3 estimates, and Git-provenance limitation.
 
 ## Research questions and hypotheses
 
-The social-observation treatment remains Stage-5: five initial visibility profiles, fixed versus adaptive bounded attention, plus a B0 ecological baseline. The new ecology factor isolates spatial resource organization while holding total capacity fixed.
+The social-observation treatment uses five initial visibility profiles, fixed versus adaptive bounded attention, plus a B0 ecological baseline. The ecology factor isolates spatial resource organization while holding total capacity fixed.
 
 - **RQ1:** How do capacity-matched resource layouts, initial visibility profiles, and adaptive observation affect how accurately agents' four observed peers represent population extraction behavior?
 - **RQ2:** How do those conditions affect collective extraction, inequality in actual observer counts, resource persistence, reserve welfare, and wealth inequality?
@@ -16,9 +16,9 @@ Local-view error is the absolute difference between the share of low extraction 
 
 ## Frozen landscape contract
 
-The new scenario IDs are `balanced_uniform`, `balanced_dispersed`, and `balanced_segregated`. On a 10×10 grid, each has total K=75. Uniform has K=0.75 in all cells. The two unequal maps each have fifty K=0.55 and fifty K=0.95 cells; the dispersed map uses the landscape seed to permute positions, and the segregated map arranges low and high capacity by column. The unequal maps have the same capacity histogram in every replicate. All maps use regeneration r=0.05, equilibrium fraction q=0.70, initial resource 0.5K, and neighbor coupling c=0.10. Landscape seed is campaign seed plus replicate; other paired seeds and all social parameters follow the earlier Stage-5 study.
+The scenario IDs are `balanced_uniform`, `balanced_dispersed`, and `balanced_segregated`. On a 10×10 grid, each has total K=75. Uniform has K=0.75 in all cells. The two unequal maps each have fifty K=0.55 and fifty K=0.95 cells; the dispersed map uses the landscape seed to permute positions, and the segregated map arranges low and high capacity by column. The unequal maps have the same capacity histogram in every replicate. All maps use regeneration r=0.05, equilibrium fraction q=0.70, initial resource 0.5K, and neighbor coupling c=0.10. Landscape seed is campaign seed plus replicate; paired seeds and social parameters are frozen in `scripts/run_balanced_campaign.sh` and the saved campaign metadata.
 
-The new `environment_design=balanced_capacity_v1` identity is stored in every run configuration and campaign freeze. Analyses reject mixed environment designs and differing scenario sets. Historical scenario definitions and reference hashes remain untouched.
+The `environment_design=balanced_capacity_v1` identity is stored in every run configuration and campaign freeze. Analyses reject mixed environment designs and differing scenario sets.
 
 ## Validation gates and measurements
 
