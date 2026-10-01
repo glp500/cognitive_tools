@@ -1,144 +1,141 @@
-# Draft 2: slide-by-slide revision plan
+# Updated slide edit plan — 1 October 2026
 
-**Audience and length:** mixed audience, 10–12 minutes. Use 13 main slides and keep detailed plots in backup. This is an editing guide for [Gavin Lip. Cogntive Tools Project Draft-2.pdf](</home/gavinl/Downloads/Gavin Lip. Cogntive Tools Project Draft-2.pdf>), not a request to build another deck. Keep each slide to one claim, one visual, and a short source/status line. Put definitions, methods, and caveats in speaker notes.
+For [Draft 2](</home/gavinl/Downloads/Gavin Lip. Cogntive Tools Project Draft-2.pdf>). This revision incorporates the [figure audit](../docs/reviews/visibility-figure-audit-2026-10-01.md) and the regenerated pilot figures. It is an **editing plan**, not a new slide deck. Aim for **13 main slides in 10–12 minutes** for a mixed audience. Use one visual and one take-home point per slide; move methods and caveats to speaker notes.
 
-**Evidence labels:** The independent held-out payoff gate supports the **commons-dilemma structure** for the tested policy pair and evaluation design. The ten-replicate **learning pilot is exploratory**; it does not confirm H1–H3. Use “Exploratory pilot · n=10” on every pilot-result slide. Replace those slides with the independent full-campaign results only after the frozen analysis and health checks complete.
+The independent full campaign is still running. Slides 8–12 below use **exploratory pilot examples (n=10)**. Mark them that way on the slide. When the full analysis passes its health checks, update the values and figures without changing the pre-specified comparisons or wording. The held-out commons-payoff gate on slide 3 is a separate completed validation.
 
-The five saved candidate figures are in [`story_candidates`](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/story_manifest.json). Prefer their PDF or SVG versions when placing them in slides. The PNG links below are convenient previews.
+## Figure choices at a glance
 
-**Exact prospective hypotheses:** H1: Across training, greater inequality in actual observer counts is associated with greater local-view error. H2: Averaged equally over five initial profiles and both network dynamics, segregated resource layout produces greater final-window local-view error than dispersed layout. H3: Averaged equally over three landscapes and five initial profiles, adaptive bounded rewiring reduces final-window local-view error relative to fixed observation starting from the same graph. The concise slide headlines below preserve those meanings; their full estimands are in the [study specification](../docs/specs/capacity-matched-visibility-study.md).
-
-| Draft 2 page | Change | Revised slide |
+| Figure | Use in the talk? | Reason |
 |---|---|---|
-| 1 | Keep the project identity; simplify title and hero visual. | 1 |
-| 2–4 | Condense motivation, progress, and broad framing into one causal story. | 2 |
-| 5 | Replace the other Commons Game's apples with this model's validation result. | 3 |
-| 8 | Replace old RQ/H wording with the frozen revised questions. | 4 |
-| 6 and 9 | Separate matched-capacity geography from the factorial design. | 5 and 7 |
-| 7 | Correct and simplify fixed versus adaptive observation mechanics. | 6 |
-| 10–12 | Fill the empty results slides with the revised H1–H3, one per slide. | 8–10 |
-| 13 | Replace the outdated migration/uncertain-dilemma conclusion. | 13 |
-| New | Add RQ2 consequences before the conclusion. | 11–12 |
+| [Story 01 · three capacity maps](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/01_uneven_ground.pdf) | **Yes, slide 5.** | The three maps and shared scale show the matched resource budget immediately. |
+| [Story 02 · who gets seen](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/02_who_gets_seen.pdf) | **Backup.** | Five stacked profiles are valuable evidence but too much to read during a short talk. |
+| [Story 03 · local views](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/03_different_windows.pdf) | **Yes, split its panels across slides 8–9.** | The right panel shows H1's sign reversal; the left shows the ten primary H2 contrasts. Do not shrink the whole two-panel figure onto one slide. |
+| [Story 04 · stock and wellbeing](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/04_stock_and_wellbeing.pdf) | **Yes, first two panels on slide 12.** | Resource persistence is on the common horizontal axis. Put the separate training-end regional panel in backup. |
+| [Story 05 · adaptation pathway](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/05_adaptation_pathway.pdf) | **One selected row or a simplified cut on slide 11; full figure in backup.** | The complete 15-cell display is too dense when projected. |
+| [Analysis 02 · initial visibility](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/figures/02_initial_visibility_manipulation.pdf) | **Backup.** | Clear manipulation check; use if asked whether the initial profiles produced unequal actual observer counts. |
+| Other [analysis grids](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/figures/03_population_perception.pdf) | **Backup or appendix.** | They document every condition but do not give a quick visual answer to one hypothesis. |
 
-## 1. Title — 20–30 seconds
+Use PDF or SVG exports when editing so labels remain sharp. Landscape colors are **uniform teal, dispersed rust, segregated violet**; the analysis grids use **fixed blue and adaptive orange** with different marker shapes. Keep the same key when drawing a new summary interval.
 
-**On slide:** “Who gets seen in a shared-resource world?” Subtitle: “Ecology, local observation, and collective outcomes.” Include name and date.
+## Slide-by-slide edits
 
-**Figure:** A small three-map strip based on [candidate 1](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/01_uneven_ground.png), or no figure. If using a stylized strip, label it “illustrative” and use the actual maps on slide 5.
+### 1. Title — 20 seconds
 
-**Speaker notes:** This is a controlled agent-based commons study. The talk asks whether spatial resource arrangement and who agents observe change what information is available and what the population does. Do not claim the slides measure human beliefs.
+**Replace Draft 2 slide 1 title with:** “Who gets seen in a shared-resource world?” Subtitle: “Ecology, local observation, and collective outcomes.” Add your name and date.
 
-## 2. The story in one line — 40–50 seconds
+**Figure:** No statistical chart. A small crop of the three maps from story 01 is optional; the maps get their full explanation on slide 5.
 
-**On slide:** `Resource geography → who gets seen → local view and collective outcomes`. Under the last step, name only “extraction · stock · welfare · inequality.”
+**Speaker notes:** This is an agent-based commons study about what agents can observe and what the group does. It does not measure human beliefs.
 
-**Figure:** Three large boxes and arrows. This replaces Draft 2's tiny multi-part framing diagram. Keep the “technological mediation” motivation in notes rather than as a list on the slide.
+### 2. Why this question matters — 40 seconds
 
-**Speaker notes:** Each agent observes four peers. The observation network determines whose extraction choices become visible. Local-view error compares those four peers with the population. Resource geography is manipulated while total configured capacity is fixed. The study then checks extraction, resource persistence, reserve welfare, and inequality.
+**On-slide sentence:** “What agents see depends on where resources are and whose actions become visible.”
 
-## 3. Why this is a commons dilemma — 45–60 seconds
+**Figure:** Draw three large boxes: `resource geography → four observed peers → group outcomes`. Under the last box, use only `extraction · stock · welfare · inequality`. Condense Draft 2 slides 2–4 into this one visual.
 
-**On slide:** “Held-out payoff gate: supported in all three landscapes.” Show three rows—uniform, dispersed, segregated—with a check for **summed** and **discounted** return. Footer: “6/6 ecology × return verdicts supported.”
+**Speaker notes:** The “technological mediation” motivation from Draft 2 belongs here in spoken form. The observation network shapes the information available to an agent; ecology shapes the context in which extraction occurs. This diagram organizes the study, but arrows alone do not establish causal mediation.
 
-**Figure:** A simple six-cell verdict grid, built from the [payoff validation report](../results/payoff_validation/balanced_gate_v1/analysis/validation_report.md). Do **not** use Draft 2's screenshot of another game's apples as if it were this model.
+### 3. Is this a commons dilemma? — 45 seconds
 
-**Speaker notes:** The gate tested N=64, horizon 1,000, 100 held-out replicates per landscape, always-low versus always-high policies, and capped-harvest utility. Collective gain, exploitation gap, and fear had positive simultaneous lower bounds for both return measures in all three ecologies. This establishes the criterion for the tested policies and reset distribution, not learning convergence or H1–H3.
+**On-slide sentence:** “The tested incentives pass the commons-dilemma gate in all three landscapes.”
 
-## 4. Revised research questions — 45–60 seconds
+**Figure:** A 3×2 check grid: rows `uniform / dispersed / segregated`; columns `summed return / discounted return`. Show `6 of 6 supported`. Build it from the [held-out payoff report](../results/payoff_validation/balanced_gate_v1/analysis/validation_report.md). Replace Draft 2 slide 5's screenshot of a different Commons Game.
 
-**On slide:** Use these exact two questions, in separate large cards:
+**Speaker notes:** The gate tested always-low and always-high policies, N=64, horizon 1,000, and 100 held-out replicates per landscape. Collective gain, exploitation gap, and fear met the required simultaneous bounds. This validates the tested incentive structure; it does **not** say what learned agents will choose.
+
+### 4. The revised questions — 50 seconds
+
+**Put only these two questions on the slide:**
 
 > **RQ1:** How do capacity-matched resource layouts, initial visibility profiles, and adaptive observation affect how accurately agents' four observed peers represent population extraction behavior?
 
 > **RQ2:** How do those conditions affect collective extraction, inequality in actual observer counts, resource persistence, reserve welfare, and wealth inequality?
 
-**Figure:** None. The questions are the visual. Avoid putting H1–H3 on this slide as additional small paragraphs.
+**Figure:** None. Use two spacious text cards. Replace the old RQ/H wording on Draft 2 slide 8; do not squeeze the hypotheses onto this slide.
 
-**Speaker notes:** “Actual observer counts” means how many agents selected each source as a peer. Local-view error is an information-availability measure: the absolute difference between the low-extraction share among four observed peers and among all other agents, averaged over agents. It is not a reported belief or psychological “misperception.”
+**Speaker notes:** “Actual observer count” is how many agents select a given agent as a source. “Local-view error” is the difference between the low-extraction share among four observed peers and the share among all other agents, averaged in absolute value. It measures available information, **not** an elicited belief.
 
-## 5. Same capacity, different geography — 50–60 seconds
+### 5. The resource manipulation — 50 seconds
 
-**On slide:** “Same total capacity (K=75); different spatial organization.” Name the three maps: uniform, dispersed, segregated.
+**On-slide title:** “The worlds have the same capacity, arranged differently.”
 
-**Figure:** [Candidate 1: three capacity maps](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/01_uneven_ground.png), large and full width. It already contains a shared color scale. If cropping, preserve all three map titles and the scale.
+**Figure:** Use [story 01](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/01_uneven_ground.pdf) nearly full width. Preserve the three map names, shared color scale, and `K=75` labels. This replaces the small maps on Draft 2 slide 9.
 
-**Speaker notes:** The 10×10 uniform map uses K=0.75 per cell. Both unequal maps contain fifty K=0.55 and fifty K=0.95 cells; only arrangement differs. Regeneration, initial resource fraction, and spatial coupling are held fixed. These controls isolate **configured spatial organization**, but they do not guarantee identical realized unharvested stock. The figure shows replicate 0, not a mean map.
+**Speaker notes:** Uniform has K=0.75 in every cell. Both unequal maps have fifty K=0.55 and fifty K=0.95 cells, so dispersed versus segregated differs in arrangement, not total capacity or capacity histogram. Other resource parameters are fixed. The displayed map is replicate 0; matching configured capacity does not force identical realized stock.
 
-## 6. What “adaptive observation” means — 50–60 seconds
+### 6. How observation can change — 50 seconds
 
-**On slide:** Two paths from the same starting graph: **Fixed: retain four sources** and **Adaptive: sometimes replace one source**. Add a compact rule: “Every 50 steps → error > .25 → 10% rewire chance.”
+**On-slide title:** “Adaptive agents can replace one observed peer.”
 
-**Figure:** Redraw Draft 2's fixed/adaptive diagram with at most four source dots and one replacement arrow. Avoid the old line “25% chance to have a source outside local view.”
+**Figure:** Redraw Draft 2 slide 7 as two simple paths from the **same starting graph**: `fixed: keep four peers` and `adaptive: check → sometimes replace one`. Under adaptive, print `every 50 steps · error > .25 · 10% rewire chance`.
 
-**Speaker notes:** Five initial visibility profiles are crossed with fixed and adaptive dynamics. Adaptive candidate search is 75% two-hop and 25% global *conditional on a rewire attempt*. The 25% is neither the chance of rewiring at each step nor a guarantee that the selected peer is outside the old local view. The fixed and adaptive pair begins from the same observation graph.
+**Speaker notes:** Conditional on a rewire, candidate search uses a 75% two-hop / 25% global branch. The 25% is **not** a 25% chance of having an outside observer on every step. Both dynamics begin from the same graph. Keep the five profile names for the next slide or in notes.
 
-## 7. Study design and measures — 50–60 seconds
+### 7. The comparison design — 55 seconds
 
-**On slide:** A large `3 landscapes × (5 profiles × 2 dynamics + B0)` design line. Beneath it, show `N=64 · 5,000 training steps · 1,000 fresh-evaluation steps · paired seeds`. Separate small labels: “pilot n=10” and “independent full campaign n=100.”
+**On-slide title:** “We change geography and observation, then compare matched runs.”
 
-**Figure:** One clean matrix or flow strip. Do not repeat the maps at thumbnail size. A bottom row can name the five readouts: local-view error, observer-count Gini, low-extraction share, resource fraction, reserve welfare/wealth Gini.
+**Figure:** A simple matrix: `3 landscapes × [5 initial profiles × fixed/adaptive + B0]`. Under it: `64 agents · 5,000 training steps · 1,000-step fresh evaluation · paired seeds`. Use `pilot: 10 replicates` and `independent full study: 100` as separate status labels. Do not use a multi-panel results plot here.
 
-**Speaker notes:** Profiles are equal, random, normal-centered, low-propensity majority, and high-propensity majority. B0 is an ecological baseline, not a social-observation network treatment. Paired seeds support matched contrasts; the independent replicate, not an agent or checkpoint, is the inferential unit. The primary sustainability measure is **total resource / total capacity** on fresh evaluation, not mean local fill fraction.
+**Speaker notes:** The profiles are equal, random, normal-centered, low-propensity majority, and high-propensity majority. B0 is an ecological baseline, not an observation treatment. RQ1's primary outcome is local-view error. RQ2 records low-extraction share, observer-count Gini, total resource/total capacity, mean reserve welfare, and final wealth Gini. Independent replicates are the inferential units.
 
-## 8. H1 — unequal attention and local-view error — 60–75 seconds
+### 8. H1: unequal attention — 65 seconds
 
-**On slide:** “**H1:** Across training, greater inequality in actual observer counts is associated with greater local-view error.” Show two large interval estimates: within-run `r = −0.079 [−0.143, −0.021]`; after linear time adjustment `r = +0.036 [+0.011, +0.063]`. Put a visible zero reference and conclusion: “Sign reverses after time adjustment.”
+**On-slide title:** “H1: More unequal attention should accompany worse local views.”
 
-**Figure:** Replot these two estimates from [H1 checkpoint summary](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/h1_checkpoint_association_summary.csv) as two horizontal intervals. The raw checkpoint hexbin in [candidate 3](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/03_different_windows.png) belongs in backup because it does not itself show the time-adjustment sensitivity.
+**Figure:** Use **only the right panel** of the updated [story 03](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/03_different_windows.pdf). Keep both intervals and the zero line. Add a large takeaway below: **“The pilot association changes sign after time adjustment.”**
 
-**Speaker notes:** The primary estimate centers observer-count Gini and mean absolute local-view error within each adaptive run, then pools matched training checkpoints and bootstraps replicate IDs as clusters. The raw pilot association is opposite the predicted positive sign; time adjustment reverses it. A separate between-run mean estimate is +0.094 [−0.101, +0.294]. Do not call H1 supported or refuted from this pilot, and do not describe an association as a causal effect of visibility.
+**Pilot values:** within-run `r = −0.079 [−0.143, −0.021]`; after linear time adjustment `r = +0.036 [+0.011, +0.063]`.
 
-## 9. H2 — spatial segregation — 50–65 seconds
+**Speaker notes:** Exact H1: “Across training, greater inequality in actual observer counts is associated with greater local-view error.” The primary longitudinal estimate uses adaptive-run checkpoints and clusters the interval by replicate. The sign reversal makes the pilot inconclusive for a stable directional interpretation. This is an association, not a causal effect. Mark the slide **Exploratory pilot · n=10**.
 
-**On slide:** “**H2:** Segregated layout produces greater final-window local-view error than dispersed layout.” Show one large `segregated − dispersed` interval: `+0.0011 [−0.0016, +0.0040]`; add “uncertain in pilot.”
+### 9. H2: segregated versus dispersed — 60 seconds
 
-**Figure:** Replot the pooled paired contrast from [pooled hypothesis summary](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/pooled_hypothesis_summary.csv) as a horizontal interval with zero clearly labeled. Keep the ten treatment-level contrasts from [candidate 3](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/03_different_windows.png) in backup.
+**On-slide title:** “H2: Does spatial segregation make the local view less accurate?”
 
-**Speaker notes:** H2 averages equally across five initial profiles and fixed/adaptive dynamics. For each replicate, first pair segregated minus dispersed within each social-treatment cell, then average the ten differences; bootstrap replicates. The interval includes zero. Both unequal maps have the same total capacity and capacity histogram. H2's directional wording was set after the exploratory pilot existed, so the pilot cannot confirm it.
+**Figure:** Use **only the left panel** of updated [story 03](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/03_different_windows.pdf). Circle or otherwise highlight the pooled line in its axis label; do not explain all ten rows aloud. If the audience is distant, replace the panel with a single large pooled interval drawn from the [summary table](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/pooled_hypothesis_summary.csv).
 
-## 10. H3 — adaptive versus fixed observation — 50–65 seconds
+**Pilot value:** `segregated − dispersed = +0.0011 [−0.0016, +0.0040]`; the interval includes zero.
 
-**On slide:** “**H3:** Adaptive bounded rewiring reduces final-window local-view error relative to fixed observation.” Show `adaptive − fixed = −0.0029 [−0.0050, −0.0010]`; add “pilot-aligned; independent test pending.”
+**Speaker notes:** Exact H2: “Averaged equally over five initial profiles and both network dynamics, segregated resource layout produces greater final-window local-view error than dispersed layout.” The ten cell contrasts are paired by replicate and then averaged. The pilot does not establish a difference. Its directional wording was chosen after seeing pilot data. Mark the slide **Exploratory pilot · n=10**.
 
-**Figure:** Replot the pooled paired contrast from [pooled hypothesis summary](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/pooled_hypothesis_summary.csv) with a zero line. Use a matching visual scale and color convention with slide 9 where possible.
+### 10. H3: adaptive versus fixed — 60 seconds
 
-**Speaker notes:** H3 averages the fifteen ecology × profile paired adaptive-minus-fixed differences within each replicate. The two conditions start from the same graph. This pilot interval is below zero, but the directional prediction is pilot-informed and therefore not confirmatory. The detailed effect varies by cell, as [candidate 5](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/05_adaptation_pathway.png) shows.
+**On-slide title:** “H3: Does adapting attention improve the local view?”
 
-## 11. RQ2 — from attention to collective extraction — 60 seconds
+**Figure:** Draw one large horizontal estimate-and-interval chart from the [pooled H3 row](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/pooled_hypothesis_summary.csv). Label `adaptive − fixed` and zero. **Do not** paste the full 15-cell story 05 here; it obscures the primary result.
 
-**On slide:** “What changes when attention adapts?” Use three labeled steps: **who is seen → local-view error → low-extraction share**. Under each, show one concise adaptive-minus-fixed summary or one emphasized example row. Avoid asking the audience to read all 15 treatment cells live.
+**Pilot value:** `−0.0029 [−0.0050, −0.0010]`. Add “pilot-aligned; prospective test pending,” not “confirmed.”
 
-**Figure:** Make a presentation cut of [candidate 5](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/05_adaptation_pathway.png) from [adaptive–fixed summaries](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/adaptive_fixed_summary.csv). Preserve the full three-panel figure for backup. If using the existing figure unchanged, give it the entire slide and explicitly trace **one** profile left to right.
+**Speaker notes:** Exact H3: “Averaged equally over three landscapes and five initial profiles, adaptive bounded rewiring reduces final-window local-view error relative to fixed observation starting from the same graph.” The analysis averages 15 paired cell differences within each replicate. The direction was pilot-informed. Mark the slide **Exploratory pilot · n=10**.
 
-**Speaker notes:** Adaptive observation often increases visibility concentration, especially from an initially equal graph, while local-view error can fall. Changes in collective extraction are heterogeneous and do not support a universal directional story from the pilot. The full figure's cell intervals are pointwise and descriptive. The plotted sequence is a narrative ordering of measures, not a demonstrated causal mediation chain.
+### 11. What else changes with adaptation? — 60 seconds
 
-## 12. RQ2 — sustainability, welfare, and wealth — 60 seconds
+**On-slide title:** “Changing attention can concentrate visibility without a uniform extraction effect.”
 
-**On slide:** “What happens to the commons and to agents?” Put **resource persistence** on the horizontal axis, with **reserve welfare** and **wealth Gini** as two clearly separated outcomes. If showing the high/low-region comparison, label it “segregated world, training end.”
+**Figure:** Make a **talk cut** of [story 05](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/05_adaptation_pathway.pdf): show one named initial profile across its three panels, or show three pooled/landscape summaries. Keep `who is seen → what four peers reveal → low-extraction share` as the reading order. The full five-profile figure belongs in backup.
 
-**Figure:** [Candidate 4: stock and wellbeing](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/04_stock_and_wellbeing.png). For live presentation, the strongest version is a two-panel cut of its first two panels; move its regional-gap panel to backup. Keep the same landscape colors and B0/fixed/adaptive symbols. The source is [outcome summary](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/data/outcome_summary.csv).
+**Speaker notes:** The pilot often shows more concentrated actual observer counts after adaptive rewiring; local-view error can improve, while low-extraction-share changes vary by condition. The plot is a comparison of related outcomes, **not proof of a causal pathway**. The full figure uses pointwise cell intervals. Mark the slide **Exploratory pilot · n=10**.
 
-**Speaker notes:** The first two panels show 33 condition means from fresh evaluation, not a pooled regression. The regional-gap panel uses training-end reserves and a different comparison unit; do not silently combine it with fresh-evaluation outcomes. B0 is the ecological baseline. These plots help describe the joint outcome space; they do not prove that segregation reduces welfare or that changes in visibility cause wealth inequality.
+### 12. What happens to the resource and to agents? — 60 seconds
 
-## 13. Conclusion — 40–50 seconds
+**On-slide title:** “Resource persistence, welfare, and wealth can move differently.”
 
-**On slide:** Two large statements: **Established:** “Commons-payoff criterion supported in all six ecology × return cells.” **Open:** “H1 time-sensitive; H2 uncertain; H3 pilot-aligned.” Final line: “The independent full campaign tests the frozen learning hypotheses.”
+**Figure:** Show the **first two panels only** from [story 04](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/04_stock_and_wellbeing.pdf): resource/total capacity on the common x-axis, reserve welfare on the left, wealth Gini on the right. Preserve landscape colors and B0/fixed/adaptive symbol key. Put its regional-gap panel in backup because it is measured at training end, not fresh evaluation.
 
-**Figure:** None. Do not reuse Draft 2's old conclusion that the ecology prevented evaluation as a dilemma, or imply that a Melting Pot/SocialJAX migration is needed to establish the criterion.
+**Speaker notes:** The first two panels are descriptive means for 33 conditions in fresh evaluation, not a pooled regression or a test of mediation. B0 is the ecological baseline. The regional panel compares high- and low-capacity areas in the segregated world at **training end**. Avoid claiming that segregation necessarily lowers welfare. Mark the slide **Exploratory pilot · n=10**.
 
-**Speaker notes:** The structural gate and the learning study answer different questions. The gate supports a commons-dilemma interpretation for its tested policies, horizon, and reset distribution. It does not guarantee that learning agents will cooperate. The independent full campaign is needed for prospective H1–H3 evaluation. A framework migration would be a separate comparability or engineering decision.
+### 13. Closing answer and next step — 40 seconds
 
-## Backup slides (show only for questions)
+**On-slide title:** “The commons criterion passed; the learning questions remain open.”
 
-1. [Candidate 3: treatment-level H2 contrasts and H1 checkpoints](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/03_different_windows.png). Use for questions about heterogeneous effects and the pooled estimands; remind listeners that the plotted H1 checkpoint slope changes sign after time adjustment.
-2. [Candidate 2: who gets seen](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/02_who_gets_seen.png). Use for questions about whether the visibility manipulation actually changed observer counts. Its “top six” agents are re-ranked at each snapshot, so connected points are **not** trajectories of the same six individuals.
-3. The full [candidate 5](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/05_adaptation_pathway.png) and the segregated-region panel of [candidate 4](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/04_stock_and_wellbeing.png), if you simplify those for slides 11–12.
+**On-slide text:** Two cards: **Established:** “Held-out commons gate: 6/6 supported.” **Learning pilot:** “H1 time-sensitive · H2 uncertain · H3 pilot-aligned.” End with “The independent full campaign tests the frozen hypotheses.” No figure needed.
 
-## Visual rules for the edit
+**Speaker notes:** The payoff gate addresses the game's incentives for a particular policy pair and evaluation setup. It does not guarantee cooperation by learned agents. Replace the pilot assessments only when the independent full analysis is complete. Remove Draft 2's old conclusion that the model could not be evaluated as a dilemma; framework migration is a separate decision.
 
-- Use a title that states the claim or question. Put no more than one main figure on a slide; allow full width for landscape and outcome figures.
-- Use one consistent color per landscape—uniform teal, dispersed rust, segregated violet—and separate symbol shapes for B0, fixed, and adaptive where needed.
-- On hypothesis slides, show estimate, interval, zero reference, and a plain-language interpretation. State the contrast direction in the title or axis label.
-- Keep source and evidence-status labels small but readable. The details of bootstrap, pairing, time windows, and measurement formulas belong in speaker notes.
-- Avoid the words “belief” and “misperception” unless explaining that local-view error measures available information. Avoid causal verbs for H1 or for cross-outcome scatterplots.
-- Check projection readability at the actual room size. The existing full candidate figures 2, 3, and 5 are better as backup or re-rendered presentation cuts because their many rows become hard to follow at a distance.
+## Backup slides and editing rules
+
+Keep [story 02](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/02_who_gets_seen.pdf) and [analysis 02](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/figures/02_initial_visibility_manipulation.pdf) for questions about whether visibility profiles worked. Keep the **full** [story 05](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/05_adaptation_pathway.pdf) for condition heterogeneity and the **regional panel** of [story 04](../results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis/story_candidates/04_stock_and_wellbeing.pdf) for place-based welfare. The top-six panel in story 02 re-ranks agents at each snapshot; it is not a trajectory of the same six people.
+
+At projected size, use large titles and axes, one comparison per slide, and no paragraph captions inside plots. Explain intervals, pairing, and limitations in notes. Keep `local-view error` as the measured term; avoid “belief” or “misperception” unless explicitly distinguishing them from available information. Use “associated with” for H1 and “paired difference” for H2/H3. After full results arrive, retain the same figure selections and contrasts but replace every pilot number, status label, and source path with the verified full-analysis version.
