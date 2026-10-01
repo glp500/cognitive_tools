@@ -1,7 +1,0 @@
-rewire_theta,rewire_mu,scenario,population,metric,n,mean,bootstrap_ci_low,bootstrap_ci_high
-0.0,1.0,uniform_high,8,resource_fraction,2,0.48540218815507796,0.48496136982787147,0.48584300648228446
-0.25,1.0,uniform_high,8,resource_fraction,2,0.48540218815507796,0.48496136982787147,0.48584300648228446
-1.0,1.0,uniform_high,8,resource_fraction,2,0.4882095192357023,0.48496136982787147,0.4914576686435332
-0.0,1.0,uniform_high,8,visibility_gini,2,0.15234375,0.1328125,0.171875
-0.25,1.0,uniform_high,8,visibility_gini,2,0.15234375,0.1328125,0.171875
-1.0,1.0,uniform_high,8,visibility_gini,2,0.140625,0.1328125,0.1484375
