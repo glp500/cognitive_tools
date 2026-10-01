@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import itertools
 import json
 import math
 import platform
+import re
 import subprocess
 import sys
 from collections import defaultdict
@@ -82,6 +84,18 @@ STRICT_COMPATIBILITY_KEYS = (
     "rewire_threshold",
     "forecast_alpha",
 )
+
+PRESENTATION_ONLY_COMMIT_FILES = frozenset(
+    {
+        ".gitignore",
+        "README.md",
+        "cognitive_tools/visibility_figures.py",
+        "cognitive_tools/visibility_palette.py",
+        "scripts/plot_visibility_main.py",
+        "scripts/plot_visibility_story.py",
+    }
+)
+PRESENTATION_ONLY_COMMIT_PREFIXES = ("docs/", "presentations/")
 
 
 @dataclass
@@ -314,7 +328,50 @@ def run_label_order(runs: list[RunData]) -> list[str]:
     return labels
 
 
-def validate_compatibility(runs: list[RunData]) -> list[str]:
+def _git_changed_paths(commits: set[str]) -> list[str]:
+    """Return every changed path across input revisions, failing closed on Git errors."""
+    repo = Path(__file__).resolve().parent.parent
+    if any(re.fullmatch(r"[0-9a-f]{40}", commit) is None for commit in commits):
+        raise ValueError("Input run Git commits must be full 40-character SHA-1 IDs")
+    changed: set[str] = set()
+    for left, right in itertools.combinations(sorted(commits), 2):
+        result = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repo),
+                "diff",
+                "--name-only",
+                "-z",
+                "--no-ext-diff",
+                "--no-textconv",
+                "--no-renames",
+                left,
+                right,
+                "--",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise ValueError(
+                f"Cannot verify input Git commit difference {left}..{right}: "
+                f"{result.stderr.strip()}"
+            )
+        changed.update(path for path in result.stdout.split("\0") if path)
+    return sorted(changed)
+
+
+def _is_presentation_only_commit_path(path: str) -> bool:
+    return path in PRESENTATION_ONLY_COMMIT_FILES or path.startswith(
+        PRESENTATION_ONLY_COMMIT_PREFIXES
+    )
+
+
+def validate_compatibility(
+    runs: list[RunData], *, allow_presentation_only_commit_drift: bool = False
+) -> list[str]:
     if not runs:
         raise ValueError("At least one run directory is required.")
 
@@ -347,9 +404,25 @@ def validate_compatibility(runs: list[RunData]) -> list[str]:
         if run.config.get("run_metadata", {}).get("git_commit_sha")
     }
     if len(commit_shas) > 1:
-        raise ValueError(
-            "Cross-treatment analysis would mix experiment runs from "
-            f"different Git commits: {sorted(commit_shas)}."
+        if not allow_presentation_only_commit_drift:
+            raise ValueError(
+                "Cross-treatment analysis would mix experiment runs from "
+                f"different Git commits: {sorted(commit_shas)}."
+            )
+        changed_paths = _git_changed_paths(commit_shas)
+        scientific_paths = [
+            path for path in changed_paths if not _is_presentation_only_commit_path(path)
+        ]
+        if scientific_paths:
+            raise ValueError(
+                "Cross-treatment analysis would mix simulation-relevant Git changes: "
+                + ", ".join(scientific_paths)
+            )
+        warnings.append(
+            "Verified presentation-only Git commit drift across "
+            + ", ".join(sorted(commit_shas))
+            + "; changed paths: "
+            + (", ".join(changed_paths) if changed_paths else "none")
         )
 
     dirty_runs = [
@@ -1557,6 +1630,16 @@ def analysis_manifest(*, args, runs: list[RunData], warnings: list[str]) -> dict
     )
     return {
         "analysis_git_commit_sha": commit.stdout.strip() if commit.returncode == 0 else None,
+        "input_git_commit_shas": sorted(
+            {
+                run.config.get("run_metadata", {}).get("git_commit_sha")
+                for run in runs
+                if run.config.get("run_metadata", {}).get("git_commit_sha")
+            }
+        ),
+        "allow_presentation_only_commit_drift": bool(
+            getattr(args, "allow_presentation_only_commit_drift", False)
+        ),
         "analysis_git_worktree_dirty": bool(status.stdout.strip())
         if status.returncode == 0
         else None,
@@ -1596,7 +1679,12 @@ def run_analysis(args) -> Path:
 
     runs = [load_run(path) for path in resolved_paths]
     assign_run_labels(runs)
-    warnings = validate_compatibility(runs)
+    warnings = validate_compatibility(
+        runs,
+        allow_presentation_only_commit_drift=getattr(
+            args, "allow_presentation_only_commit_drift", False
+        ),
+    )
     warnings.extend(resolve_r0_pairs(runs))
 
     output_dir = (
@@ -1852,6 +1940,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=1729,
         help="Deterministic bootstrap/display-jitter seed.",
+    )
+    parser.add_argument(
+        "--allow-presentation-only-commit-drift",
+        action="store_true",
+        help=(
+            "Accept mixed input Git commits only when Git verifies that every "
+            "changed path is documentation or presentation-only code; record "
+            "the commits and changed paths in the analysis manifest."
+        ),
     )
     parser.add_argument(
         "--resource-low-threshold",

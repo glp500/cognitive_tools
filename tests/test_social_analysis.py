@@ -510,6 +510,32 @@ def test_validate_compatibility_rejects_mixed_git_commits(tmp_path):
         analysis.validate_compatibility(runs)
 
 
+def test_validate_compatibility_accepts_verified_presentation_commit_drift(tmp_path, monkeypatch):
+    first_dir = make_run(tmp_path, "first_commit", treatment="S1", rewiring="none")
+    second_dir = make_run(tmp_path, "second_commit", treatment="S2", rewiring="none")
+    config_path = second_dir / "config.json"
+    config = json.loads(config_path.read_text())
+    config["run_metadata"]["git_commit_sha"] = "b" * 40
+    config_path.write_text(json.dumps(config))
+    runs = [analysis.load_run(first_dir), analysis.load_run(second_dir)]
+    analysis.assign_run_labels(runs)
+
+    monkeypatch.setattr(
+        analysis,
+        "_git_changed_paths",
+        lambda commits: ["README.md", "cognitive_tools/visibility_figures.py"],
+        raising=False,
+    )
+    warnings = analysis.validate_compatibility(runs, allow_presentation_only_commit_drift=True)
+    assert any("presentation-only" in warning for warning in warnings)
+
+    monkeypatch.setattr(
+        analysis, "_git_changed_paths", lambda commits: ["cognitive_tools/social.py"]
+    )
+    with pytest.raises(ValueError, match="simulation-relevant"):
+        analysis.validate_compatibility(runs, allow_presentation_only_commit_drift=True)
+
+
 def test_reward_compatibility_resolves_legacy_and_rejects_capped(tmp_path):
     from cognitive_tools.env import reward_definition
 

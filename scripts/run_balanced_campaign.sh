@@ -19,6 +19,13 @@ esac
 if [[ -n "$(git status --porcelain)" ]]; then
     echo 'Commit source and protocol changes before running to preserve provenance'; exit 1
 fi
+FROZEN_SHA="$(git rev-parse HEAD)"
+assert_frozen_source() {
+    if [[ "$(git rev-parse HEAD)" != "$FROZEN_SHA" || -n "$(git status --porcelain)" ]]; then
+        echo 'Campaign source changed or worktree became dirty; stop before starting another treatment.' >&2
+        exit 1
+    fi
+}
 PYTHON_BIN="${PYTHON_BIN:-python}"
 export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
 if [[ "$MODE" == full ]]; then
@@ -60,19 +67,24 @@ if [[ "${RESUME:-0}" == 1 ]]; then COMMON+=(--resume-conditions); fi
 "$PYTHON_BIN" -m scripts.validate_balanced_landscapes --seed "$SEED" \
     --replicates "$REPS" --output "$CAMPAIGN/landscape_validation.csv"
 RUNS=(--run "$ROOT/${TAG}_b0")
+assert_frozen_source
 "$PYTHON_BIN" -m cognitive_tools.experiment "${COMMON[@]}" \
     --run-name "${TAG}_b0" --social-mode none --network-dynamics none --rewiring none
+assert_frozen_source
 for PROFILE in equal random normal_centered low_propensity_majority high_propensity_majority; do
     for DYNAMICS in fixed adaptive_bounded; do
         REWIRING=none
         if [[ "$DYNAMICS" == adaptive_bounded ]]; then REWIRING=prediction_error; fi
         RUN_NAME="${TAG}_${PROFILE}_${DYNAMICS}"
+        assert_frozen_source
         "$PYTHON_BIN" -m cognitive_tools.experiment "${COMMON[@]}" \
             --run-name "$RUN_NAME" --social-mode fixed --visibility-profile "$PROFILE" \
             --network-dynamics "$DYNAMICS" --rewiring "$REWIRING"
+        assert_frozen_source
         RUNS+=(--run "$ROOT/$RUN_NAME")
     done
 done
+assert_frozen_source
 "$PYTHON_BIN" -m cognitive_tools.analysis --profile visibility "${RUNS[@]}" \
     --analysis-name "${TAG}_analysis" --bootstrap-reps "$BOOT"
 if [[ "$MODE" != smoke ]]; then

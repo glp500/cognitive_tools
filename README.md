@@ -27,7 +27,11 @@ time-adjusted H1 associations, a secondary run-average association, and
 replicate-averaged H2/H3 contrasts. It also compares
 collective extraction, visibility inequality, resource persistence, reserve
 welfare, and wealth inequality for RQ2. Directional H2/H3 predictions are
-pilot-informed and require the independent full study for confirmation.
+pilot-informed. The independent 100-replicate full study has now completed:
+the primary H1 association ran opposite its prediction, H2 remained
+unresolved, and H3 showed a small reduction in local-view error. See the
+[full-run recovery audit](docs/reviews/balanced-full-run-recovery-2026-10-01.md)
+for estimates, health checks, and its Git-provenance limitation.
 
 Each observer attends four sources. Five profiles manipulate initial visibility:
 equal, random, normal centered, low-propensity majority and high-propensity
@@ -70,7 +74,10 @@ CONFIRM_FULL=YES BALANCED_PAYOFF_GATE=results/payoff_validation/balanced_gate_v1
 ```
 
 Use `RESUME=1` with the same command and tag to recover completed conditions
-under the same code/specification. Results are written to
+under the same clean code revision and specification. The runner now checks
+the frozen Git revision and clean worktree between treatments, so a code or
+documentation edit during a campaign stops the next treatment before its
+provenance changes. Results are written to
 `results/q_learning_baseline/experiments/<tag>_*` and the five main figures to
 `results/q_learning_baseline/social_analysis/<tag>_analysis/figures/`.
 The campaign script first writes `results/q_learning_baseline/campaigns/<tag>/landscape_validation.csv`,
@@ -79,6 +86,27 @@ render five story candidates under `<tag>_analysis/story_candidates/`. Use a new
 tag for each new campaign. Review the [new study specification](docs/specs/capacity-matched-visibility-study.md)
 before interpreting results. The older `run_visibility_campaign.sh` remains
 available for reproducing the earlier Stage-5 design.
+
+If all condition runs completed but the final combined analysis stopped, run
+the analysis helper rather than restarting 3,300 simulations:
+
+```bash
+PYTHON_BIN=python bash scripts/analyze_balanced_campaign.sh balanced_full_v1 \
+    --allow-presentation-only-commit-drift
+```
+
+The helper requires all 11 `complete.json` markers, uses the frozen bootstrap
+count, runs the visibility analysis, and renders the five story figures. The
+optional flag is for the recorded `balanced_full_v1` revision drift: analysis
+keeps the original input commit IDs and accepts them only if Git verifies that
+all intervening changes are documentation or presentation code. Scientific
+source changes still fail. Input runs that recorded a dirty worktree remain
+explicit warnings in `analysis_manifest.json`; the flag does not certify their
+uncommitted contents. Omit the flag for a campaign recorded at one revision.
+The [full-run recovery audit](docs/reviews/balanced-full-run-recovery-2026-10-01.md)
+records the affected commits, completed-run count, full-study estimates, and
+provenance limitation. The recovered analysis and five story figures are under
+`results/q_learning_baseline/social_analysis/balanced_full_v1_analysis/`.
 
 ### Re-render the visual story
 
