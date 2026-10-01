@@ -9,8 +9,12 @@ ECOLOGY_COLORS = {
     "balanced_segregated": "#6654A4",
 }
 ECOLOGY_MARKERS = {
-    "uniform_high": "o", "patchy_high": "s", "split_high_low": "^",
-    "balanced_uniform": "o", "balanced_dispersed": "s", "balanced_segregated": "^",
+    "uniform_high": "o",
+    "patchy_high": "s",
+    "split_high_low": "^",
+    "balanced_uniform": "o",
+    "balanced_dispersed": "s",
+    "balanced_segregated": "^",
 }
 DYNAMICS_COLORS = {"fixed": "#245B78", "adaptive_bounded": "#C56A32"}
 DYNAMICS_MARKERS = {"fixed": "o", "adaptive_bounded": "^"}

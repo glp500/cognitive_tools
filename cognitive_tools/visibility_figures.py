@@ -177,8 +177,12 @@ def _manipulation(directory, tables):
     if not distributions or any(not values for values in distributions):
         raise ValueError("Missing initial observer counts for a visibility profile")
     axes[0].boxplot(
-        distributions, positions=range(len(profiles)), orientation="horizontal", widths=0.48,
-        patch_artist=True, showfliers=False,
+        distributions,
+        positions=range(len(profiles)),
+        orientation="horizontal",
+        widths=0.48,
+        patch_artist=True,
+        showfliers=False,
         boxprops={"facecolor": "#DCE8EB", "edgecolor": DYNAMICS_COLORS["fixed"]},
         medianprops={"color": INK, "linewidth": 1.6},
         whiskerprops={"color": DYNAMICS_COLORS["fixed"]},
@@ -241,8 +245,11 @@ def _factor_grid(directory, table, metrics, filename, title, caption="", *, ecol
                     point = next((r for r in matches if r["profile"] == profile), None)
                     if point:
                         _point(
-                            ax, point, index + offset,
-                            color=COLORS[dynamic], marker=DYNAMICS_MARKERS[dynamic],
+                            ax,
+                            point,
+                            index + offset,
+                            color=COLORS[dynamic],
+                            marker=DYNAMICS_MARKERS[dynamic],
                         )
             if row_index == len(metrics) - 1:
                 ax.set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=25, ha="right")
@@ -255,8 +262,7 @@ def _factor_grid(directory, table, metrics, filename, title, caption="", *, ecol
                 ax.set_title(LABELS[ecology])
     handles = [
         plt.Line2D(
-            [0], [0], marker=DYNAMICS_MARKERS[name], linestyle="", color=color,
-            label=LABELS[name],
+            [0], [0], marker=DYNAMICS_MARKERS[name], linestyle="", color=color, label=LABELS[name]
         )
         for name, color in COLORS.items()
     ]
@@ -346,8 +352,7 @@ def _trajectory(directory, table, metric, filename, ylabel, ecologies):
                 ax.set_xlabel("Training step")
     handles = [
         plt.Line2D(
-            [0], [0], color=color, linestyle="-" if name == "fixed" else "--",
-            label=LABELS[name],
+            [0], [0], color=color, linestyle="-" if name == "fixed" else "--", label=LABELS[name]
         )
         for name, color in COLORS.items()
     ]
@@ -387,10 +392,16 @@ def save_visibility_figures(
     seed=20261002,
 ):
     directory.mkdir(parents=True, exist_ok=True)
-    plt.rcParams.update({
-        "font.size": 11, "axes.labelsize": 10.5, "axes.titlesize": 11.5,
-        "pdf.fonttype": 42, "svg.fonttype": "none", "figure.facecolor": "white",
-    })
+    plt.rcParams.update(
+        {
+            "font.size": 11,
+            "axes.labelsize": 10.5,
+            "axes.titlesize": 11.5,
+            "pdf.fonttype": 42,
+            "svg.fonttype": "none",
+            "figure.facecolor": "white",
+        }
+    )
     _design(directory, ecologies, width=width, height=height, seed=seed)
     _manipulation(directory, tables)
     _factor_grid(

@@ -52,17 +52,26 @@ def main() -> None:
             raise ValueError(f"Empty required figure table: {path}")
     output = (args.output or root / "figures").resolve()
     save_visibility_figures(
-        output, tables, ecologies=ecologies,
-        width=int(config.get("width", 10)), height=int(config.get("height", 10)),
+        output,
+        tables,
+        ecologies=ecologies,
+        width=int(config.get("width", 10)),
+        height=int(config.get("height", 10)),
         seed=int(config.get("seed", 20261002)),
     )
     missing = [name for name in FIGURES if not (output / f"{name}.pdf").is_file()]
     if missing:
         raise RuntimeError(f"Missing expected figures: {missing}")
-    print(json.dumps({
-        "event": "visibility_main_complete", "analysis": root.name,
-        "figure_count": len(FIGURES), "output": str(output),
-    }))
+    print(
+        json.dumps(
+            {
+                "event": "visibility_main_complete",
+                "analysis": root.name,
+                "figure_count": len(FIGURES),
+                "output": str(output),
+            }
+        )
+    )
 
 
 if __name__ == "__main__":

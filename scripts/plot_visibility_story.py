@@ -27,7 +27,13 @@ from cognitive_tools.scenarios import build_environment_maps
 from cognitive_tools.visibility import PROFILES
 from cognitive_tools.visibility_figures import LABELS
 from cognitive_tools.visibility_palette import (
-    ECOLOGY_COLORS, ECOLOGY_MARKERS, FINAL, GRID, INITIAL, INK, MUTED,
+    ECOLOGY_COLORS,
+    ECOLOGY_MARKERS,
+    FINAL,
+    GRID,
+    INITIAL,
+    INK,
+    MUTED,
 )
 
 ECOLOGIES = ("uniform_high", "patchy_high", "split_high_low")
@@ -366,8 +372,7 @@ def _perception(output: Path, root: Path, note: str) -> None:
         ("high_propensity_majority-random", "High majority − random"),
     )
     primary_h2 = [
-        row for row in h1
-        if row["comparison"] == "balanced_segregated-balanced_dispersed"
+        row for row in h1 if row["comparison"] == "balanced_segregated-balanced_dispersed"
     ]
     extent_rows = primary_h2 if balanced else h1 + h2
     extent = 1.12 * max(abs(float(row[key])) for row in extent_rows for key in ("low", "high"))
@@ -384,8 +389,12 @@ def _perception(output: Path, root: Path, note: str) -> None:
     ]
     h1_styles = (
         (
-            ("balanced_segregated-balanced_dispersed", ECOLOGY_COLORS["balanced_segregated"],
-             "s", "Segregated − dispersed"),
+            (
+                "balanced_segregated-balanced_dispersed",
+                ECOLOGY_COLORS["balanced_segregated"],
+                "s",
+                "Segregated − dispersed",
+            ),
         )
         if balanced
         else (
@@ -445,36 +454,54 @@ def _perception(output: Path, root: Path, note: str) -> None:
             raise ValueError("Invalid H1 checkpoint coverage or association")
         h1_extent = max(
             0.08,
-            1.25 * max(
+            1.25
+            * max(
                 abs(float(by_measure[key][bound]))
                 for key in ("within_run", "linear_time_adjusted")
                 for bound in ("low", "high")
             ),
         )
-        for index, (key, color) in enumerate((
-            ("within_run", "#B06435"),
-            ("linear_time_adjusted", "#197A73"),
-        )):
+        for index, (key, color) in enumerate(
+            (("within_run", "#B06435"), ("linear_time_adjusted", "#197A73"))
+        ):
             row = by_measure[key]
             estimate, low, high = (float(row[field]) for field in ("estimate", "low", "high"))
             if not low <= estimate <= high:
                 raise ValueError(f"Invalid H1 interval: {key}")
             ax.plot([low, high], [index, index], color=color, lw=2.4)
             ax.scatter([estimate], [index], color=color, s=70, zorder=3)
-            ax.text(high + 0.025 * h1_extent, index, f"{estimate:+.3f}", va="center", color=color, fontsize=10)
+            ax.text(
+                high + 0.025 * h1_extent,
+                index,
+                f"{estimate:+.3f}",
+                va="center",
+                color=color,
+                fontsize=10,
+            )
         ax.set_yticks((0, 1), ("Within run", "After linear time adjustment"))
         ax.set_ylim(1.7, -0.7)
         ax.set_xlim(-h1_extent, h1_extent)
         ax.set_xlabel("Association with local-view error · Pearson r")
-        ax.set_title("H1 · Observer-count inequality\nand local-view error", loc="left", fontweight="bold")
+        ax.set_title(
+            "H1 · Observer-count inequality\nand local-view error", loc="left", fontweight="bold"
+        )
         _clean_axis(ax, zero=True)
         ax.text(
-            0.52, 0.51,
-            ("Direction reverses after time adjustment"
-             if float(primary["estimate"]) * float(by_measure["linear_time_adjusted"]["estimate"]) < 0
-             else "Compare raw and time-adjusted estimates"),
-            transform=ax.transAxes, ha="center", va="center", fontsize=10,
-            color=INK, bbox={"facecolor": "#EEF3F2", "edgecolor": "none", "pad": 5},
+            0.52,
+            0.51,
+            (
+                "Direction reverses after time adjustment"
+                if float(primary["estimate"])
+                * float(by_measure["linear_time_adjusted"]["estimate"])
+                < 0
+                else "Compare raw and time-adjusted estimates"
+            ),
+            transform=ax.transAxes,
+            ha="center",
+            va="center",
+            fontsize=10,
+            color=INK,
+            bbox={"facecolor": "#EEF3F2", "edgecolor": "none", "pad": 5},
         )
     else:
         offsets = (-0.18, 0.0, 0.18)
@@ -512,14 +539,21 @@ def _perception(output: Path, root: Path, note: str) -> None:
     ]
     if balanced:
         legend_ax.text(
-            0.5, 0.5,
+            0.5,
+            0.5,
             "H2: paired replicate-bootstrap intervals · H1: replicate-cluster bootstrap intervals · zero marks no difference/association",
-            ha="center", va="center", color=MUTED, fontsize=9.5,
+            ha="center",
+            va="center",
+            color=MUTED,
+            fontsize=9.5,
         )
     else:
         legend_ax.legend(
-            handles=contrast_handles + ecology_handles, frameon=False,
-            loc="center", ncol=2, fontsize=9.5,
+            handles=contrast_handles + ecology_handles,
+            frameon=False,
+            loc="center",
+            ncol=2,
+            fontsize=9.5,
         )
     fig.suptitle(
         "3  ·  Different local views of the same population",
