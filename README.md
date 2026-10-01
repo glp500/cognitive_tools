@@ -14,7 +14,20 @@ values, so their direct comparison isolates spatial arrangement. Attention
 profiles and fixed/adaptive observation follow the historical
 [Stage-5 protocol](docs/specs/visibility-bounded-search-study.md). The previous
 [capped-harvest commons validation](docs/reviews/capped-harvest-validation-results-2026-09-30.md)
-applies only to its tested landscapes; the new maps require a fresh payoff gate.
+applies only to its tested landscapes. The new maps independently passed the
+[balanced-landscape payoff gate](docs/reviews/balanced-capacity-payoff-gate-2026-10-01.md)
+for both summed and discounted returns.
+
+The revised prospective hypotheses ask whether inequality in actual observer
+counts is associated with local-view error over training (H1), whether
+segregated resources increase that error relative to capacity-matched dispersed
+resources (H2), and whether adaptive observation reduces it relative to a
+paired fixed network (H3). The analysis saves within-run checkpoint and
+time-adjusted H1 associations, a secondary run-average association, and
+replicate-averaged H2/H3 contrasts. It also compares
+collective extraction, visibility inequality, resource persistence, reserve
+welfare, and wealth inequality for RQ2. Directional H2/H3 predictions are
+pilot-informed and require the independent full study for confirmation.
 
 Each observer attends four sources. Five profiles manipulate initial visibility:
 equal, random, normal centered, low-propensity majority and high-propensity
@@ -39,7 +52,7 @@ PYTHON_BIN=python WORKERS=8 bash scripts/run_balanced_campaign.sh figure_smoke b
 # Smaller scientific campaign: all 33 conditions, 10 replicates each.
 PYTHON_BIN=python WORKERS=8 bash scripts/run_balanced_campaign.sh pilot balanced_pilot_v1
 
-# Validate the new maps as a commons dilemma before a confirmatory full run.
+# Reproduce the held-out commons-dilemma gate before a confirmatory full run.
 python -m cognitive_tools.payoff --output results/payoff_validation/balanced_gate_v1/run \
     --purpose validation --workers 14 --population 64 --replicates 100 \
     --replicate-start 4000 --seed 20261014 --focal-count 4 --assignments 1 \
@@ -49,6 +62,7 @@ python -m cognitive_tools.payoff --output results/payoff_validation/balanced_gat
 python -m cognitive_tools.payoff_analysis \
     --run results/payoff_validation/balanced_gate_v1/run \
     --output results/payoff_validation/balanced_gate_v1/analysis --resamples 5000
+python -m scripts.validate_balanced_gate results/payoff_validation/balanced_gate_v1/analysis
 
 # Frozen full campaign: 33 conditions × 100 replicates = 3,300 runs.
 CONFIRM_FULL=YES BALANCED_PAYOFF_GATE=results/payoff_validation/balanced_gate_v1/analysis \
@@ -73,7 +87,7 @@ set from its saved tables and source runs:
 
 ```bash
 MPLCONFIGDIR=/tmp/cognitive-mpl python -m scripts.plot_visibility_story \
-    --analysis-dir results/q_learning_baseline/social_analysis/balanced_pilot_v1_analysis
+    --analysis-dir results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis
 ```
 
 Use the full campaign's `<tag>_analysis` directory when it is available. The

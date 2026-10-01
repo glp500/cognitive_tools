@@ -25,31 +25,7 @@ if [[ "$MODE" == full ]]; then
     if [[ -z "${BALANCED_PAYOFF_GATE:-}" ]]; then
         echo 'Set BALANCED_PAYOFF_GATE to the validated payoff analysis directory'; exit 2
     fi
-    "$PYTHON_BIN" - "$BALANCED_PAYOFF_GATE" <<'PYGATE'
-import csv,hashlib,json,sys
-from pathlib import Path
-analysis=Path(sys.argv[1])
-run=analysis.parent/'run'
-producer=run/'manifest.json'
-metadata=json.loads((analysis/'analysis_manifest.json').read_text())
-manifest=json.loads(producer.read_text())
-expected={'balanced_uniform','balanced_dispersed','balanced_segregated'}
-config=manifest['config']
-if (manifest['status']!='complete' or manifest['purpose']!='validation'
-    or metadata['input_manifest_sha256']!=hashlib.sha256(producer.read_bytes()).hexdigest()
-    or config['reward_mode']!='capped_harvest' or config['population']!=64
-    or config['replicates']<100 or config['compositions']!=[0,63]
-    or config['horizons']!=[1000] or set(config['scenarios'])!=expected):
-    raise SystemExit('Balanced payoff gate provenance or frozen design is invalid')
-path=analysis/'verdicts.csv'
-with path.open(newline='') as handle:
-    rows=list(csv.DictReader(handle))
-if {r['scenario'] for r in rows} != expected or len(rows) != 6 or any(
-    r['verdict'] != 'supported' or r['horizon'] != '1000'
-    or r['return_type'] not in ('sum','discounted') for r in rows
-):
-    raise SystemExit('Balanced payoff gate has not supported all six scenario/return cells')
-PYGATE
+    "$PYTHON_BIN" -m scripts.validate_balanced_gate "$BALANCED_PAYOFF_GATE"
 fi
 SPEC=configs/visibility/visibility_profiles_v1.json
 ROOT=results/q_learning_baseline/experiments

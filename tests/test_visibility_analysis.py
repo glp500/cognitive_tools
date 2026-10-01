@@ -137,6 +137,20 @@ def test_balanced_analysis_uses_matched_ecologies_and_weighted_stock(tmp_path):
         "balanced_segregated-balanced_dispersed",
         "balanced_segregated-balanced_uniform",
     }
+    assert {
+        "low_extraction_rate",
+        "visibility_gini",
+        "resource_fraction",
+        "reserve_welfare",
+        "final_wealth_gini",
+    } <= {row["metric"] for row in tables["ecology_contrast_summary"]}
+    assert {
+        "low_extraction_rate",
+        "visibility_gini",
+        "resource_fraction",
+        "reserve_welfare",
+        "final_wealth_gini",
+    } <= {row["metric"] for row in tables["adaptive_fixed_summary"]}
     assert "local_resource_fraction" in {row["metric"] for row in tables["outcome_summary"]}
     outcomes = {
         (row["scenario"], row["dynamics"], row["metric"]): float(row["value"])

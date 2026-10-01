@@ -82,6 +82,25 @@ def _point(ax, row: dict[str, str], y: float, *, color: str, marker: str = "o") 
     ax.scatter([estimate], [y], color=color, marker=marker, s=32, zorder=3)
 
 
+def _pooled_result(root: Path, hypothesis: str) -> dict[str, str]:
+    matches = [
+        row
+        for row in _read(root / "data" / "pooled_hypothesis_summary.csv")
+        if row["hypothesis"] == hypothesis
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"Expected one pooled {hypothesis} result")
+    estimate, low, high = (float(matches[0][key]) for key in ("mean", "low", "high"))
+    expected_cells = 10 if hypothesis == "H2" else 15
+    if (
+        not all(np.isfinite(value) for value in (estimate, low, high))
+        or not low <= estimate <= high
+        or int(matches[0]["n_cells"]) != expected_cells
+    ):
+        raise ValueError(f"Invalid pooled {hypothesis} estimate or treatment coverage")
+    return matches[0]
+
+
 def _clean_axis(ax, *, zero: bool = False) -> None:
     if zero:
         ax.axvline(0, color=INK, lw=0.9, zorder=0)
@@ -349,7 +368,9 @@ def _perception(output: Path, root: Path, note: str) -> None:
     h1_expected = (3 if balanced else 2) * len(PROFILES) * 2
     h2_expected = 4 * len(ECOLOGIES)
     if len(h1) != h1_expected or len(h2) != h2_expected:
-        raise ValueError(f"Incomplete H1/H2 contrasts: H1={len(h1)}, H2={len(h2)}")
+        raise ValueError(
+            f"Incomplete ecology/profile contrasts: ecology={len(h1)}, profile={len(h2)}"
+        )
     h1_by_key = {(row["comparison"], row["profile"], row["dynamics"]): row for row in h1}
     h2_by_key = {(row["comparison"], row["scenario"]): row for row in h2}
     comparisons = (
@@ -413,8 +434,15 @@ def _perception(output: Path, root: Path, note: str) -> None:
     ax.set_ylim(len(labels) - 0.5, -0.5)
     ax.set_xlim(-extent, extent)
     ax.set_xlabel("Difference in mean absolute perception error")
+    if balanced:
+        pooled = _pooled_result(root, "H2")
+        ax.set_xlabel(
+            "Difference in mean absolute local-view error\n"
+            f"Pooled H2 Δ = {float(pooled['mean']):+.4f} "
+            f"[{float(pooled['low']):+.4f}, {float(pooled['high']):+.4f}]"
+        )
     ax.set_title(
-        "H1 · Resource geography\nat matched capacity"
+        "H2 · Resource geography\nat matched capacity"
         if balanced
         else "H1 · Ecological setting\nversus uniform high",
         loc="left",
@@ -422,22 +450,67 @@ def _perception(output: Path, root: Path, note: str) -> None:
     )
     _clean_axis(ax, zero=True)
     ax = axes[1]
-    offsets = (-0.18, 0.0, 0.18)
-    for y, (comparison, _) in enumerate(comparisons):
-        for offset, ecology in zip(offsets, ECOLOGIES):
-            _point(
-                ax,
-                h2_by_key[(comparison, ecology)],
-                y + offset,
-                color=ECOLOGY_COLORS[ecology],
-                marker=ECOLOGY_MARKERS[ecology],
-            )
-    ax.set_yticks(range(4), [label for _, label in comparisons])
-    ax.set_ylim(3.5, -0.5)
-    ax.set_xlim(-extent, extent)
-    ax.set_xlabel("Difference in mean absolute perception error")
-    ax.set_title("H2 · Initial attention profile\non fixed networks", loc="left", fontweight="bold")
-    _clean_axis(ax, zero=True)
+    if balanced:
+        pairs = _read(root / "data" / "h1_checkpoint_pairs.csv")
+        associations = _read(root / "data" / "h1_checkpoint_association_summary.csv")
+        by_measure = {row["measure"]: row for row in associations}
+        if set(by_measure) != {"within_run", "linear_time_adjusted"}:
+            raise ValueError("Incomplete H1 longitudinal analyses")
+        primary = by_measure["within_run"]
+        if (
+            len(pairs) != int(primary["n_checkpoints"])
+            or int(primary["n_treatment_cells"]) != 15
+            or any(not np.isfinite(float(primary[key])) for key in ("estimate", "low", "high"))
+        ):
+            raise ValueError("Invalid H1 checkpoint coverage or association")
+        centered_x = np.array([float(row["visibility_gini_deviation"]) for row in pairs])
+        centered_y = np.array([float(row["local_view_error_deviation"]) for row in pairs])
+        variation = float(np.dot(centered_x, centered_x))
+        if variation <= 0:
+            raise ValueError("H1 observer-count inequality has no within-run variation")
+        ax.hexbin(centered_x, centered_y, gridsize=29, mincnt=1, bins="log", cmap="Blues")
+        slope = float(np.dot(centered_x, centered_y) / variation)
+        x_limit = float(np.max(np.abs(centered_x))) * 1.12
+        ax.plot([-x_limit, x_limit], [-slope * x_limit, slope * x_limit], color=INK, lw=1.5)
+        ax.axhline(0, color="#c7cdd0", lw=0.8)
+        ax.axvline(0, color="#c7cdd0", lw=0.8)
+        ax.set_xlim(-x_limit, x_limit)
+        ax.set_xlabel("Observer-count inequality · deviation from run mean")
+        ax.set_ylabel("Local-view error · deviation from run mean")
+        ax.set_title("H1 · Who gets seen versus\nwhat peers reveal", loc="left", fontweight="bold")
+        ax.text(
+            0.03,
+            0.96,
+            f"Within-run r = {float(primary['estimate']):+.2f}\n"
+            f"95% interval [{float(primary['low']):+.2f}, {float(primary['high']):+.2f}]\n"
+            f"After linear time adjustment: {float(by_measure['linear_time_adjusted']['estimate']):+.2f}",
+            transform=ax.transAxes,
+            va="top",
+            fontsize=9,
+            color=INK,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.75),
+        )
+        ax.grid(color="#e4e9ea", lw=0.6, zorder=0)
+        ax.spines[["top", "right"]].set_visible(False)
+    else:
+        offsets = (-0.18, 0.0, 0.18)
+        for y, (comparison, _) in enumerate(comparisons):
+            for offset, ecology in zip(offsets, ECOLOGIES):
+                _point(
+                    ax,
+                    h2_by_key[(comparison, ecology)],
+                    y + offset,
+                    color=ECOLOGY_COLORS[ecology],
+                    marker=ECOLOGY_MARKERS[ecology],
+                )
+        ax.set_yticks(range(4), [label for _, label in comparisons])
+        ax.set_ylim(3.5, -0.5)
+        ax.set_xlim(-extent, extent)
+        ax.set_xlabel("Difference in mean absolute perception error")
+        ax.set_title(
+            "H2 · Initial attention profile\non fixed networks", loc="left", fontweight="bold"
+        )
+        _clean_axis(ax, zero=True)
     contrast_handles = [
         Line2D([0], [0], color=color, marker=marker, linestyle="", label=label)
         for _, color, marker, label in h1_styles
@@ -454,7 +527,12 @@ def _perception(output: Path, root: Path, note: str) -> None:
         for e in ECOLOGIES
     ]
     handles = (
-        [item for pair in zip(contrast_handles, ecology_handles) for item in pair]
+        contrast_handles
+        + [
+            Line2D(
+                [0], [0], marker="h", color="#336f9a", linestyle="", label="Adaptive checkpoints"
+            )
+        ]
         if balanced
         else contrast_handles + ecology_handles
     )
@@ -472,7 +550,13 @@ def _perception(output: Path, root: Path, note: str) -> None:
         fig,
         output,
         "03_different_windows",
-        f"{note}; planned paired H1/H2 contrasts, pointwise replicate-bootstrap 95% intervals. Zero means no difference.",
+        (
+            f"{note}; H2 paired ecology contrasts have pointwise replicate-bootstrap 95% intervals. "
+            "H1 shows within-run-centered adaptive checkpoints; darker hexagons contain more checkpoints. "
+            "Its interval resamples replicate IDs. The association is descriptive, not causal."
+            if balanced
+            else f"{note}; historical paired H1/H2 contrasts, pointwise replicate-bootstrap 95% intervals. Zero means no difference."
+        ),
     )
 
 
@@ -487,7 +571,7 @@ def _evaluation_points(runs: list[dict[str, str]], root: Path) -> list[dict]:
     expected = {
         (row["scenario"], row["profile"], row["dynamics"], row["metric"]): float(row["mean"])
         for row in summary
-        if row["metric"] in ("resource_fraction", "reserve_welfare")
+        if row["metric"] in ("resource_fraction", "reserve_welfare", "final_wealth_gini")
     }
     points = []
     for run in runs:
@@ -520,10 +604,12 @@ def _evaluation_points(runs: list[dict[str, str]], root: Path) -> list[dict]:
                     float(row["eval_mean_mean_resource_fraction"]) for row in rows
                 ),
                 "welfare": mean(float(row["eval_mean_mean_reserve_welfare"]) for row in rows),
+                "wealth_gini": mean(float(row["final_wealth_gini"]) for row in rows),
             }
             for field, metric in (
                 ("fraction", "resource_fraction"),
                 ("welfare", "reserve_welfare"),
+                ("wealth_gini", "final_wealth_gini"),
             ):
                 if abs(point[field] - expected[(ecology, profile, dynamics, metric)]) > 1e-9:
                     raise ValueError(
@@ -584,12 +670,15 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
     markers = {"none": "D", "fixed": "o", "adaptive_bounded": "^"}
     for point in points:
         color = ECOLOGY_COLORS[point["ecology"]]
-        for ax, x_key in zip(
-            axes[:2], ("fraction", "local_fraction") if balanced else ("stock", "fraction")
-        ):
+        panels = (
+            ((axes[0], "fraction", "welfare"), (axes[1], "fraction", "wealth_gini"))
+            if balanced
+            else ((axes[0], "stock", "welfare"), (axes[1], "fraction", "welfare"))
+        )
+        for ax, x_key, y_key in panels:
             ax.scatter(
                 point[x_key],
-                point["welfare"],
+                point[y_key],
                 marker=markers[point["dynamics"]],
                 s=95 if point["dynamics"] == "none" else 42,
                 facecolors="white" if point["dynamics"] == "none" else color,
@@ -603,16 +692,18 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
         else "Mean total resource · fresh evaluation"
     )
     axes[1].set_xlabel(
-        "Mean local fill fraction · fresh evaluation"
+        "Total resource / total capacity · fresh evaluation"
         if balanced
         else "Mean resource / capacity · fresh evaluation"
     )
     axes[0].set_ylabel("Mean reserve welfare · fresh evaluation")
+    if balanced:
+        axes[1].set_ylabel("Final wealth Gini · fresh evaluation")
     axes[0].set_title(
         "Collective stock" if balanced else "Absolute stock", loc="left", fontweight="bold"
     )
     axes[1].set_title(
-        "Local fill" if balanced else "Remaining fraction", loc="left", fontweight="bold"
+        "Wealth inequality" if balanced else "Remaining fraction", loc="left", fontweight="bold"
     )
     welfare_values = [point["welfare"] for point in points]
     welfare_pad = max(max(welfare_values) - min(welfare_values), 0.10) * 0.2
@@ -623,8 +714,16 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
     for ax in axes[:2]:
         ax.spines[["top", "right"]].set_visible(False)
         ax.grid(color="#e4e9ea", lw=0.6, zorder=0)
-        ax.set_ylim(*welfare_limits)
-    axes[1].set_yticklabels([])
+    axes[0].set_ylim(*welfare_limits)
+    if balanced:
+        wealth_values = [point["wealth_gini"] for point in points]
+        wealth_pad = max(max(wealth_values) - min(wealth_values), 0.05) * 0.2
+        axes[1].set_ylim(
+            max(0, min(wealth_values) - wealth_pad), min(1, max(wealth_values) + wealth_pad)
+        )
+    else:
+        axes[1].set_ylim(*welfare_limits)
+        axes[1].set_yticklabels([])
     ax = axes[2]
     for item in regions:
         color = INK if item["baseline"] else "#b9c1c5"
@@ -685,7 +784,11 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
         fontsize=10,
     )
     fig.suptitle(
-        "4  ·  Resource stock and welfare tell different parts of the story",
+        (
+            "4  ·  Resource persistence, reserve welfare and wealth inequality"
+            if balanced
+            else "4  ·  Resource stock and welfare tell different parts of the story"
+        ),
         x=0.02,
         y=1.15,
         ha="left",
@@ -696,12 +799,13 @@ def _stock_welfare(output: Path, runs: list[dict[str, str]], root: Path, note: s
         fig,
         output,
         "04_stock_and_wellbeing",
-        f"{note}; left: 33 fresh-evaluation condition means. Right: 11 treatment means; B0 dark, social treatments grey. Regional welfare is from training end. No pooled regression.",
+        f"{note}; first two panels: 33 fresh-evaluation condition means. Right: 11 treatment means; B0 dark, social treatments grey. Regional welfare is from training end. No pooled regression.",
     )
 
 
 def _adaptation(output: Path, root: Path, note: str) -> None:
     rows = _read(root / "data" / "adaptive_fixed_summary.csv")
+    balanced = ECOLOGIES[0] == "balanced_uniform"
     metrics = (
         ("visibility_gini", "Who is seen?", "Visibility Gini"),
         ("social_perception_error", "What is perceived?", "Mean absolute error"),
@@ -734,6 +838,13 @@ def _adaptation(output: Path, root: Path, note: str) -> None:
         ax.set_ylim(len(PROFILES) - 0.5, -0.5)
         ax.set_yticks(range(len(PROFILES)), [LABELS[p] for p in PROFILES])
         ax.set_xlabel(f"Adaptive − fixed · {label}")
+        if balanced and metric == "social_perception_error":
+            pooled = _pooled_result(root, "H3")
+            ax.set_xlabel(
+                f"Adaptive − fixed · {label}\n"
+                f"Pooled H3 Δ = {float(pooled['mean']):+.4f} "
+                f"[{float(pooled['low']):+.4f}, {float(pooled['high']):+.4f}]"
+            )
         ax.set_title(question, loc="left", fontweight="bold")
         _clean_axis(ax, zero=True)
     fig.legend(
@@ -765,7 +876,12 @@ def _adaptation(output: Path, root: Path, note: str) -> None:
         fig,
         output,
         "05_adaptation_pathway",
-        f"{note}; all 15 paired ecology/profile cells per outcome; pointwise replicate-bootstrap 95% intervals. Zero means no difference.",
+        (
+            f"{note}; 15 paired ecology/profile cells per outcome, with pointwise intervals. "
+            "The pooled H3 result averages cells within each replicate before bootstrapping replicates."
+            if balanced
+            else f"{note}; all 15 paired ecology/profile cells per outcome; pointwise replicate-bootstrap 95% intervals. Zero means no difference."
+        ),
     )
 
 
@@ -877,6 +993,14 @@ def main() -> None:
         "visibility_profile_contrast_summary.csv",
         "outcome_summary.csv",
         "adaptive_fixed_summary.csv",
+    ) + (
+        (
+            "h1_checkpoint_pairs.csv",
+            "h1_checkpoint_association_summary.csv",
+            "pooled_hypothesis_summary.csv",
+        )
+        if ECOLOGIES[0] == "balanced_uniform"
+        else ()
     )
     try:
         source_hashes = {
@@ -936,21 +1060,38 @@ def main() -> None:
             ],
             "03_different_windows": [
                 "data/ecology_contrast_summary.csv",
-                "data/visibility_profile_contrast_summary.csv",
+                *(
+                    [
+                        "data/h1_checkpoint_pairs.csv",
+                        "data/h1_checkpoint_association_summary.csv",
+                        "data/pooled_hypothesis_summary.csv",
+                    ]
+                    if ECOLOGIES[0] == "balanced_uniform"
+                    else ["data/visibility_profile_contrast_summary.csv"]
+                ),
             ],
             "04_stock_and_wellbeing": [
                 "all runs/data/evaluation_summary.csv",
                 "all runs/data/agent_social_summary.csv",
                 "data/outcome_summary.csv",
             ],
-            "05_adaptation_pathway": ["data/adaptive_fixed_summary.csv"],
+            "05_adaptation_pathway": [
+                "data/adaptive_fixed_summary.csv",
+                *(
+                    ["data/pooled_hypothesis_summary.csv"]
+                    if ECOLOGIES[0] == "balanced_uniform"
+                    else []
+                ),
+            ],
         },
         "input_sha256": source_hashes,
         "checks_passed": {
             "run_count": 11,
             "ecology_treatment_means": 33,
-            "h1_contrast_cells": 30 if ECOLOGIES[0] == "balanced_uniform" else 20,
-            "h2_contrast_cells": 12,
+            "ecology_contrast_cells": 30 if ECOLOGIES[0] == "balanced_uniform" else 20,
+            "profile_contrast_cells": 12,
+            "h1_association_defined": ECOLOGIES[0] == "balanced_uniform",
+            "h2_primary_cells": 10 if ECOLOGIES[0] == "balanced_uniform" else None,
             "h3_cells_per_outcome": 15,
             "observers_per_snapshot": 64,
             "attention_links_per_snapshot": 256,

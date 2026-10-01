@@ -123,6 +123,9 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
     }
     if len(run_factors) != len(runs):
         raise ValueError("Duplicate Stage-5 treatment factors")
+    expected_factors = {(None, "none")} | {
+        (profile, dynamics) for profile in PROFILES for dynamics in ("fixed", "adaptive_bounded")
+    }
     initial_agents, initial_reps, primary, outcomes = [], [], [], []
     trajectory_groups = defaultdict(list)
     graph_identity = {}
@@ -304,6 +307,7 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
     all_rows = primary + outcomes
     if balanced:
         ecology, ecology_sum = [], []
+        rq2_metrics = PRIMARY + ("resource_fraction", "reserve_welfare", "final_wealth_gini")
         for left, right in (
             ("balanced_dispersed", "balanced_uniform"),
             ("balanced_segregated", "balanced_dispersed"),
@@ -315,7 +319,7 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
                 lambda r, left=left: r["scenario"] == left,
                 lambda r, right=right: {**r, "scenario": right},
                 ("scenario", "profile", "dynamics", "population"),
-                PRIMARY,
+                rq2_metrics,
                 reps=bootstrap_reps,
                 seed=bootstrap_seed,
             )
@@ -338,7 +342,16 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
         lambda r: r["dynamics"] == "fixed" and r["profile"] in PROFILES and r["profile"] != "equal",
         lambda r: {**r, "profile": "equal" if r["profile"] == "random" else "random"},
         ("scenario", "profile", "dynamics", "population"),
-        ("social_perception_error",),
+        (
+            "social_perception_error",
+            "visibility_gini",
+            "low_extraction_rate",
+            "resource_fraction",
+            "reserve_welfare",
+            "final_wealth_gini",
+        )
+        if balanced
+        else ("social_perception_error",),
         reps=bootstrap_reps,
         seed=bootstrap_seed,
     )
@@ -392,11 +405,20 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
         adaptive_fixed_summary=adaptation_sum,
         training_trajectory_summary=trajectory_summary,
     )
+    if balanced and run_factors == expected_factors:
+        from .visibility_hypotheses import analyze_balanced_hypotheses
+
+        tables.update(
+            analyze_balanced_hypotheses(
+                runs,
+                ecology,
+                adaptation,
+                bootstrap_reps=bootstrap_reps,
+                bootstrap_seed=bootstrap_seed,
+            )
+        )
     for name, rows in tables.items():
         write_csv_rows(tables_dir / f"{name}.csv", rows)
-    expected_factors = {(None, "none")} | {
-        (profile, dynamics) for profile in PROFILES for dynamics in ("fixed", "adaptive_bounded")
-    }
     health = dict(
         study_protocol=PROTOCOL,
         run_count=len(runs),
@@ -414,6 +436,17 @@ def run_visibility_analysis(runs, tables_dir, figures_dir, *, bootstrap_reps, bo
         visibility_contrast_rows=len(visibility),
         adaptive_contrast_rows=len(adaptation),
     )
+    if balanced and run_factors == expected_factors:
+        health.update(
+            h1_run_means=len(tables["h1_run_means"]),
+            h1_checkpoint_pairs=len(tables["h1_checkpoint_pairs"]),
+            h1_association_defined=sum(
+                math.isfinite(_number(row["estimate"]))
+                for row in tables["h1_checkpoint_association_summary"]
+                if row["measure"] == "within_run"
+            ),
+            pooled_hypothesis_replicates=len(tables["pooled_hypothesis_replicates"]),
+        )
     from .visibility_figures import save_visibility_figures
 
     save_visibility_figures(
