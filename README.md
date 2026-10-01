@@ -82,6 +82,17 @@ available for reproducing the earlier Stage-5 design.
 
 ### Re-render the visual story
 
+After a completed balanced pilot or full analysis, presentation-only figure changes can be applied without rerunning simulations or bootstrap estimates:
+
+```bash
+MPLCONFIGDIR=/tmp/cognitive-mpl python -m scripts.plot_visibility_main \
+    --analysis-dir results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis
+MPLCONFIGDIR=/tmp/cognitive-mpl python -m scripts.plot_visibility_story \
+    --analysis-dir results/q_learning_baseline/social_analysis/balanced_pilot_v1_revised_analysis
+```
+
+For the full campaign, replace the analysis directory with `balanced_full_v1_analysis` after `analysis_health.json` exists. The campaign runner already generates both figure families automatically; these commands are for a later visual-only re-render. Main figures are in `figures/`; story candidates and their provenance manifest are in `story_candidates/`.
+
 After a completed Stage-5 analysis, render the separate five-figure narrative
 set from its saved tables and source runs:
 

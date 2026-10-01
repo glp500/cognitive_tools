@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, FancyArrowPatch, Rectangle
 
 from .visibility import PROFILES
+from .visibility_palette import DYNAMICS_COLORS, DYNAMICS_MARKERS, GRID, INK, MUTED
 
 LABELS = {
     "equal": "Equal",
@@ -26,12 +27,13 @@ LABELS = {
     "fixed": "Fixed",
     "adaptive_bounded": "Adaptive",
 }
-COLORS = {"fixed": "#237b66", "adaptive_bounded": "#c15c36"}
+COLORS = DYNAMICS_COLORS
 
 
 def _save(fig, directory, name, caption=""):
     if caption:
-        fig.text(0.5, -0.025, caption, ha="center", va="top", fontsize=9)
+        fig.text(0.5, -0.025, caption, ha="center", va="top", fontsize=9, color=MUTED)
+        (directory / f"{name}.caption.txt").write_text(caption + "\n")
     fig.savefig(directory / f"{name}.png", dpi=200, bbox_inches="tight")
     fig.savefig(directory / f"{name}.pdf", bbox_inches="tight")
     plt.close(fig)
@@ -41,17 +43,17 @@ def _n(rows):
     return max((int(r.get("n_replicates", 0)) for r in rows), default=0)
 
 
-def _point(ax, row, x, *, color):
+def _point(ax, row, x, *, color, marker="o"):
     mean = float(row["mean"])
     lower, upper = float(row["low"]), float(row["high"])
     ax.errorbar(
         x,
         mean,
         yerr=[[max(0, mean - lower)], [max(0, upper - mean)]],
-        fmt="o",
+        fmt=marker,
         color=color,
-        ms=4,
-        lw=1.1,
+        ms=5,
+        lw=1.35,
         capsize=2,
     )
 
@@ -80,16 +82,16 @@ def _design(directory, ecologies, *, width=10, height=10, seed=20261002):
         0.9,
         "Fixed: graph held constant\n\nAdaptive bounded:\n"
         "prediction error > .25\nrewire probability .10 every 50 steps\n"
-        "75% local / 25% global search",
+        "75% two-hop / 25% global candidate search",
         va="top",
         fontsize=11,
     )
     axes[1, 2].text(
         0.02,
         0.9,
-        "RQ1  Local perception vs population\n\n"
-        "RQ2  Visibility concentration\n        and extraction behavior\n\n"
-        "Secondary: resources, reserves, inequality",
+        "RQ1  Four peers vs population extraction\n\n"
+        "RQ2  Extraction and observer inequality\n"
+        "        Resource stock, reserve welfare, wealth Gini",
         va="top",
         fontsize=11,
     )
@@ -161,41 +163,56 @@ def _design(directory, ecologies, *, width=10, height=10, seed=20261002):
 
 
 def _manipulation(directory, tables):
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4.2), constrained_layout=True)
+    fig, axes = plt.subplots(1, 3, figsize=(13.5, 4.6), constrained_layout=True, sharey=True)
     agents = tables["initial_visibility_agents"]
     # Reused ecologies/dynamics share graphs; one row per profile, replicate and agent.
     unique = {
         (r["visibility_profile"], r["population"], r["replicate"], r["agent"]): r for r in agents
     }
-    for index, profile in enumerate(PROFILES):
-        counts = [
-            int(r["initial_visibility_count"]) for key, r in unique.items() if key[0] == profile
-        ]
-        if counts:
-            axes[0].scatter([index] * len(counts), counts, alpha=0.08, s=5, color="#276f67")
+    profiles = [profile for profile in PROFILES if any(key[0] == profile for key in unique)]
+    distributions = [
+        [int(r["initial_visibility_count"]) for key, r in unique.items() if key[0] == profile]
+        for profile in profiles
+    ]
+    if not distributions or any(not values for values in distributions):
+        raise ValueError("Missing initial observer counts for a visibility profile")
+    axes[0].boxplot(
+        distributions, positions=range(len(profiles)), orientation="horizontal", widths=0.48,
+        patch_artist=True, showfliers=False,
+        boxprops={"facecolor": "#DCE8EB", "edgecolor": DYNAMICS_COLORS["fixed"]},
+        medianprops={"color": INK, "linewidth": 1.6},
+        whiskerprops={"color": DYNAMICS_COLORS["fixed"]},
+        capprops={"color": DYNAMICS_COLORS["fixed"]},
+    )
+    summaries = tables["initial_visibility_summary"]
     for ax, metric in ((axes[1], "visibility_gini"), (axes[2], "zero_visibility_fraction")):
-        for index, profile in enumerate(PROFILES):
+        for index, profile in enumerate(profiles):
             row = next(
-                (
-                    r
-                    for r in tables["initial_visibility_summary"]
-                    if r["profile"] == profile and r["metric"] == metric
-                ),
-                None,
+                (r for r in summaries if r["profile"] == profile and r["metric"] == metric), None
             )
-            if row:
-                _point(ax, row, index, color="#276f67")
-        ax.set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=30, ha="right")
-    axes[0].set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=30, ha="right")
-    axes[0].set_ylabel("Observer count per source")
-    axes[1].set_ylabel("Initial visibility Gini")
-    axes[2].set_ylabel("Initially invisible fraction")
-    fig.suptitle("Initial visibility: agent distributions and replicate intervals")
+            if row is None:
+                raise ValueError(f"Missing initial visibility summary: {profile}, {metric}")
+            estimate, low, high = (float(row[key]) for key in ("mean", "low", "high"))
+            ax.plot([low, high], [index, index], color=DYNAMICS_COLORS["fixed"], lw=1.6)
+            ax.scatter([estimate], [index], color=DYNAMICS_COLORS["fixed"], s=34, zorder=3)
+    for ax in axes:
+        ax.set_yticks(range(len(profiles)), [LABELS[p] for p in profiles])
+        ax.set_ylim(len(profiles) - 0.5, -0.5)
+        ax.grid(axis="x", color=GRID, lw=0.7)
+        ax.spines[["top", "right"]].set_visible(False)
+        ax.tick_params(axis="y", length=0)
+    axes[0].set_xlabel("Actual observers per agent")
+    axes[1].set_xlabel("Observer-count Gini")
+    axes[2].set_xlabel("Fraction with no observers")
+    axes[0].set_title("Agent distributions", loc="left", fontweight="bold")
+    axes[1].set_title("Inequality", loc="left", fontweight="bold")
+    axes[2].set_title("Unseen agents", loc="left", fontweight="bold")
+    fig.suptitle("Initial visibility: who can be seen?", fontsize=15, color=INK)
     _save(
         fig,
         directory,
         "02_initial_visibility_manipulation",
-        f"Agent counts descriptive; Gini and invisible fraction are replicate means with 95% intervals (n≤{_n(tables['initial_visibility_summary'])})",
+        f"Boxplots summarize agent observer counts; Gini and unseen fraction show replicate means with 95% intervals (n≤{_n(summaries)})",
     )
 
 
@@ -223,15 +240,24 @@ def _factor_grid(directory, table, metrics, filename, title, caption="", *, ecol
                 for index, profile in enumerate(PROFILES):
                     point = next((r for r in matches if r["profile"] == profile), None)
                     if point:
-                        _point(ax, point, index + offset, color=COLORS[dynamic])
-            ax.set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=30, ha="right")
+                        _point(
+                            ax, point, index + offset,
+                            color=COLORS[dynamic], marker=DYNAMICS_MARKERS[dynamic],
+                        )
+            if row_index == len(metrics) - 1:
+                ax.set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=25, ha="right")
+            else:
+                ax.set_xticks(range(5), [])
             ax.set_xlim(-0.5, 4.5)
             if col == 0:
                 ax.set_ylabel(label)
             if row_index == 0:
                 ax.set_title(LABELS[ecology])
     handles = [
-        plt.Line2D([0], [0], marker="o", linestyle="", color=color, label=LABELS[name])
+        plt.Line2D(
+            [0], [0], marker=DYNAMICS_MARKERS[name], linestyle="", color=color,
+            label=LABELS[name],
+        )
         for name, color in COLORS.items()
     ]
     fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.085))
@@ -251,7 +277,7 @@ def _paired_consequences(directory, table, ecologies):
     for row_index, (metric, label) in enumerate(metrics):
         for col, ecology in enumerate(ecologies):
             ax = axes[row_index, col]
-            ax.axhline(0, color="#626262", lw=0.8)
+            ax.axhline(0, color=INK, lw=0.85)
             for index, profile in enumerate(PROFILES):
                 point = next(
                     (
@@ -264,8 +290,11 @@ def _paired_consequences(directory, table, ecologies):
                     None,
                 )
                 if point:
-                    _point(ax, point, index, color="#594981")
-            ax.set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=30, ha="right")
+                    _point(ax, point, index, color="#6654A4")
+            if row_index == len(metrics) - 1:
+                ax.set_xticks(range(5), [LABELS[p] for p in PROFILES], rotation=25, ha="right")
+            else:
+                ax.set_xticks(range(5), [])
             ax.set_xlim(-0.5, 4.5)
             if col == 0:
                 ax.set_ylabel(f"Adaptive − fixed\n{label}")
@@ -306,6 +335,7 @@ def _trajectory(directory, table, metric, filename, ylabel, ecologies):
                         [int(r["time"]) for r in rows],
                         [float(r["mean"]) for r in rows],
                         color=COLORS[dynamic],
+                        linestyle="-" if dynamic == "fixed" else "--",
                         label=LABELS[dynamic],
                     )
             if col == 0:
@@ -315,7 +345,11 @@ def _trajectory(directory, table, metric, filename, ylabel, ecologies):
             if row_index == 4:
                 ax.set_xlabel("Training step")
     handles = [
-        plt.Line2D([0], [0], color=color, label=LABELS[name]) for name, color in COLORS.items()
+        plt.Line2D(
+            [0], [0], color=color, linestyle="-" if name == "fixed" else "--",
+            label=LABELS[name],
+        )
+        for name, color in COLORS.items()
     ]
     fig.legend(handles=handles, loc="upper center", ncol=2, bbox_to_anchor=(0.5, 1.08))
     fig.suptitle(f"Training trajectories · {ylabel}", y=1.14)
@@ -353,13 +387,17 @@ def save_visibility_figures(
     seed=20261002,
 ):
     directory.mkdir(parents=True, exist_ok=True)
+    plt.rcParams.update({
+        "font.size": 11, "axes.labelsize": 10.5, "axes.titlesize": 11.5,
+        "pdf.fonttype": 42, "svg.fonttype": "none", "figure.facecolor": "white",
+    })
     _design(directory, ecologies, width=width, height=height, seed=seed)
     _manipulation(directory, tables)
     _factor_grid(
         directory,
         tables["primary_window_summary"],
         (
-            ("social_perception_error", "Perception error"),
+            ("social_perception_error", "Local-view error"),
             ("majority_mismatch_rate", "Majority mismatch (non-ties)"),
             ("majority_tie_rate", "Majority tie rate"),
         ),

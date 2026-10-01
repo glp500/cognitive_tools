@@ -26,28 +26,11 @@ from matplotlib.lines import Line2D
 from cognitive_tools.scenarios import build_environment_maps
 from cognitive_tools.visibility import PROFILES
 from cognitive_tools.visibility_figures import LABELS
+from cognitive_tools.visibility_palette import (
+    ECOLOGY_COLORS, ECOLOGY_MARKERS, FINAL, GRID, INITIAL, INK, MUTED,
+)
 
 ECOLOGIES = ("uniform_high", "patchy_high", "split_high_low")
-ECOLOGY_COLORS = {
-    "uniform_high": "#287d78",
-    "patchy_high": "#ad6534",
-    "split_high_low": "#69599a",
-    "balanced_uniform": "#287d78",
-    "balanced_dispersed": "#ad6534",
-    "balanced_segregated": "#69599a",
-}
-ECOLOGY_MARKERS = {
-    "uniform_high": "o",
-    "patchy_high": "s",
-    "split_high_low": "^",
-    "balanced_uniform": "o",
-    "balanced_dispersed": "s",
-    "balanced_segregated": "^",
-}
-INK = "#24323b"
-MUTED = "#5b6972"
-INITIAL = "#317b89"
-FINAL = "#c6683d"
 
 
 def _read(path: Path) -> list[dict[str, str]]:
@@ -104,7 +87,7 @@ def _pooled_result(root: Path, hypothesis: str) -> dict[str, str]:
 def _clean_axis(ax, *, zero: bool = False) -> None:
     if zero:
         ax.axvline(0, color=INK, lw=0.9, zorder=0)
-    ax.grid(axis="x", color="#e4e9ea", lw=0.6, zorder=0)
+    ax.grid(axis="x", color=GRID, lw=0.6, zorder=0)
     ax.spines[["top", "right"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
 
@@ -266,6 +249,7 @@ def _attention(output: Path, runs: list[dict[str, str]], root: Path, note: str) 
         layout="constrained",
         gridspec_kw={"width_ratios": [2.3, 1]},
     )
+    share_values = []
     for index, profile in enumerate(PROFILES):
         ax, share_ax = axes[index]
         starts = [count for key, values in initial.items() if key[0] == profile for count in values]
@@ -296,6 +280,7 @@ def _attention(output: Path, runs: list[dict[str, str]], root: Path, note: str) 
             if key[0] == profile
         ]
         initial_mean = mean(first_shares)
+        share_values.extend(first_shares)
         share_ax.scatter([initial_mean], [0], color=INITIAL, s=42, marker="s", zorder=3)
         for ecology_index, ecology in enumerate(ECOLOGIES):
             shares = [
@@ -303,9 +288,7 @@ def _attention(output: Path, runs: list[dict[str, str]], root: Path, note: str) 
                 for key, values in final.items()
                 if key[0] == profile and key[1] == ecology
             ]
-            share_ax.plot(
-                [initial_mean, mean(shares)], [0, ecology_index + 1], color="#c9cdd0", lw=1
-            )
+            share_values.extend(shares)
             share_ax.plot(
                 [min(shares), max(shares)],
                 [ecology_index + 1] * 2,
@@ -322,8 +305,11 @@ def _attention(output: Path, runs: list[dict[str, str]], root: Path, note: str) 
             )
         share_ax.set_yticks([])
         share_ax.set_ylim(3.5, -0.5)
-        share_ax.set_xlim(0.07, 0.35)
         _clean_axis(share_ax)
+    share_low, share_high = min(share_values), max(share_values)
+    share_pad = max(0.015, (share_high - share_low) * 0.08)
+    for share_ax in axes[:, 1]:
+        share_ax.set_xlim(max(0, share_low - share_pad), min(1, share_high + share_pad))
     axes[0, 0].legend(frameon=False, ncol=2, loc="upper right")
     axes[0, 0].set_title("Fraction of sources at each observer count", loc="left")
     axes[0, 1].set_title("Top-six attention share", loc="left")
@@ -379,7 +365,12 @@ def _perception(output: Path, root: Path, note: str) -> None:
         ("low_propensity_majority-random", "Low majority − random"),
         ("high_propensity_majority-random", "High majority − random"),
     )
-    extent = 1.12 * max(abs(float(row[key])) for row in h1 + h2 for key in ("low", "high"))
+    primary_h2 = [
+        row for row in h1
+        if row["comparison"] == "balanced_segregated-balanced_dispersed"
+    ]
+    extent_rows = primary_h2 if balanced else h1 + h2
+    extent = 1.12 * max(abs(float(row[key])) for row in extent_rows for key in ("low", "high"))
     fig = plt.figure(figsize=(14.2, 6.6), layout="constrained")
     grid = fig.add_gridspec(2, 2, height_ratios=[7, 1], width_ratios=[1.2, 1])
     axes = (fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1]))
@@ -393,19 +384,8 @@ def _perception(output: Path, root: Path, note: str) -> None:
     ]
     h1_styles = (
         (
-            (
-                "balanced_dispersed-balanced_uniform",
-                ECOLOGY_COLORS["balanced_dispersed"],
-                "o",
-                "Dispersed − uniform",
-            ),
-            (
-                "balanced_segregated-balanced_dispersed",
-                ECOLOGY_COLORS["balanced_segregated"],
-                "s",
-                "Segregated − dispersed (primary)",
-            ),
-            ("balanced_segregated-balanced_uniform", INK, "^", "Segregated − uniform"),
+            ("balanced_segregated-balanced_dispersed", ECOLOGY_COLORS["balanced_segregated"],
+             "s", "Segregated − dispersed"),
         )
         if balanced
         else (
@@ -421,7 +401,7 @@ def _perception(output: Path, root: Path, note: str) -> None:
     for y, (profile, dynamics) in enumerate(
         (p, d) for p in PROFILES for d in ("fixed", "adaptive_bounded")
     ):
-        offsets = (-0.20, 0.0, 0.20) if balanced else (-0.15, 0.15)
+        offsets = (0.0,) if balanced else (-0.15, 0.15)
         for offset, (comparison, color, marker, _) in zip(offsets, h1_styles):
             _point(
                 ax,
@@ -442,7 +422,7 @@ def _perception(output: Path, root: Path, note: str) -> None:
             f"[{float(pooled['low']):+.4f}, {float(pooled['high']):+.4f}]"
         )
     ax.set_title(
-        "H2 · Resource geography\nat matched capacity"
+        "H2 · Segregated versus dispersed\nat matched capacity"
         if balanced
         else "H1 · Ecological setting\nversus uniform high",
         loc="left",
@@ -463,35 +443,39 @@ def _perception(output: Path, root: Path, note: str) -> None:
             or any(not np.isfinite(float(primary[key])) for key in ("estimate", "low", "high"))
         ):
             raise ValueError("Invalid H1 checkpoint coverage or association")
-        centered_x = np.array([float(row["visibility_gini_deviation"]) for row in pairs])
-        centered_y = np.array([float(row["local_view_error_deviation"]) for row in pairs])
-        variation = float(np.dot(centered_x, centered_x))
-        if variation <= 0:
-            raise ValueError("H1 observer-count inequality has no within-run variation")
-        ax.hexbin(centered_x, centered_y, gridsize=29, mincnt=1, bins="log", cmap="Blues")
-        slope = float(np.dot(centered_x, centered_y) / variation)
-        x_limit = float(np.max(np.abs(centered_x))) * 1.12
-        ax.plot([-x_limit, x_limit], [-slope * x_limit, slope * x_limit], color=INK, lw=1.5)
-        ax.axhline(0, color="#c7cdd0", lw=0.8)
-        ax.axvline(0, color="#c7cdd0", lw=0.8)
-        ax.set_xlim(-x_limit, x_limit)
-        ax.set_xlabel("Observer-count inequality · deviation from run mean")
-        ax.set_ylabel("Local-view error · deviation from run mean")
-        ax.set_title("H1 · Who gets seen versus\nwhat peers reveal", loc="left", fontweight="bold")
-        ax.text(
-            0.03,
-            0.96,
-            f"Within-run r = {float(primary['estimate']):+.2f}\n"
-            f"95% interval [{float(primary['low']):+.2f}, {float(primary['high']):+.2f}]\n"
-            f"After linear time adjustment: {float(by_measure['linear_time_adjusted']['estimate']):+.2f}",
-            transform=ax.transAxes,
-            va="top",
-            fontsize=9,
-            color=INK,
-            bbox=dict(facecolor="white", edgecolor="none", alpha=0.75),
+        h1_extent = max(
+            0.08,
+            1.25 * max(
+                abs(float(by_measure[key][bound]))
+                for key in ("within_run", "linear_time_adjusted")
+                for bound in ("low", "high")
+            ),
         )
-        ax.grid(color="#e4e9ea", lw=0.6, zorder=0)
-        ax.spines[["top", "right"]].set_visible(False)
+        for index, (key, color) in enumerate((
+            ("within_run", "#B06435"),
+            ("linear_time_adjusted", "#197A73"),
+        )):
+            row = by_measure[key]
+            estimate, low, high = (float(row[field]) for field in ("estimate", "low", "high"))
+            if not low <= estimate <= high:
+                raise ValueError(f"Invalid H1 interval: {key}")
+            ax.plot([low, high], [index, index], color=color, lw=2.4)
+            ax.scatter([estimate], [index], color=color, s=70, zorder=3)
+            ax.text(high + 0.025 * h1_extent, index, f"{estimate:+.3f}", va="center", color=color, fontsize=10)
+        ax.set_yticks((0, 1), ("Within run", "After linear time adjustment"))
+        ax.set_ylim(1.7, -0.7)
+        ax.set_xlim(-h1_extent, h1_extent)
+        ax.set_xlabel("Association with local-view error · Pearson r")
+        ax.set_title("H1 · Observer-count inequality\nand local-view error", loc="left", fontweight="bold")
+        _clean_axis(ax, zero=True)
+        ax.text(
+            0.52, 0.51,
+            ("Direction reverses after time adjustment"
+             if float(primary["estimate"]) * float(by_measure["linear_time_adjusted"]["estimate"]) < 0
+             else "Compare raw and time-adjusted estimates"),
+            transform=ax.transAxes, ha="center", va="center", fontsize=10,
+            color=INK, bbox={"facecolor": "#EEF3F2", "edgecolor": "none", "pad": 5},
+        )
     else:
         offsets = (-0.18, 0.0, 0.18)
         for y, (comparison, _) in enumerate(comparisons):
@@ -526,19 +510,17 @@ def _perception(output: Path, root: Path, note: str) -> None:
         )
         for e in ECOLOGIES
     ]
-    handles = (
-        contrast_handles
-        + [
-            Line2D(
-                [0], [0], marker="h", color="#336f9a", linestyle="", label="Adaptive checkpoints"
-            )
-        ]
-        if balanced
-        else contrast_handles + ecology_handles
-    )
-    legend_ax.legend(
-        handles=handles, frameon=False, loc="center", ncol=3 if balanced else 2, fontsize=9.5
-    )
+    if balanced:
+        legend_ax.text(
+            0.5, 0.5,
+            "H2: paired replicate-bootstrap intervals · H1: replicate-cluster bootstrap intervals · zero marks no difference/association",
+            ha="center", va="center", color=MUTED, fontsize=9.5,
+        )
+    else:
+        legend_ax.legend(
+            handles=contrast_handles + ecology_handles, frameon=False,
+            loc="center", ncol=2, fontsize=9.5,
+        )
     fig.suptitle(
         "3  ·  Different local views of the same population",
         x=0.02,
@@ -551,9 +533,9 @@ def _perception(output: Path, root: Path, note: str) -> None:
         output,
         "03_different_windows",
         (
-            f"{note}; H2 paired ecology contrasts have pointwise replicate-bootstrap 95% intervals. "
-            "H1 shows within-run-centered adaptive checkpoints; darker hexagons contain more checkpoints. "
-            "Its interval resamples replicate IDs. The association is descriptive, not causal."
+            f"{note}; H2 shows the primary segregated−dispersed contrast in each social treatment; "
+            "cell intervals are pointwise. H1 compares the raw within-run and linearly time-adjusted "
+            "associations; both intervals cluster-bootstrap replicate IDs. The association is not causal."
             if balanced
             else f"{note}; historical paired H1/H2 contrasts, pointwise replicate-bootstrap 95% intervals. Zero means no difference."
         ),
@@ -808,7 +790,7 @@ def _adaptation(output: Path, root: Path, note: str) -> None:
     balanced = ECOLOGIES[0] == "balanced_uniform"
     metrics = (
         ("visibility_gini", "Who is seen?", "Visibility Gini"),
-        ("social_perception_error", "What is perceived?", "Mean absolute error"),
+        ("social_perception_error", "What do four peers reveal?", "Local-view error"),
         ("low_extraction_rate", "What does the group do?", "Low-extraction share"),
     )
     fig, axes = plt.subplots(1, 3, figsize=(12.3, 5), layout="constrained")
@@ -1038,6 +1020,9 @@ def main() -> None:
         "schema_version": 1,
         "analysis": identity,
         "story_source_sha256": _sha256(Path(__file__)),
+        "figure_palette_sha256": _sha256(
+            Path(__file__).resolve().parents[1] / "cognitive_tools" / "visibility_palette.py"
+        ),
         "environment_design": config.get("environment_design", "legacy"),
         "ecologies": ECOLOGIES,
         "analysis_source_sha256": analysis.get("analysis_source_sha256"),
@@ -1099,7 +1084,10 @@ def main() -> None:
             "regional_replicate_coverage": True,
             "source_config_hashes_match_analysis": True,
         },
-        "limitations": ["pointwise intervals", "training-end regional welfare shown separately"],
+        "limitations": [
+            "H2/H3 cell intervals are pointwise; H1 intervals cluster-bootstrap replicate IDs",
+            "training-end regional welfare shown separately",
+        ],
     }
     report_path.write_text(json.dumps(report, indent=2) + "\n")
     print(
