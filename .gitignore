@@ -22,3 +22,8 @@ dist/
 .DS_Store
 .vscode/
 .idea/
+
+# Locally generated presentation exports and builder
+presentations/*.pptx
+presentations/*.pdf
+presentations/build_study_update.py
